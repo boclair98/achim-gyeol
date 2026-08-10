@@ -5,7 +5,7 @@ import { PwaRegister } from "@/components/PwaRegister";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://achim-gyeol.coders.kr"),
+  metadataBase: new URL("https://achim-gyeol-ai.coders.kr"),
   title: "아침결 — 놓친 하루를 5분 안에",
   description: "복수 출처와 검증 상태를 함께 보여주는 책임 있는 AI 모닝 브리핑.",
   manifest: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/manifest.webmanifest`,
