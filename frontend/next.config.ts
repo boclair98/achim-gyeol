@@ -8,9 +8,9 @@ const nextConfig: NextConfig = {
   // no headers() at request time, no middleware. All identity + data
   // fetching happens client-side.
   output: "export",
-  // SPA-style routing fallback inside `out/` is handled by the nginx
-  // config (try_files … /index.html).
-  trailingSlash: false,
+  // Emit route/index.html so the same build works on GitHub Pages and
+  // static nginx hosting without rewrite rules.
+  trailingSlash: true,
   basePath,
   assetPrefix: basePath || undefined,
   images: { unoptimized: true },
