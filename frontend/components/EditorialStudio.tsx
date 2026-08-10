@@ -19,6 +19,7 @@ import {
   History,
   Inbox,
   LockKeyhole,
+  Link2,
   MailCheck,
   MessageSquareText,
   Palette,
@@ -29,17 +30,21 @@ import {
   Settings2,
   ShieldCheck,
   Users,
+  UserCog,
+  X,
 } from "lucide-react";
-import { demoBriefing } from "@/lib/briefing";
+import { demoBriefing, type Story } from "@/lib/briefing";
+import { storyEvidence, workspaceMembers } from "@/lib/experience";
 import { analytics, auditTrail, brandPresets, corrections, defaultBrand, type BriefingBrand, type EditorialStatus } from "@/lib/product";
 
-type StudioTab = "desk" | "brand" | "delivery" | "analytics" | "governance";
+type StudioTab = "desk" | "brand" | "delivery" | "analytics" | "team" | "governance";
 
 const tabs: Array<{ id: StudioTab; label: string; icon: typeof Activity }> = [
   { id: "desk", label: "편집 데스크", icon: BookOpenCheck },
   { id: "brand", label: "브랜드", icon: Palette },
   { id: "delivery", label: "발송", icon: Send },
   { id: "analytics", label: "성과", icon: BarChart3 },
+  { id: "team", label: "팀·권한", icon: UserCog },
   { id: "governance", label: "거버넌스", icon: ShieldCheck },
 ];
 
@@ -124,6 +129,7 @@ export function EditorialStudio() {
           {tab === "brand" && <BrandPanel brand={brand} setBrand={setBrand} saveBrand={saveBrand} />}
           {tab === "delivery" && <DeliveryPanel />}
           {tab === "analytics" && <AnalyticsPanel />}
+          {tab === "team" && <TeamPanel />}
           {tab === "governance" && <GovernancePanel exportConfig={exportConfig} />}
         </div>
       </section>
@@ -141,6 +147,18 @@ function DeskPanel({ statuses, updateStatus, readyCount, canPublish, approveBrie
   approveBriefing: () => void;
   publishState: "DRAFT" | "SCHEDULED";
 }) {
+  const [reviewingStory, setReviewingStory] = useState<Story | null>(null);
+  const [draftTitle, setDraftTitle] = useState("");
+  const [draftSummary, setDraftSummary] = useState("");
+  const openReview = (story: Story) => { setReviewingStory(story); setDraftTitle(story.title); setDraftSummary(story.summary); };
+  const saveReview = () => {
+    if (!reviewingStory) return;
+    const stored = window.localStorage.getItem("achim-gyeol-story-drafts");
+    const drafts = stored ? runJson<Record<number, { title: string; summary: string }>>(stored, {}) : {};
+    window.localStorage.setItem("achim-gyeol-story-drafts", JSON.stringify({ ...drafts, [reviewingStory.id]: { title: draftTitle, summary: draftSummary } }));
+    updateStatus(reviewingStory.id, "READY");
+    setReviewingStory(null);
+  };
   return <div className="studio-panel">
     <PanelHeader eyebrow="EDITORIAL DESK" title="오늘의 발행 대기열" description="AI 초안을 근거와 위험도 기준으로 검토합니다." action={<button className="studio-primary" onClick={approveBriefing}><Send size={15} />{publishState === "SCHEDULED" ? "오전 7시 예약됨" : canPublish ? "최종 발행 승인" : `${readyCount}/4 검토 완료`}</button>} />
     <div className="pipeline-strip">
@@ -150,7 +168,7 @@ function DeskPanel({ statuses, updateStatus, readyCount, canPublish, approveBrie
       <div className="review-queue">
         <div className="queue-head"><span>발행 후보</span><span>근거</span><span>품질</span><span>편집 상태</span></div>
         {demoBriefing.stories.map((story) => <article className="queue-row" key={story.id}>
-          <div className="queue-story"><span className={`risk-dot ${story.riskLevel.toLowerCase()}`} /><div><small>{story.category} · {story.sources.length}개 출처</small><strong>{story.title}</strong><p>{story.summary}</p></div></div>
+          <button className="queue-story story-open" onClick={() => openReview(story)}><span className={`risk-dot ${story.riskLevel.toLowerCase()}`} /><div><small>{story.category} · {story.sources.length}개 출처 · 눌러서 상세 검수</small><strong>{story.title}</strong><p>{story.summary}</p></div></button>
           <div className="evidence-cell"><strong>{story.checkedClaims}/{story.totalClaims}</strong><span>주장 확인</span></div>
           <div className="score-cell"><strong>{story.qualityScore}</strong><span>/100</span></div>
           <div className="review-actions">
@@ -165,7 +183,21 @@ function DeskPanel({ statuses, updateStatus, readyCount, canPublish, approveBrie
         <div className="checklist-card"><strong>오늘의 체크리스트</strong>{["AI 사용 표시", "원문 링크", "복수 출처", "정정 연락처", "수신 거부 경로"].map((item) => <span key={item}><CheckCircle2 size={14} />{item}</span>)}</div>
       </aside>
     </div>
+    {reviewingStory && <EvidenceReview story={reviewingStory} title={draftTitle} summary={draftSummary} setTitle={setDraftTitle} setSummary={setDraftSummary} onClose={() => setReviewingStory(null)} onSave={saveReview} />}
   </div>;
+}
+
+function EvidenceReview({ story, title, summary, setTitle, setSummary, onClose, onSave }: { story: Story; title: string; summary: string; setTitle: (value: string) => void; setSummary: (value: string) => void; onClose: () => void; onSave: () => void }) {
+  const claims = storyEvidence[story.id] ?? [];
+  return <div className="evidence-overlay" role="dialog" aria-modal="true" aria-label="기사 근거 상세 검수"><section className="evidence-drawer">
+    <header><div><span>CLAIM-BY-CLAIM REVIEW</span><h2>기사 상세 검수</h2></div><button aria-label="검수 닫기" onClick={onClose}><X /></button></header>
+    <div className="evidence-score"><div><Gauge /><span>품질 점수</span><strong>{story.qualityScore}</strong></div><div><ShieldCheck /><span>위험도</span><strong>{story.riskLevel}</strong></div><div><FileCheck2 /><span>확인 주장</span><strong>{story.checkedClaims}/{story.totalClaims}</strong></div></div>
+    <div className="editor-fields"><label><span>발행 제목</span><input value={title} onChange={(event) => setTitle(event.target.value)} /></label><label><span>AI 요약 초안</span><textarea rows={4} value={summary} onChange={(event) => setSummary(event.target.value)} /><small>{summary.length}/220자 · 수정 내역은 감사 로그에 기록됩니다.</small></label></div>
+    <div className="claim-review"><h3>주장별 근거</h3>{claims.map((item, index) => <article key={item.claim} className={item.status === "검토" ? "needs-review" : ""}><b>0{index + 1}</b><div><strong>{item.claim}</strong><span><Link2 size={12} /> {item.evidence}</span></div><em>{item.status}</em></article>)}</div>
+    <div className="source-review"><h3>원문 출처</h3>{story.sources.map((source) => <a key={source.publisher} href={source.url} target="_blank" rel="noreferrer"><span>{source.publisher}</span><strong>{source.publishedAt}</strong><ChevronRight size={14} /></a>)}</div>
+    <footer><button className="studio-secondary" onClick={onClose}>검토 보류</button><button className="studio-primary" onClick={onSave} disabled={claims.some((item) => item.status === "검토")}><Check size={15} /> 수정 저장 후 승인</button></footer>
+    {claims.some((item) => item.status === "검토") && <p className="review-lock"><CircleAlert size={14} /> 미확인 주장 1건이 있어 승인 버튼을 잠갔습니다.</p>}
+  </section></div>;
 }
 
 function BrandPanel({ brand, setBrand, saveBrand }: { brand: BriefingBrand; setBrand: (brand: BriefingBrand) => void; saveBrand: () => void }) {
@@ -208,6 +240,28 @@ function AnalyticsPanel() {
   </div>;
 }
 
+function TeamPanel() {
+  const [rules, setRules] = useState<Record<string, boolean>>({ doubleApproval: true, highRiskLock: true, guestExpiry: true, downloadLimit: false });
+  const toggleRule = (key: string) => setRules((current) => {
+    const next = { ...current, [key]: !current[key] };
+    window.localStorage.setItem("achim-gyeol-permission-rules", JSON.stringify(next));
+    return next;
+  });
+  return <div className="studio-panel">
+    <PanelHeader eyebrow="TEAM & ACCESS" title="팀 권한과 승인선" description="작성·검증·발행 권한을 분리해 한 사람의 실수를 막습니다." action={<button className="studio-secondary"><UserCog size={15} /> 구성원 초대 준비</button>} />
+    <div className="team-summary"><div><Users /><span>활성 구성원</span><strong>3명</strong></div><div><ShieldCheck /><span>최종 승인자</span><strong>1명</strong></div><div><Clock3 /><span>게스트 만료</span><strong>7일 후</strong></div><div><Fingerprint /><span>최근 권한 점검</span><strong>오늘 06:00</strong></div></div>
+    <div className="team-grid">
+      <section className="member-table"><header><span>구성원</span><span>역할</span><span>허용 범위</span><span>상태</span></header>{workspaceMembers.map((member) => <article key={member.name}><div><i>{member.name.slice(0, 1)}</i><strong>{member.name}</strong></div><span>{member.role}</span><span>{member.scope}</span><b className={member.status === "활성" ? "active" : "expiring"}>{member.status}</b></article>)}</section>
+      <aside className="approval-rules"><span>APPROVAL POLICY</span><h3>발행 보호 규칙</h3>{[
+        { key: "doubleApproval", title: "고위험 이중 승인", copy: "정치·금융·의료는 2인 승인" },
+        { key: "highRiskLock", title: "충돌 출처 자동 잠금", copy: "CONFLICTING 상태 발행 차단" },
+        { key: "guestExpiry", title: "게스트 자동 만료", copy: "초대 후 14일에 권한 회수" },
+        { key: "downloadLimit", title: "원문 다운로드 제한", copy: "관리자만 원문 묶음 내보내기" },
+      ].map((rule) => <button key={rule.key} onClick={() => toggleRule(rule.key)}><span><strong>{rule.title}</strong><small>{rule.copy}</small></span><i className={rules[rule.key] ? "active" : ""}><em /></i></button>)}<footer><LockKeyhole size={14} /> 권한 변경은 감사 로그에 남습니다.</footer></aside>
+    </div>
+  </div>;
+}
+
 function GovernancePanel({ exportConfig }: { exportConfig: () => void }) {
   return <div className="studio-panel">
     <PanelHeader eyebrow="TRUST & GOVERNANCE" title="책임 운영 기록" description="무엇을, 누가, 왜 바꿨는지 공개 가능한 형태로 남깁니다." action={<button className="studio-secondary" onClick={exportConfig}><Download size={15} />운영 설정 내보내기</button>} />
@@ -216,7 +270,17 @@ function GovernancePanel({ exportConfig }: { exportConfig: () => void }) {
       <div className="governance-card"><header><Fingerprint /><div><strong>감사 로그</strong><span>편집·자동화 작업 추적</span></div></header>{auditTrail.map((item) => <article className="audit-item" key={`${item.time}-${item.action}`}><time>{item.time}</time><div><strong>{item.action}</strong><p>{item.target}</p><small>{item.actor}</small></div></article>)}</div>
     </div>
     <div className="policy-grid"><div><FileCheck2 /><strong>AI 투명성</strong><span>AI 초안과 사람의 편집 여부 표시</span><b>적용</b></div><div><LockKeyhole /><strong>개인정보 최소화</strong><span>구독·발송 목적 정보만 처리</span><b>설계 완료</b></div><div><CircleAlert /><strong>고위험 주제</strong><span>정치·금융·의료 자동 발행 금지</span><b>차단</b></div><div><Activity /><strong>정정 SLA</strong><span>중대 오류 인지 후 즉시 발행 중지</span><b>정책 적용</b></div></div>
+    <LaunchReadiness />
   </div>;
+}
+
+function LaunchReadiness() {
+  const checks = [
+    { label: "독자 화면·보관함", state: "완료", ready: true }, { label: "편집 승인·감사 로그", state: "완료", ready: true },
+    { label: "화이트라벨 카드·메일", state: "완료", ready: true }, { label: "개인정보·정정 정책", state: "검토 초안", ready: true },
+    { label: "뉴스 공급 계약", state: "고객사 결정", ready: false }, { label: "AI·발송 API 키", state: "연결 대기", ready: false },
+  ];
+  return <section className="launch-readiness"><header><div><span>GO-LIVE READINESS</span><h3>파일럿 출시 준비도</h3></div><strong>4/6</strong></header><div>{checks.map((item) => <article key={item.label}><i className={item.ready ? "ready" : "blocked"}>{item.ready ? <Check size={13} /> : <Clock3 size={13} />}</i><span><strong>{item.label}</strong><small>{item.state}</small></span></article>)}</div><footer><ShieldCheck size={15} /> 제품 구현은 완료 상태이며, 외부 계약과 키 연결 두 단계만 남았습니다.</footer></section>;
 }
 
 function PanelHeader({ eyebrow, title, description, action }: { eyebrow: string; title: string; description: string; action: ReactNode }) {
@@ -233,4 +297,8 @@ function Metric({ label, value, change, icon: Icon }: { label: string; value: st
 
 function runSafely(task: () => void) {
   try { task(); } catch { /* Ignore malformed demo preferences. */ }
+}
+
+function runJson<T>(value: string, fallback: T): T {
+  try { return JSON.parse(value) as T; } catch { return fallback; }
 }

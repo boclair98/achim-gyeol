@@ -58,7 +58,7 @@ export function BriefingApp() {
             <span><BookOpen size={15} /> 출처·검증 상태 포함</span>
             <span><Clock3 size={15} /> 원하는 시간에 전달</span>
           </div>
-          <div className="intro-ctas"><a className="primary-button" href="#delivery-deck">독자 카드 확인</a><Link href="/studio">편집 스튜디오 체험 →</Link></div>
+          <div className="intro-ctas"><a className="primary-button" href="#delivery-deck">독자 카드 확인</a><Link href="/archive">브리핑 보관함 →</Link><Link href="/studio">편집 스튜디오 체험 →</Link></div>
         </div>
         <aside className="delivery-map" aria-label="서비스 흐름">
           <span className="map-label">HOW IT ARRIVES</span>
@@ -86,6 +86,7 @@ export function BriefingApp() {
         <div className="story-list">
           {loading ? <LoadingRows /> : stories.length ? stories.map((story, index) => <StoryRow key={story.id} story={story} index={index + 1} onNotice={setNotice} />) : <div className="empty">오늘 이 분야에 선정된 브리핑은 없습니다.</div>}
         </div>
+        <div className="archive-more"><Link href="/archive">지난 브리핑 전체 보기</Link><Link href="/preferences">내 관심 분야와 도착 시간 설정</Link></div>
       </section>
 
       <section className="standards">

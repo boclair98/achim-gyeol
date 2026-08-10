@@ -7,6 +7,7 @@ export function SiteHeader({ context = "NEWS DELIVERY PLATFORM" }: { context?: s
       <Link className="site-brand" href="/"><i aria-hidden="true" />아침결<span>BRIEFING OS</span></Link>
       <nav aria-label="주요 메뉴">
         <Link href="/">브리핑</Link>
+        <Link href="/archive">보관함</Link>
         <Link href="/studio">편집 스튜디오</Link>
         <Link href="/trust">신뢰센터</Link>
       </nav>
@@ -21,6 +22,8 @@ export function SiteFooter() {
       <div><strong>아침결 Briefing OS</strong><p>뉴스 조직과 전문 커뮤니티를 위한 화이트라벨 AI 브리핑 제작·전송 플랫폼</p></div>
       <nav aria-label="정책 문서">
         <Link href="/trust">편집 원칙</Link>
+        <Link href="/archive">브리핑 보관함</Link>
+        <Link href="/preferences">내 브리핑 설정</Link>
         <Link href="/privacy">개인정보처리방침</Link>
         <Link href="/terms">이용약관</Link>
         <a href="mailto:editor@achim-gyeol.example">편집 문의 <ArrowUpRight size={12} /></a>

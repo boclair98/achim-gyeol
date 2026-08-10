@@ -15,5 +15,10 @@ export default function manifest(): MetadataRoute.Manifest {
     icons: [
       { src: `${basePath}/icon.svg`, sizes: "any", type: "image/svg+xml", purpose: "any" },
     ],
+    shortcuts: [
+      { name: "오늘의 브리핑", short_name: "오늘", url: `${basePath}/`, icons: [{ src: `${basePath}/icon.svg`, sizes: "any", type: "image/svg+xml" }] },
+      { name: "브리핑 보관함", short_name: "보관함", url: `${basePath}/archive/`, icons: [{ src: `${basePath}/icon.svg`, sizes: "any", type: "image/svg+xml" }] },
+      { name: "내 브리핑 설정", short_name: "설정", url: `${basePath}/preferences/`, icons: [{ src: `${basePath}/icon.svg`, sizes: "any", type: "image/svg+xml" }] },
+    ],
   };
 }

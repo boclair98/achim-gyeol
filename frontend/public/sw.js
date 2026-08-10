@@ -1,5 +1,5 @@
-const CACHE = "achim-gyeol-v2";
-const SHELL = ["./", "./icon.svg", "./briefing-card-bg.png"];
+const CACHE = "achim-gyeol-v3";
+const SHELL = ["./", "./archive/", "./preferences/", "./trust/", "./manifest.webmanifest", "./icon.svg", "./briefing-card-bg.png", "./og-v2.png"];
 self.addEventListener("install", (event) => event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL))));
 self.addEventListener("activate", (event) => event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))))));
 self.addEventListener("fetch", (event) => {

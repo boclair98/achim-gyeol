@@ -7,24 +7,24 @@ import "./enterprise.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://boclair98.github.io/achim-gyeol-pages";
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-const socialImageUrl = new URL("og.png", `${siteUrl.replace(/\/$/, "")}/`).toString();
+const socialImageUrl = new URL("og-v2.png", `${siteUrl.replace(/\/$/, "")}/`).toString();
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "아침결 — 매일 아침 도착하는 AI 뉴스 요약 카드",
-  description: "핵심 뉴스의 AI 3줄 요약, 중요성, 출처와 검증 상태를 카드 묶음으로 전달하는 모닝 브리핑.",
+  title: "아침결 — 독자 경험부터 편집 책임까지 연결하는 뉴스룸 브리핑 OS",
+  description: "개인화 뉴스 카드, 검색 가능한 보관함, 주장별 근거 검수와 사람의 최종 승인을 연결하는 화이트라벨 브리핑 운영체제.",
   manifest: `${basePath}/manifest.webmanifest`,
   applicationName: "아침결",
   appleWebApp: { capable: true, title: "아침결", statusBarStyle: "default" },
   openGraph: {
-    title: "아침결 — 뉴스 요약 카드가 매일 아침 도착해요",
-    description: "뉴스별 AI 3줄 요약과 출처를 넘겨 보는 카드 묶음으로 받아보세요.",
+    title: "아침결 — 읽는 경험부터 편집 책임까지, 한 번에",
+    description: "개인화 · 근거 검수 · 사람의 승인을 연결하는 Newsroom Briefing OS",
     images: [{ url: socialImageUrl, width: 1792, height: 896, alt: "아침결 뉴스룸 브리핑 OS" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "아침결 — 뉴스 요약 카드가 매일 아침 도착해요",
-    description: "뉴스별 AI 3줄 요약과 출처를 넘겨 보는 카드 묶음으로 받아보세요.",
+    title: "아침결 — 읽는 경험부터 편집 책임까지, 한 번에",
+    description: "개인화 · 근거 검수 · 사람의 승인을 연결하는 Newsroom Briefing OS",
     images: [socialImageUrl],
   },
 };
