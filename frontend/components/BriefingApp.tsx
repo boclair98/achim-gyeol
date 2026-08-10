@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import {
   Bell,
@@ -15,6 +16,7 @@ import { demoBriefing, type Briefing, type Story } from "@/lib/briefing";
 
 const categories = ["전체", "정책", "경제", "사회", "테크"];
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+const assetBase = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 export function BriefingApp() {
   const [briefing, setBriefing] = useState<Briefing>(demoBriefing);
@@ -76,12 +78,12 @@ export function BriefingApp() {
     <main className="page-shell">
       <header className="masthead">
         <div className="masthead-utility">
-          <span>AI DAILY NEWS BRIEFING</span>
-          <span>{briefing.dateLabel} · 오전 7시 발행</span>
+          <span><i aria-hidden="true" /> AI-CURATED DAILY NEWS</span>
+          <span>{briefing.dateLabel} · MORNING DROP 07:00</span>
         </div>
         <div className="masthead-main">
           <div className="brand"><span aria-hidden="true" />아침결</div>
-          <p>어제의 핵심을 오늘의 판단으로</p>
+          <p>어제의 핵심을 오늘의 감각으로</p>
           <div className="header-actions">
             <button className="icon-button" aria-label="브리핑 공유" onClick={shareBriefing}>
               <Share2 size={17} />
@@ -105,9 +107,13 @@ export function BriefingApp() {
       </header>
 
       <section className="lead-section">
+        <div className="lead-art" aria-hidden="true">
+          <Image src={`${assetBase}/hero-mz.png`} alt="" fill priority sizes="(max-width: 760px) 100vw, 1160px" />
+          <div className="lead-art-shade" />
+        </div>
         <div className="lead-copy">
-          <span className="section-label">MORNING BRIEF</span>
-          <h1>놓친 하루를<br />5분 안에 읽습니다.</h1>
+          <span className="hero-badge"><i aria-hidden="true" /> 5-MIN NEWS DROP</span>
+          <h1>어제의 이슈,<br />오늘 감각으로.</h1>
           <p>{briefing.lead}</p>
           <div className="lead-actions">
             <button className="primary-button" onClick={() => setNotice("음성 브리핑은 API 연결 단계에서 추가할 수 있어요.")}>
@@ -117,7 +123,7 @@ export function BriefingApp() {
           </div>
         </div>
         <aside className="edition-panel" aria-label="브리핑 정보">
-          <div className="edition-heading">TODAY&apos;S EDITION</div>
+          <div className="edition-heading"><span>LIVE</span> TODAY&apos;S EDITION</div>
           <dl>
             <div><dt>예상 읽기</dt><dd>{briefing.readMinutes}분</dd></div>
             <div><dt>주요 기사</dt><dd>{briefing.stories.length}건</dd></div>
@@ -137,7 +143,7 @@ export function BriefingApp() {
 
       <section className="news-section">
         <div className="section-heading">
-          <div><span className="section-label">TOP STORIES</span><h2>오늘 꼭 알아둘 이야기</h2></div>
+          <div><span className="section-label">TODAY&apos;S PICK</span><h2>오늘 꼭 알아둘 이야기</h2></div>
           <p>조회 수보다 일상에 미치는 영향을 먼저 봤습니다.</p>
         </div>
         <div className="story-list">
@@ -155,8 +161,8 @@ export function BriefingApp() {
 
       <section className="standards">
         <div>
-          <span className="section-label light">EDITORIAL STANDARD</span>
-          <h2>빠름보다<br />확인된 한 문장.</h2>
+          <span className="section-label light">TRUST IS THE VIBE</span>
+          <h2>힙하게 읽고,<br />정확하게 판단해요.</h2>
           <p>AI가 초안을 만들고, 품질 규칙을 통과한 이야기만 발행합니다.</p>
         </div>
         <ol>
