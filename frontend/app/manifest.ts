@@ -5,9 +5,9 @@ export const dynamic = "force-static";
 export default function manifest(): MetadataRoute.Manifest {
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
   return {
-    name: "아침결 — AI 모닝 브리핑",
+    name: "아침결 — AI 뉴스 요약 카드",
     short_name: "아침결",
-    description: "복수 출처와 검증 상태를 함께 보여주는 AI 모닝 브리핑",
+    description: "매일 아침 핵심 뉴스의 AI 3줄 요약과 출처를 카드 묶음으로 전달합니다.",
     start_url: ".",
     display: "standalone",
     background_color: "#f7f7f5",

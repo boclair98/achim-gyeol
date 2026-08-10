@@ -4,23 +4,26 @@ import { PwaRegister } from "@/components/PwaRegister";
 
 import "./globals.css";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://boclair98.github.io/achim-gyeol-pages";
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://achim-gyeol-ai.coders.kr"),
-  title: "아침결 — 놓친 하루를 5분 안에",
-  description: "복수 출처와 검증 상태를 함께 보여주는 책임 있는 AI 모닝 브리핑.",
-  manifest: `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/manifest.webmanifest`,
+  metadataBase: new URL(siteUrl),
+  title: "아침결 — 매일 아침 도착하는 AI 뉴스 요약 카드",
+  description: "핵심 뉴스의 AI 3줄 요약, 중요성, 출처와 검증 상태를 카드 묶음으로 전달하는 모닝 브리핑.",
+  manifest: `${basePath}/manifest.webmanifest`,
   applicationName: "아침결",
   appleWebApp: { capable: true, title: "아침결", statusBarStyle: "default" },
   openGraph: {
-    title: "아침결 — 어제의 이슈, 오늘 감각으로",
-    description: "복수 출처로 확인한 핵심 뉴스만 5분 안에.",
-    images: ["/hero-mz.png"],
+    title: "아침결 — 뉴스 요약 카드가 매일 아침 도착해요",
+    description: "뉴스별 AI 3줄 요약과 출처를 넘겨 보는 카드 묶음으로 받아보세요.",
+    images: [`${basePath}/briefing-card-bg.png`],
   },
   twitter: {
     card: "summary_large_image",
-    title: "아침결 — 어제의 이슈, 오늘 감각으로",
-    description: "복수 출처로 확인한 핵심 뉴스만 5분 안에.",
-    images: ["/hero-mz.png"],
+    title: "아침결 — 뉴스 요약 카드가 매일 아침 도착해요",
+    description: "뉴스별 AI 3줄 요약과 출처를 넘겨 보는 카드 묶음으로 받아보세요.",
+    images: [`${basePath}/briefing-card-bg.png`],
   },
 };
 

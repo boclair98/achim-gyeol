@@ -1,30 +1,28 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import {
-  Bell,
   BookOpen,
   CheckCircle2,
   Clock3,
   ExternalLink,
   RefreshCw,
-  Share2,
-  Volume2,
+  Send,
 } from "lucide-react";
+import { DeliveryDeck } from "@/components/DeliveryDeck";
 import { demoBriefing, type Briefing, type Story } from "@/lib/briefing";
 
 const categories = ["전체", "정책", "경제", "사회", "테크"];
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
-const assetBase = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 export function BriefingApp() {
   const [briefing, setBriefing] = useState<Briefing>(demoBriefing);
   const [category, setCategory] = useState("전체");
-  const [loading, setLoading] = useState(true);
-  const [notice, setNotice] = useState("API 연결 전이라 데모 브리핑을 보여드리고 있어요.");
+  const [loading, setLoading] = useState(Boolean(apiBase));
+  const [notice, setNotice] = useState("API 연결 전이라 데모 뉴스로 실제 전송 카드를 만들고 있어요.");
 
   useEffect(() => {
+    if (!apiBase) return;
     const controller = new AbortController();
     fetch(`${apiBase}/api/briefings/today`, { signal: controller.signal })
       .then((response) => {
@@ -35,138 +33,75 @@ export function BriefingApp() {
         setBriefing(data);
         setNotice("");
       })
-      .catch(() => setNotice("API 연결 전이라 데모 브리핑을 보여드리고 있어요."))
+      .catch(() => setNotice("API 연결 전이라 데모 뉴스로 실제 전송 카드를 만들고 있어요."))
       .finally(() => setLoading(false));
     return () => controller.abort();
   }, []);
 
   const stories = useMemo(
-    () =>
-      category === "전체"
-        ? briefing.stories
-        : briefing.stories.filter((story) => story.category === category),
+    () => category === "전체" ? briefing.stories : briefing.stories.filter((story) => story.category === category),
     [briefing, category],
   );
-
-  const enableNotifications = async () => {
-    if (!("Notification" in window)) {
-      setNotice("이 브라우저는 알림을 지원하지 않아요.");
-      return;
-    }
-    const permission = await Notification.requestPermission();
-    setNotice(
-      permission === "granted"
-        ? "매일 아침 브리핑 알림을 받을 준비가 됐어요."
-        : "브라우저 설정에서 알림을 허용할 수 있어요.",
-    );
-  };
-
-  const shareBriefing = async () => {
-    const payload = {
-      title: "아침결 모닝 브리핑",
-      text: briefing.lead,
-      url: window.location.href,
-    };
-    if (navigator.share) await navigator.share(payload);
-    else {
-      await navigator.clipboard.writeText(window.location.href);
-      setNotice("브리핑 주소를 복사했어요.");
-    }
-  };
 
   return (
     <main className="page-shell">
       <header className="masthead">
         <div className="masthead-utility">
           <span><i aria-hidden="true" /> AI-CURATED DAILY NEWS</span>
-          <span>{briefing.dateLabel} · MORNING DROP 07:00</span>
+          <span>{briefing.dateLabel} · DELIVERY READY</span>
         </div>
         <div className="masthead-main">
-          <div className="brand"><span aria-hidden="true" />아침결</div>
-          <p>어제의 핵심을 오늘의 감각으로</p>
-          <div className="header-actions">
-            <button className="icon-button" aria-label="브리핑 공유" onClick={shareBriefing}>
-              <Share2 size={17} />
-            </button>
-            <button className="primary-button" onClick={enableNotifications}>
-              <Bell size={16} /><span>아침 알림 받기</span>
-            </button>
-          </div>
+          <a className="brand" href="#top" aria-label="아침결 홈"><span aria-hidden="true" />아침결</a>
+          <p>웹보다 먼저, 매일 아침 카드로</p>
+          <a className="primary-button header-cta" href="#delivery-deck"><Send size={16} /> 전송 카드 보기</a>
         </div>
-        <nav className="news-nav" aria-label="뉴스 분야">
-          {categories.map((item) => (
-            <button
-              key={item}
-              className={category === item ? "active" : ""}
-              onClick={() => setCategory(item)}
-            >
-              {item}
-            </button>
-          ))}
-        </nav>
       </header>
 
-      <section className="lead-section">
-        <div className="lead-art" aria-hidden="true">
-          <Image src={`${assetBase}/hero-mz.png`} alt="" fill priority sizes="(max-width: 760px) 100vw, 1160px" />
-          <div className="lead-art-shade" />
-        </div>
-        <div className="lead-copy">
-          <span className="hero-badge"><i aria-hidden="true" /> 5-MIN NEWS DROP</span>
-          <h1>어제의 이슈,<br />오늘 감각으로.</h1>
-          <p>{briefing.lead}</p>
-          <div className="lead-actions">
-            <button className="primary-button" onClick={() => setNotice("음성 브리핑은 API 연결 단계에서 추가할 수 있어요.")}>
-              <Volume2 size={16} /> 3분 브리핑 듣기
-            </button>
-            <button className="text-button" onClick={shareBriefing}>오늘 브리핑 공유 <Share2 size={14} /></button>
+      <section className="service-intro" id="top">
+        <div className="intro-copy">
+          <span className="hero-badge"><i aria-hidden="true" /> NEWS DELIVERY SERVICE</span>
+          <h1>뉴스를 찾지 않아도,<br /><em>요약 카드가 도착해요.</em></h1>
+          <p>웹은 구독 설정과 보관함입니다. 실제 사용자는 매일 아침, 핵심 뉴스가 모두 정리된 카드 묶음을 받아봅니다.</p>
+          <div className="intro-points">
+            <span><CheckCircle2 size={15} /> 뉴스별 AI 3줄 요약</span>
+            <span><BookOpen size={15} /> 출처·검증 상태 포함</span>
+            <span><Clock3 size={15} /> 원하는 시간에 전달</span>
           </div>
         </div>
-        <aside className="edition-panel" aria-label="브리핑 정보">
-          <div className="edition-heading"><span>LIVE</span> TODAY&apos;S EDITION</div>
-          <dl>
-            <div><dt>예상 읽기</dt><dd>{briefing.readMinutes}분</dd></div>
-            <div><dt>주요 기사</dt><dd>{briefing.stories.length}건</dd></div>
-            <div><dt>교차 검증</dt><dd>{briefing.verifiedCount}건</dd></div>
-            <div><dt>마지막 확인</dt><dd>{briefing.lastVerifiedAt}</dd></div>
-          </dl>
-          <p><CheckCircle2 size={15} /> 출처와 검증 상태를 함께 공개합니다.</p>
+        <aside className="delivery-map" aria-label="서비스 흐름">
+          <span className="map-label">HOW IT ARRIVES</span>
+          <ol>
+            <li><strong>01</strong><div><b>밤사이 뉴스 수집</b><span>외부 뉴스 API 연결 예정</span></div></li>
+            <li><strong>02</strong><div><b>AI 요약·교차 확인</b><span>제목, 3줄 요약, 중요성, 출처</span></div></li>
+            <li className="active"><strong>03</strong><div><b>카드 묶음 자동 생성</b><span>1080×1350 전송 이미지</span></div></li>
+            <li><strong>04</strong><div><b>아침 알림과 함께 전달</b><span>PWA·카카오·메신저 API 연결 예정</span></div></li>
+          </ol>
         </aside>
       </section>
 
-      <div className="trust-strip" aria-label="편집 원칙">
-        <span><CheckCircle2 size={14} /> 복수 출처 우선</span>
-        <span><BookOpen size={14} /> 원문 바로가기</span>
-        <span><Clock3 size={14} /> 수정 시각 공개</span>
-        <span><RefreshCw size={14} /> 오류 신고 반영</span>
-      </div>
+      <DeliveryDeck briefing={briefing} onNotice={setNotice} />
 
-      <section className="news-section">
+      <section className="archive-section" id="archive">
         <div className="section-heading">
-          <div><span className="section-label">TODAY&apos;S PICK</span><h2>오늘 꼭 알아둘 이야기</h2></div>
-          <p>조회 수보다 일상에 미치는 영향을 먼저 봤습니다.</p>
+          <div><span className="section-label">WEB ARCHIVE</span><h2>웹에서는 자세히 확인해요.</h2></div>
+          <p>전달 카드에서 더 알아보고 싶은 뉴스만 원문과 함께 펼쳐봅니다.</p>
         </div>
+        <nav className="archive-nav" aria-label="뉴스 분야">
+          {categories.map((item) => <button key={item} className={category === item ? "active" : ""} onClick={() => setCategory(item)}>{item}</button>)}
+        </nav>
         <div className="story-list">
-          {loading ? (
-            <LoadingRows />
-          ) : stories.length ? (
-            stories.map((story, index) => (
-              <StoryRow key={story.id} story={story} index={index + 1} onNotice={setNotice} />
-            ))
-          ) : (
-            <div className="empty">오늘 이 분야에 선정된 브리핑은 없습니다.</div>
-          )}
+          {loading ? <LoadingRows /> : stories.length ? stories.map((story, index) => <StoryRow key={story.id} story={story} index={index + 1} onNotice={setNotice} />) : <div className="empty">오늘 이 분야에 선정된 브리핑은 없습니다.</div>}
         </div>
       </section>
 
       <section className="standards">
         <div>
-          <span className="section-label light">TRUST IS THE VIBE</span>
-          <h2>힙하게 읽고,<br />정확하게 판단해요.</h2>
-          <p>AI가 초안을 만들고, 품질 규칙을 통과한 이야기만 발행합니다.</p>
+          <span className="section-label light">QUALITY BEFORE SPEED</span>
+          <h2>짧게 보내도,<br />근거는 빼지 않아요.</h2>
+          <p>카드 한 장마다 사용자가 사실 여부와 출처를 직접 확인할 수 있게 설계했습니다.</p>
         </div>
         <ol>
-          <li><strong>01</strong><span>독립된 출처 두 곳 이상을 기본으로 확인합니다.</span></li>
+          <li><strong>01</strong><span>독립된 출처 두 곳 이상을 우선 확인합니다.</span></li>
           <li><strong>02</strong><span>사실, 주장, 전망을 같은 문장에 섞지 않습니다.</span></li>
           <li><strong>03</strong><span>숫자·날짜·인명은 별도 검증 상태를 기록합니다.</span></li>
           <li><strong>04</strong><span>오류는 숨기지 않고 수정 시각과 이유를 남깁니다.</span></li>
@@ -175,14 +110,10 @@ export function BriefingApp() {
 
       <footer className="footer">
         <span>아침결은 공개 자료를 AI로 정리합니다. 중요한 판단 전에는 원문을 확인하세요.</span>
-        <span>coders.kr 배포 호환 · PWA</span>
+        <span>카드 생성·PWA 준비 완료 · 외부 API 연결 대기</span>
       </footer>
 
-      {notice && (
-        <div className="notice" role="status">
-          <span>{notice}</span><button onClick={() => setNotice("")}>확인</button>
-        </div>
-      )}
+      {notice && <div className="notice" role="status"><span>{notice}</span><button onClick={() => setNotice("")}>확인</button></div>}
     </main>
   );
 }
@@ -193,24 +124,15 @@ function StoryRow({ story, index, onNotice }: { story: Story; index: number; onN
     <article className="story-row">
       <div className="story-index">{String(index).padStart(2, "0")}</div>
       <div className="story-body">
-        <div className="story-kicker">
-          <span className="category">{story.category}</span>
-          <span className={verified ? "verified" : "verified developing"}>
-            <CheckCircle2 size={13} />{verified ? "교차 확인" : "추가 보도 확인 중"}
-          </span>
-        </div>
+        <div className="story-kicker"><span className="category">{story.category}</span><span className={verified ? "verified" : "verified developing"}><CheckCircle2 size={13} />{verified ? "교차 확인" : "추가 보도 확인 중"}</span></div>
         <h3>{story.title}</h3>
         <p className="summary">{story.summary}</p>
         <div className="why"><strong>왜 중요한가</strong><span>{story.whyItMatters}</span></div>
         <div className="source-row">
           <span>출처 {story.sources.map((source) => source.publisher).join(" · ")}</span>
           <div className="story-actions">
-            <button aria-label="오류 신고" onClick={() => onNotice("오류 신고를 기록했어요. 확인 후 수정 이력에 반영할게요.")}>
-              <RefreshCw size={15} />
-            </button>
-            <a aria-label="첫 번째 원문 열기" href={story.sources[0]?.url ?? "#"} target="_blank" rel="noreferrer">
-              원문 <ExternalLink size={14} />
-            </a>
+            <button aria-label="오류 신고" onClick={() => onNotice("오류 신고를 기록했어요. API 연결 후 검수 대기열로 전송됩니다.")}><RefreshCw size={15} /></button>
+            <a aria-label="첫 번째 원문 열기" href={story.sources[0]?.url ?? "#"} target="_blank" rel="noreferrer">원문 <ExternalLink size={14} /></a>
           </div>
         </div>
       </div>
