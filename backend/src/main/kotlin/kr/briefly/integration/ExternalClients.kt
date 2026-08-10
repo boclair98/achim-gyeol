@@ -24,10 +24,14 @@ class NaverNewsClient(
     override fun search(query: String, display: Int): List<CollectedArticle> {
         val root = client.get().uri { it.path("/v1/search/news.json").queryParam("query", query).queryParam("display", display.coerceIn(1, 100)).queryParam("sort", "date").build() }
             .header("X-Naver-Client-Id", clientId).header("X-Naver-Client-Secret", clientSecret).retrieve().body(JsonNode::class.java) ?: return emptyList()
-        return root.path("items").map { item ->
+        val articles = mutableListOf<CollectedArticle>()
+        val items = root.path("items").iterator()
+        while (items.hasNext()) {
+            val item = items.next()
             val originalUrl = item.path("originallink").asText()
-            CollectedArticle(item.path("title").asText().replace(Regex("<[^>]+>"), ""), item.path("description").asText().replace(Regex("<[^>]+>"), ""), originalUrl, java.time.ZonedDateTime.parse(item.path("pubDate").asText(), java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME).toOffsetDateTime(), runCatching { URI(originalUrl).host.removePrefix("www.") }.getOrDefault("원문 언론사"))
+            articles += CollectedArticle(item.path("title").asText().replace(Regex("<[^>]+>"), ""), item.path("description").asText().replace(Regex("<[^>]+>"), ""), originalUrl, java.time.ZonedDateTime.parse(item.path("pubDate").asText(), java.time.format.DateTimeFormatter.RFC_1123_DATE_TIME).toOffsetDateTime(), runCatching { URI(originalUrl).host.removePrefix("www.") }.getOrDefault("원문 언론사"))
         }
+        return articles
     }
 }
 
