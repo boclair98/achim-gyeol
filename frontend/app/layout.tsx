@@ -5,7 +5,7 @@ import { PwaRegister } from "@/components/PwaRegister";
 import "./globals.css";
 import "./enterprise.css";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://boclair98.github.io/achim-gyeol-pages";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://boclair98.github.io/Moring_news";
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const socialImageUrl = new URL("og-v2.png", `${siteUrl.replace(/\/$/, "")}/`).toString();
 
