@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="아침결 뉴스 아이콘">
+  <rect width="512" height="512" fill="#f7f7f5"/>
+  <rect x="58" y="58" width="32" height="396" fill="#c61f2b"/>
+  <rect x="126" y="78" width="328" height="42" fill="#142333"/>
+  <rect x="126" y="154" width="250" height="24" fill="#142333"/>
+  <rect x="126" y="212" width="328" height="16" fill="#8b949d"/>
+  <rect x="126" y="254" width="328" height="16" fill="#8b949d"/>
+  <rect x="126" y="296" width="284" height="16" fill="#8b949d"/>
+  <rect x="126" y="366" width="118" height="70" fill="#142333"/>
+  <rect x="270" y="366" width="184" height="16" fill="#8b949d"/>
+  <rect x="270" y="404" width="156" height="16" fill="#8b949d"/>
+</svg>

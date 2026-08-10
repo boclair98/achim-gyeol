@@ -1,0 +1,24 @@
+version: "1"
+mode: native
+
+services:
+  web:
+    dockerfile: frontend/Dockerfile
+    context: frontend
+    port: 80
+    expose: public
+    env:
+      BACKEND_URL: ${api.internal_url}
+
+  api:
+    dockerfile: backend/Dockerfile
+    context: backend
+    port: 8080
+    env:
+      DATABASE_URL: jdbc:postgresql://${db.host}:${db.port}/${db.name}
+      DATABASE_USER: ${db.user}
+      DATABASE_PASSWORD: ${db.password}
+
+  db:
+    type: postgres
+    size: 1Gi

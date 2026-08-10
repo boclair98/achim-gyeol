@@ -1,0 +1,14 @@
+node_modules
+.next
+out
+target
+data
+.coders/
+frontend-dev.*.log
+__pycache__
+*.pyc
+.venv
+.env
+.env.*
+!.env.example
+.DS_Store
