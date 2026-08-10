@@ -1,15 +1,16 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   BookOpen,
   CheckCircle2,
   Clock3,
   ExternalLink,
   RefreshCw,
-  Send,
 } from "lucide-react";
 import { DeliveryDeck } from "@/components/DeliveryDeck";
+import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 import { demoBriefing, type Briefing, type Story } from "@/lib/briefing";
 
 const categories = ["전체", "정책", "경제", "사회", "테크"];
@@ -45,21 +46,11 @@ export function BriefingApp() {
 
   return (
     <main className="page-shell">
-      <header className="masthead">
-        <div className="masthead-utility">
-          <span><i aria-hidden="true" /> AI-CURATED DAILY NEWS</span>
-          <span>{briefing.dateLabel} · DELIVERY READY</span>
-        </div>
-        <div className="masthead-main">
-          <a className="brand" href="#top" aria-label="아침결 홈"><span aria-hidden="true" />아침결</a>
-          <p>웹보다 먼저, 매일 아침 카드로</p>
-          <a className="primary-button header-cta" href="#delivery-deck"><Send size={16} /> 전송 카드 보기</a>
-        </div>
-      </header>
+      <SiteHeader context={`${briefing.dateLabel} · DELIVERY READY`} />
 
       <section className="service-intro" id="top">
         <div className="intro-copy">
-          <span className="hero-badge"><i aria-hidden="true" /> NEWS DELIVERY SERVICE</span>
+          <span className="hero-badge"><i aria-hidden="true" /> WHITE-LABEL NEWS DELIVERY</span>
           <h1>뉴스를 찾지 않아도,<br /><em>요약 카드가 도착해요.</em></h1>
           <p>웹은 구독 설정과 보관함입니다. 실제 사용자는 매일 아침, 핵심 뉴스가 모두 정리된 카드 묶음을 받아봅니다.</p>
           <div className="intro-points">
@@ -67,6 +58,7 @@ export function BriefingApp() {
             <span><BookOpen size={15} /> 출처·검증 상태 포함</span>
             <span><Clock3 size={15} /> 원하는 시간에 전달</span>
           </div>
+          <div className="intro-ctas"><a className="primary-button" href="#delivery-deck">독자 카드 확인</a><Link href="/studio">편집 스튜디오 체험 →</Link></div>
         </div>
         <aside className="delivery-map" aria-label="서비스 흐름">
           <span className="map-label">HOW IT ARRIVES</span>
@@ -78,6 +70,8 @@ export function BriefingApp() {
           </ol>
         </aside>
       </section>
+
+      <div className="commercial-proof" aria-label="상용 운영 기능"><span><strong>01</strong> 사람의 발행 승인</span><span><strong>02</strong> 고객사 화이트라벨</span><span><strong>03</strong> 공개 정정 이력</span><span><strong>04</strong> 다중 채널 발송 준비</span></div>
 
       <DeliveryDeck briefing={briefing} onNotice={setNotice} />
 
@@ -108,10 +102,7 @@ export function BriefingApp() {
         </ol>
       </section>
 
-      <footer className="footer">
-        <span>아침결은 공개 자료를 AI로 정리합니다. 중요한 판단 전에는 원문을 확인하세요.</span>
-        <span>카드 생성·PWA 준비 완료 · 외부 API 연결 대기</span>
-      </footer>
+      <SiteFooter />
 
       {notice && <div className="notice" role="status"><span>{notice}</span><button onClick={() => setNotice("")}>확인</button></div>}
     </main>

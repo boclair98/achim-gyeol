@@ -1,11 +1,12 @@
 import type { Briefing } from "@/lib/briefing";
+import { defaultBrand, type BriefingBrand } from "@/lib/product";
 
-export function createBriefingEml(briefing: Briefing, serviceUrl: string) {
-  const subject = `[아침결] ${briefing.stories.length}개 핵심 뉴스가 카드로 도착했어요`;
-  const html = createEmailHtml(briefing, serviceUrl);
+export function createBriefingEml(briefing: Briefing, serviceUrl: string, brand: BriefingBrand = defaultBrand) {
+  const subject = `[${brand.name}] ${briefing.stories.length}개 핵심 뉴스가 카드로 도착했어요`;
+  const html = createEmailHtml(briefing, serviceUrl, brand);
   const encodedSubject = toBase64(subject);
   return [
-    "From: =?UTF-8?B?7JWE7Lmo6rKw?= <no-reply@achim-gyeol.example>",
+    `From: =?UTF-8?B?${toBase64(brand.name)}?= <no-reply@achim-gyeol.example>`,
     "To: ",
     `Subject: =?UTF-8?B?${encodedSubject}?=`,
     "MIME-Version: 1.0",
@@ -16,7 +17,7 @@ export function createBriefingEml(briefing: Briefing, serviceUrl: string) {
   ].join("\r\n");
 }
 
-export function createEmailHtml(briefing: Briefing, serviceUrl: string) {
+export function createEmailHtml(briefing: Briefing, serviceUrl: string, brand: BriefingBrand = defaultBrand) {
   const storyCards = briefing.stories.map((story, index) => {
     const verified = story.verificationStatus === "VERIFIED";
     const sources = story.sources.map((source) => `<a href="${escapeHtml(source.url)}" style="color:#1558e9;text-decoration:none;font-weight:700">${escapeHtml(source.publisher)}</a>`).join(" · ");
@@ -46,15 +47,15 @@ export function createEmailHtml(briefing: Briefing, serviceUrl: string) {
         <tr><td style="padding:0 18px 12px;color:#68707a;font-size:10px;font-weight:800;letter-spacing:1px">AI-CURATED DAILY NEWS · ${escapeHtml(briefing.dateLabel)}</td></tr>
         <tr><td style="padding:0 18px 18px">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:2px solid #101722;border-radius:26px;background:#101d32;box-shadow:7px 7px 0 #1558e9">
-            <tr><td style="padding:34px 32px 12px"><span style="display:inline-block;border-radius:999px;background:#d8ff3e;color:#101722;padding:8px 12px;font-size:10px;font-weight:900;letter-spacing:1px">AI MORNING BRIEF</span></td></tr>
+            <tr><td style="padding:34px 32px 12px"><span style="display:inline-block;border-radius:999px;background:${escapeHtml(brand.accent)};color:#101722;padding:8px 12px;font-size:10px;font-weight:900;letter-spacing:1px">${escapeHtml(brand.descriptor)}</span></td></tr>
             <tr><td style="padding:4px 32px;color:#fff;font-size:34px;line-height:1.25;font-weight:900">뉴스를 찾지 않아도,<br><span style="color:#d8ff3e">요약 카드가 도착해요.</span></td></tr>
             <tr><td style="padding:18px 32px 12px;color:#c7cfda;font-size:14px;line-height:1.8">${escapeHtml(briefing.lead)}</td></tr>
-            <tr><td style="padding:14px 32px 32px;color:#fff;font-size:12px"><b style="color:#d8ff3e">${briefing.stories.length}개 핵심 뉴스</b> · 교차 확인 ${briefing.verifiedCount}건 · 약 ${briefing.readMinutes}분</td></tr>
+            <tr><td style="padding:14px 32px 32px;color:#fff;font-size:12px"><b style="color:${escapeHtml(brand.accent)}">${briefing.stories.length}개 핵심 뉴스</b> · 교차 확인 ${briefing.verifiedCount}건 · 약 ${briefing.readMinutes}분</td></tr>
           </table>
         </td></tr>
         ${storyCards}
         <tr><td align="center" style="padding:22px 18px 8px"><a href="${escapeHtml(serviceUrl)}" style="display:inline-block;border:2px solid #101722;border-radius:13px;background:#d8ff3e;color:#101722;padding:14px 22px;text-decoration:none;font-size:13px;font-weight:900">웹 보관함에서 원문 확인</a></td></tr>
-        <tr><td align="center" style="padding:16px 24px;color:#7b838c;font-size:10px;line-height:1.7">아침결은 공개 자료를 AI로 정리합니다.<br>중요한 판단 전에는 반드시 원문을 확인하세요.</td></tr>
+        <tr><td align="center" style="padding:16px 24px;color:#7b838c;font-size:10px;line-height:1.7">${escapeHtml(brand.name)} · ${escapeHtml(brand.editorName)}<br>AI 초안이 포함되어 있으며 중요한 판단 전에는 반드시 원문을 확인하세요.</td></tr>
       </table>
     </td></tr></table>
   </body></html>`;

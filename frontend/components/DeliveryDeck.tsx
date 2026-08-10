@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import {
   BellRing,
   ChevronLeft,
@@ -14,6 +14,7 @@ import {
 import type { Briefing } from "@/lib/briefing";
 import { buildBriefingCards, renderBriefingCard, type BriefingCard } from "@/lib/briefing-card";
 import { createBriefingEml } from "@/lib/email-template";
+import { defaultBrand, type BriefingBrand } from "@/lib/product";
 
 const assetBase = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const weekdays = ["월", "화", "수", "목", "금", "토", "일"];
@@ -24,7 +25,8 @@ type Props = {
 };
 
 export function DeliveryDeck({ briefing, onNotice }: Props) {
-  const cards = useMemo(() => buildBriefingCards(briefing), [briefing]);
+  const [brand, setBrand] = useState<BriefingBrand>(defaultBrand);
+  const cards = useMemo(() => buildBriefingCards(briefing, brand), [briefing, brand]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [deliveryTime, setDeliveryTime] = useState("07:00");
   const [selectedDays, setSelectedDays] = useState([0, 1, 2, 3, 4]);
@@ -33,12 +35,13 @@ export function DeliveryDeck({ briefing, onNotice }: Props) {
 
   useEffect(() => {
     const stored = window.localStorage.getItem("achim-gyeol-delivery");
-    if (!stored) return;
+    const storedBrand = window.localStorage.getItem("achim-gyeol-brand");
     try {
-      const setting = JSON.parse(stored) as { time?: string; days?: number[] };
+      const setting = stored ? JSON.parse(stored) as { time?: string; days?: number[] } : {};
       const timer = window.setTimeout(() => {
         if (setting.time) setDeliveryTime(setting.time);
         if (setting.days) setSelectedDays(setting.days);
+        if (storedBrand) setBrand(JSON.parse(storedBrand));
       }, 0);
       return () => window.clearTimeout(timer);
     } catch {
@@ -72,7 +75,7 @@ export function DeliveryDeck({ briefing, onNotice }: Props) {
       const blob = await renderBriefingCard(currentCard, assetBase);
       const file = new File([blob], cardFileName(currentCard, currentIndex), { type: "image/png" });
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: "아침결 모닝 브리핑", text: "오늘 꼭 알아둘 뉴스 요약이에요.", files: [file] });
+        await navigator.share({ title: `${brand.name} 모닝 브리핑`, text: "오늘 꼭 알아둘 뉴스 요약이에요.", files: [file] });
       } else {
         downloadBlob(blob, file.name);
         onNotice("이 브라우저는 이미지 직접 공유를 지원하지 않아 파일로 저장했어요.");
@@ -92,7 +95,7 @@ export function DeliveryDeck({ briefing, onNotice }: Props) {
         return new File([blob], cardFileName(card, index), { type: "image/png" });
       }));
       if (navigator.canShare?.({ files })) {
-        await navigator.share({ title: "아침결 오늘의 뉴스 카드", text: `${briefing.stories.length}개 핵심 뉴스를 카드로 정리했어요.`, files });
+        await navigator.share({ title: `${brand.name} 오늘의 뉴스 카드`, text: `${briefing.stories.length}개 핵심 뉴스를 카드로 정리했어요.`, files });
       } else {
         files.forEach((file, index) => window.setTimeout(() => downloadBlob(file, file.name), index * 180));
         onNotice(`카드 ${files.length}장을 모두 PNG로 저장했어요.`);
@@ -121,13 +124,13 @@ export function DeliveryDeck({ briefing, onNotice }: Props) {
       image: `${assetBase}/briefing-card-bg.png`,
       data: { url: `${window.location.pathname}#delivery-deck` },
     };
-    await registration.showNotification("아침결 · 오늘의 뉴스 카드가 도착했어요", options);
+    await registration.showNotification(`${brand.name} · 오늘의 뉴스 카드가 도착했어요`, options);
     onNotice("실제 사용자에게 보일 도착 알림을 보냈어요. 알림을 눌러 카드 덱으로 이동할 수 있어요.");
   };
 
   const downloadEmailPreview = () => {
-    const eml = createBriefingEml(briefing, window.location.href);
-    downloadBlob(new Blob([eml], { type: "message/rfc822;charset=utf-8" }), "아침결-테스트-브리핑.eml");
+    const eml = createBriefingEml(briefing, window.location.href, brand);
+    downloadBlob(new Blob([eml], { type: "message/rfc822;charset=utf-8" }), `${brand.name}-테스트-브리핑.eml`);
     onNotice("실제 수신 형태의 테스트 메일 파일을 저장했어요. 메일 앱에서 열어 확인할 수 있어요.");
   };
 
@@ -192,9 +195,9 @@ export function DeliveryDeck({ briefing, onNotice }: Props) {
 function CardPreview({ card }: { card: BriefingCard }) {
   if (card.kind === "cover") {
     return (
-      <article className="delivery-card cover-card" style={{ backgroundImage: `linear-gradient(180deg, rgba(6,20,44,.12), rgba(6,20,44,.95)), url(${assetBase}/briefing-card-bg.png)` }}>
-        <span className="delivery-badge">AI MORNING BRIEF</span>
-        <div className="cover-brand">아침결</div>
+      <article className="delivery-card cover-card" style={{ "--tenant-accent": card.brand.accent, backgroundImage: `linear-gradient(180deg, rgba(6,20,44,.12), rgba(6,20,44,.95)), url(${assetBase}/briefing-card-bg.png)` } as CSSProperties}>
+        <span className="delivery-badge">{card.brand.descriptor}</span>
+        <div className="cover-brand">{card.brand.name}</div>
         <div className="cover-copy"><h3>어제의 소음은 빼고,<br />오늘 필요한 뉴스만.</h3><p>{card.briefing.lead}</p></div>
         <div className="cover-stats"><strong>{card.briefing.stories.length}개 핵심 뉴스</strong><span>교차 확인 {card.briefing.verifiedCount}건 · 약 {card.briefing.readMinutes}분</span></div>
       </article>
@@ -203,16 +206,16 @@ function CardPreview({ card }: { card: BriefingCard }) {
   if (card.kind === "closing") {
     return (
       <article className="delivery-card closing-card">
-        <span>TODAY IN ONE PAGE</span><h3>오늘의 흐름,<br />이렇게 기억하세요.</h3>
+        <span style={{ color: card.brand.accent }}>TODAY IN ONE PAGE</span><h3>오늘의 흐름,<br />이렇게 기억하세요.</h3>
         <ol>{card.briefing.stories.map((story, index) => <li key={story.id}><strong>{String(index + 1).padStart(2, "0")}</strong><span>{story.title}</span></li>)}</ol>
-        <footer><strong>아침결</strong><span>출처를 확인하고 · 사실과 전망을 나눕니다</span></footer>
+        <footer><strong>{card.brand.name}</strong><span>출처를 확인하고 · 사실과 전망을 나눕니다</span></footer>
       </article>
     );
   }
   const verified = card.story.verificationStatus === "VERIFIED";
   return (
-    <article className={`delivery-card summary-card accent-${card.index % 4}`}>
-      <header><strong>아침결 · AI NEWS SUMMARY</strong><span>{String(card.index).padStart(2, "0")} / {String(card.briefing.stories.length).padStart(2, "0")}</span></header>
+    <article className="delivery-card summary-card" style={{ "--card-accent": card.brand.accent } as CSSProperties}>
+      <header><strong>{card.brand.name} · AI NEWS SUMMARY</strong><span>{String(card.index).padStart(2, "0")} / {String(card.briefing.stories.length).padStart(2, "0")}</span></header>
       <div className="summary-kicker"><span>{card.story.category}</span><em>{verified ? "● 교차 검증 완료" : "● 추가 보도 확인 중"}</em></div>
       <h3>{card.story.title}</h3>
       <div className="ai-summary"><strong>AI 3줄 요약</strong><p>{card.story.summary}</p></div>
@@ -224,7 +227,7 @@ function CardPreview({ card }: { card: BriefingCard }) {
 
 function cardFileName(card: BriefingCard, index: number) {
   const suffix = card.kind === "story" ? card.story.category : card.kind === "cover" ? "표지" : "오늘의-정리";
-  return `아침결-${String(index + 1).padStart(2, "0")}-${suffix}.png`;
+  return `${card.brand.name}-${String(index + 1).padStart(2, "0")}-${suffix}.png`;
 }
 
 function downloadBlob(blob: Blob, fileName: string) {

@@ -1,24 +1,26 @@
 import type { Briefing, Story } from "@/lib/briefing";
+import { defaultBrand, type BriefingBrand } from "@/lib/product";
 
 export const CARD_WIDTH = 1080;
 export const CARD_HEIGHT = 1350;
 
 export type BriefingCard =
-  | { id: string; kind: "cover"; briefing: Briefing }
-  | { id: string; kind: "story"; briefing: Briefing; story: Story; index: number }
-  | { id: string; kind: "closing"; briefing: Briefing };
+  | { id: string; kind: "cover"; briefing: Briefing; brand: BriefingBrand }
+  | { id: string; kind: "story"; briefing: Briefing; story: Story; index: number; brand: BriefingBrand }
+  | { id: string; kind: "closing"; briefing: Briefing; brand: BriefingBrand };
 
-export function buildBriefingCards(briefing: Briefing): BriefingCard[] {
+export function buildBriefingCards(briefing: Briefing, brand: BriefingBrand = defaultBrand): BriefingCard[] {
   return [
-    { id: "cover", kind: "cover", briefing },
+    { id: "cover", kind: "cover", briefing, brand },
     ...briefing.stories.map((story, index) => ({
       id: `story-${story.id}`,
       kind: "story" as const,
       briefing,
       story,
       index: index + 1,
+      brand,
     })),
-    { id: "closing", kind: "closing", briefing },
+    { id: "closing", kind: "closing", briefing, brand },
   ];
 }
 
@@ -50,12 +52,12 @@ async function drawCover(ctx: CanvasRenderingContext2D, card: Extract<BriefingCa
   ctx.fillStyle = shade;
   ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
 
-  ctx.fillStyle = "#d8ff3e";
+  ctx.fillStyle = card.brand.accent;
   roundRect(ctx, 72, 72, 310, 64, 32);
   ctx.fill();
-  text(ctx, "AI MORNING BRIEF", 104, 89, 26, 900, "#101722");
+  text(ctx, card.brand.descriptor, 104, 89, 26, 900, "#101722");
 
-  text(ctx, "아침결", 72, 190, 48, 900, "#ffffff");
+  text(ctx, card.brand.name, 72, 190, 48, 900, "#ffffff");
   text(ctx, card.briefing.dateLabel, 72, 260, 28, 700, "rgba(255,255,255,.72)");
 
   const headlineY = 570;
@@ -69,18 +71,18 @@ async function drawCover(ctx: CanvasRenderingContext2D, card: Extract<BriefingCa
   ctx.moveTo(72, 1160);
   ctx.lineTo(1008, 1160);
   ctx.stroke();
-  text(ctx, `${card.briefing.stories.length}개 핵심 뉴스`, 72, 1202, 32, 900, "#d8ff3e");
+  text(ctx, `${card.briefing.stories.length}개 핵심 뉴스`, 72, 1202, 32, 900, card.brand.accent);
   text(ctx, `교차 확인 ${card.briefing.verifiedCount}건 · 약 ${card.briefing.readMinutes}분`, 545, 1205, 28, 700, "#ffffff");
 }
 
 function drawStory(ctx: CanvasRenderingContext2D, card: Extract<BriefingCard, { kind: "story" }>) {
-  const accent = ["#1558e9", "#ff625c", "#6d35e8", "#147a56"][card.index % 4];
+  const accent = card.brand.accent;
   ctx.fillStyle = "#f4f1e8";
   ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
   ctx.fillStyle = accent;
   ctx.fillRect(0, 0, CARD_WIDTH, 24);
 
-  text(ctx, "아침결  ·  AI NEWS SUMMARY", 68, 64, 25, 900, "#101722");
+  text(ctx, `${card.brand.name}  ·  AI NEWS SUMMARY`, 68, 64, 25, 900, "#101722");
   text(ctx, `${String(card.index).padStart(2, "0")} / ${String(card.briefing.stories.length).padStart(2, "0")}`, 850, 64, 25, 800, "#68707a");
 
   ctx.fillStyle = accent;
@@ -118,9 +120,9 @@ function drawStory(ctx: CanvasRenderingContext2D, card: Extract<BriefingCard, { 
 function drawClosing(ctx: CanvasRenderingContext2D, card: Extract<BriefingCard, { kind: "closing" }>) {
   ctx.fillStyle = "#101d32";
   ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
-  ctx.fillStyle = "#d8ff3e";
+  ctx.fillStyle = card.brand.accent;
   ctx.fillRect(0, 0, 28, CARD_HEIGHT);
-  text(ctx, "TODAY IN ONE PAGE", 76, 78, 28, 900, "#d8ff3e");
+  text(ctx, "TODAY IN ONE PAGE", 76, 78, 28, 900, card.brand.accent);
   text(ctx, "오늘의 흐름,", 76, 152, 72, 900, "#ffffff");
   text(ctx, "이렇게 기억하세요.", 76, 242, 72, 900, "#ffffff");
 
@@ -129,12 +131,12 @@ function drawClosing(ctx: CanvasRenderingContext2D, card: Extract<BriefingCard, 
     ctx.fillStyle = index % 2 === 0 ? "rgba(255,255,255,.09)" : "rgba(21,88,233,.28)";
     roundRect(ctx, 76, y, 928, 156, 28);
     ctx.fill();
-    text(ctx, String(index + 1).padStart(2, "0"), 108, y + 40, 35, 900, "#d8ff3e");
+    text(ctx, String(index + 1).padStart(2, "0"), 108, y + 40, 35, 900, card.brand.accent);
     drawParagraph(ctx, story.title, 190, y + 30, 760, 31, 43, 2, "#ffffff", 760);
     y += 176;
   });
 
-  text(ctx, "아침결", 76, 1178, 44, 900, "#ffffff");
+  text(ctx, card.brand.name, 76, 1178, 44, 900, "#ffffff");
   text(ctx, "출처를 확인하고 · 사실과 전망을 나누고 · 오류를 투명하게 고칩니다", 76, 1243, 24, 650, "rgba(255,255,255,.68)");
 }
 
