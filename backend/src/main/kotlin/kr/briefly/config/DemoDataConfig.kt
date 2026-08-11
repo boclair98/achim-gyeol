@@ -3,12 +3,14 @@ package kr.briefly.config
 import kr.briefly.domain.*
 import kr.briefly.repository.BriefingEditionRepository
 import org.springframework.boot.CommandLineRunner
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import java.time.LocalDate
 import java.time.OffsetDateTime
 
 @Configuration
+@ConditionalOnProperty(name = ["app.demo.enabled"], havingValue = "true", matchIfMissing = true)
 class DemoDataConfig {
     @Bean fun demoBriefing(repository: BriefingEditionRepository) = CommandLineRunner {
         if (repository.count() > 0) return@CommandLineRunner

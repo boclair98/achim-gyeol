@@ -15,6 +15,6 @@ class QualityGate {
             score >= 80 -> VerificationStatus.VERIFIED
             else -> VerificationStatus.DEVELOPING
         }
-        return QualityDecision(score.coerceIn(0, 100), status, independentSources >= 2 && !sourcesConflict)
+        return QualityDecision(score.coerceIn(0, 100), status, independentSources >= 2 && factsChecked && !sourcesConflict)
     }
 }
