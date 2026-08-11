@@ -57,3 +57,37 @@ jobs:
             --retry 3 --retry-all-errors --max-time 720 \
             -X POST "https://morningnews.coders.kr/api/admin/briefings/$OPERATION" \
             -H "X-Briefing-Admin-Token: $ADMIN_TOKEN"
+
+      - name: Wait for AI briefing generation
+        if: steps.operation.outputs.operation != 'dispatch'
+        shell: bash
+        env:
+          ADMIN_TOKEN: ${{ secrets.BRIEFING_ADMIN_TOKEN }}
+        run: |
+          for attempt in $(seq 1 72); do
+            status="$(curl --fail-with-body --silent --show-error \
+              --retry 3 --retry-all-errors --max-time 30 \
+              "https://morningnews.coders.kr/api/admin/briefings/status" \
+              -H "X-Briefing-Admin-Token: $ADMIN_TOKEN")"
+            ready="$(jq -r '.productionReady' <<< "$status")"
+            state="$(jq -r '.generationJob.state' <<< "$status")"
+            if [[ "$ready" == "true" ]]; then exit 0; fi
+            if [[ "$state" == "FAILED" ]]; then
+              jq -r '.generationJob.error' <<< "$status" >&2
+              exit 1
+            fi
+            sleep 10
+          done
+          echo "AI briefing generation did not finish within 12 minutes" >&2
+          exit 1
+
+      - name: Dispatch after recovered generation
+        if: steps.operation.outputs.operation == 'run'
+        shell: bash
+        env:
+          ADMIN_TOKEN: ${{ secrets.BRIEFING_ADMIN_TOKEN }}
+        run: |
+          curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-all-errors --max-time 90 \
+            -X POST "https://morningnews.coders.kr/api/admin/briefings/dispatch" \
+            -H "X-Briefing-Admin-Token: $ADMIN_TOKEN"
