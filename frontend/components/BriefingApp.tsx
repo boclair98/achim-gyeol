@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { DeliveryDeck } from "@/components/DeliveryDeck";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
+import { SubscriptionExperience, SubscriptionTrigger } from "@/components/SubscriptionExperience";
 import { demoBriefing, type Briefing, type Story } from "@/lib/briefing";
 
 const categories = ["전체", "정책", "경제", "사회", "테크"];
@@ -61,7 +62,7 @@ export function BriefingApp() {
           <h1>어제 뉴스를,<br /><em>매일 아침 한 번에.</em></h1>
           <p>하루 종일 뉴스를 따라가지 않아도 괜찮아요. 서로 다른 언론사의 보도를 확인하고, 꼭 알아야 할 흐름만 짧은 카드로 정리해 드립니다.</p>
           <div className="landing-hero-actions">
-            <a className="landing-primary" href="#delivery-deck"><BellRing size={18} /> 무료 알림 받기</a>
+            <SubscriptionTrigger className="landing-primary"><BellRing size={18} /> 무료 알림 받기</SubscriptionTrigger>
             <Link className="landing-text-link" href="/briefing">오늘의 카드 미리보기 <ArrowRight size={16} /></Link>
           </div>
           <div className="landing-promises">
@@ -111,7 +112,7 @@ export function BriefingApp() {
         </div>
       </section>
 
-      <DeliveryDeck briefing={briefing} onNotice={setNotice} />
+      <DeliveryDeck briefing={briefing} />
 
       <section className="archive-section" id="archive">
         <div className="landing-section-heading split-heading">
@@ -148,10 +149,11 @@ export function BriefingApp() {
 
       <section className="closing-cta">
         <div><span>내일부터 시작해요</span><h2>어제의 뉴스를<br />아침 한 번으로 끝내세요.</h2><p>30초면 설정이 끝납니다. 회원가입 없이 이 기기에 바로 등록하세요.</p></div>
-        <a className="landing-primary light" href="#delivery-deck"><BellRing size={18} /> 무료 알림 받기</a>
+        <SubscriptionTrigger className="landing-primary light"><BellRing size={18} /> 무료 알림 받기</SubscriptionTrigger>
       </section>
 
       <SiteFooter />
+      <SubscriptionExperience onNotice={setNotice} />
 
       {notice && <div className="notice" role="status"><span>{notice}</span><button onClick={() => setNotice("")}>확인</button></div>}
     </main>

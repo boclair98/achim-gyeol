@@ -1,45 +1,22 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { BellRing, ChevronLeft, ChevronRight, Images } from "lucide-react";
 import type { Briefing } from "@/lib/briefing";
 import { buildBriefingCards, type BriefingCard } from "@/lib/briefing-card";
 import { defaultBrand } from "@/lib/product";
-import { PushControls } from "@/components/PushControls";
+import { SubscriptionTrigger } from "@/components/SubscriptionExperience";
 
 const assetBase = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-const weekdays = ["월", "화", "수", "목", "금", "토", "일"];
-
 type Props = {
   briefing: Briefing;
-  onNotice: (message: string) => void;
 };
 
-export function DeliveryDeck({ briefing, onNotice }: Props) {
+export function DeliveryDeck({ briefing }: Props) {
   const cards = useMemo(() => buildBriefingCards(briefing, defaultBrand), [briefing]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [deliveryTime, setDeliveryTime] = useState("07:00");
-  const [selectedDays, setSelectedDays] = useState([0, 1, 2, 3, 4]);
   const currentCard = cards[currentIndex];
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem("achim-gyeol-delivery");
-    try {
-      const setting = stored ? JSON.parse(stored) as { time?: string; days?: number[] } : {};
-      const timer = window.setTimeout(() => {
-        if (setting.time) setDeliveryTime(setting.time);
-        if (setting.days) setSelectedDays(setting.days);
-      }, 0);
-      return () => window.clearTimeout(timer);
-    } catch {
-      window.localStorage.removeItem("achim-gyeol-delivery");
-    }
-  }, []);
-
-  const toggleDay = (index: number) => {
-    setSelectedDays((days) => days.includes(index) ? days.filter((day) => day !== index) : [...days, index].sort());
-  };
 
   return (
     <section className="delivery-studio subscription-studio" id="delivery-deck">
@@ -67,17 +44,13 @@ export function DeliveryDeck({ briefing, onNotice }: Props) {
           <Link className="deck-detail-link" href="/briefing">오늘의 카드 전체 화면으로 보기 →</Link>
         </div>
 
-        <div className="subscription-panel">
+        <div className="subscription-panel quick-subscription-card">
           <div className="subscription-panel-head">
             <div className="subscription-bell"><BellRing /></div>
-            <div><span>알림 받을 시간</span><h3>언제 받아볼까요?</h3></div>
+            <div><span>30초 무료 등록</span><h3>내일부터 받아보세요</h3></div>
           </div>
-          <p className="subscription-description">전날 뉴스 정리가 끝난 뒤, 선택한 시간에 이 기기로 알림을 보내드립니다.</p>
-          <label className="time-field"><span>도착 시각</span><input type="time" value={deliveryTime} onChange={(event) => setDeliveryTime(event.target.value)} /></label>
-          <div className="setting-label">받을 요일</div>
-          <div className="weekday-list" aria-label="발송 요일">
-            {weekdays.map((day, index) => <button key={day} className={selectedDays.includes(index) ? "active" : ""} onClick={() => toggleDay(index)}>{day}</button>)}
-          </div>
+          <p className="subscription-description">버튼을 누르면 시간과 요일을 고르는 작은 창이 열립니다. 다른 페이지로 이동하거나 회원가입할 필요가 없습니다.</p>
+          <div className="quick-arrival-card"><span>기본 도착 시간</span><strong>평일 오전 7:00</strong><small>등록 창에서 자유롭게 변경</small></div>
           <div className="simple-onboarding">
             <span><b>1</b> 시간과 요일 선택</span>
             <i />
@@ -85,7 +58,7 @@ export function DeliveryDeck({ briefing, onNotice }: Props) {
             <i />
             <span><b>3</b> 다음 아침부터 수신</span>
           </div>
-          <PushControls deliveryTime={deliveryTime} selectedDays={selectedDays} onNotice={onNotice} />
+          <SubscriptionTrigger className="quick-subscribe-button"><BellRing size={17} /> 이 기기에 무료 알림 등록</SubscriptionTrigger>
           <div className="privacy-note">알림 발송에 필요한 익명 기기 ID만 저장하며, 이름·이메일·전화번호를 받지 않습니다.</div>
         </div>
       </div>

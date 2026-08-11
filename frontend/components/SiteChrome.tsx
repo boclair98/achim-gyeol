@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, BellRing, Leaf } from "lucide-react";
+import { SubscriptionTrigger } from "@/components/SubscriptionExperience";
 
 export function SiteHeader({ context = "무료 알림 받기" }: { context?: string }) {
   return (
@@ -15,7 +16,7 @@ export function SiteHeader({ context = "무료 알림 받기" }: { context?: str
         <Link href="/archive">지난 뉴스</Link>
         <Link href="/trust">편집 원칙</Link>
       </nav>
-      <Link className="site-context" href="/#delivery-deck"><BellRing size={14} /> {context}</Link>
+      <SubscriptionTrigger className="site-context"><BellRing size={14} /> {context}</SubscriptionTrigger>
     </header>
   );
 }
