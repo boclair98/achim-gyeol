@@ -11,10 +11,18 @@ type PushResponse = { delivered: boolean; message: string };
 
 export function PushControls({ deliveryTime, selectedDays, onNotice }: Props) {
   const [supported, setSupported] = useState(true);
+  const [iosInstallRequired, setIosInstallRequired] = useState(false);
+  const [showIosGuide, setShowIosGuide] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
   const [working, setWorking] = useState(false);
 
   useEffect(() => {
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const standalone = window.matchMedia("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
+    if (ios && !standalone) {
+      queueMicrotask(() => { setIosInstallRequired(true); setSupported(false); });
+      return;
+    }
     const available = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
     if (!available) { queueMicrotask(() => setSupported(false)); return; }
     navigator.serviceWorker.ready.then((registration) => registration.pushManager.getSubscription())
@@ -84,13 +92,25 @@ export function PushControls({ deliveryTime, selectedDays, onNotice }: Props) {
     finally { setWorking(false); }
   };
 
-  if (!supported) return <p className="push-help">최신 Chrome·Edge 또는 홈 화면에 설치한 Safari에서 열어 주세요.</p>;
+  if (iosInstallRequired) return <div className="push-controls ios-push-controls">
+    <button className="primary-button" onClick={() => setShowIosGuide(true)}><BellRing size={16} /> 이 기기에 알림 등록</button>
+    {showIosGuide && <div className="ios-install-guide" role="status">
+      <strong>아이폰은 홈 화면 설치가 먼저 필요해요</strong>
+      <ol><li>Safari 하단의 <b>공유</b> 버튼 누르기</li><li><b>홈 화면에 추가</b> 선택하기</li><li>홈 화면의 <b>아침결</b> 아이콘으로 다시 열기</li></ol>
+      <p>카드 화면의 ‘이 기기에 알림 등록’을 누르면 실제 등록 화면으로 이어집니다.</p>
+    </div>}
+    <p className="push-help">버튼을 없앤 것이 아니라 iOS의 설치 절차를 먼저 안내합니다. 설치 후에는 다른 기기와 동일하게 등록할 수 있습니다.</p>
+  </div>;
+  if (!supported) return <div className="push-controls unsupported-push-controls">
+    <button className="primary-button" onClick={() => onNotice("Safari 또는 최신 Chrome·Edge에서 열어 주세요. 아이폰은 Safari의 ‘홈 화면에 추가’ 후 등록할 수 있습니다.")}><BellRing size={16} /> 이 기기에 알림 등록</button>
+    <p className="push-help">현재 브라우저가 Web Push를 지원하지 않습니다. 지원 브라우저에서 열면 이 버튼으로 바로 등록됩니다.</p>
+  </div>;
   return <div className="push-controls">
     <button className="primary-button" onClick={subscribe} disabled={working}><BellRing size={16} /> {subscribed ? "시간·요일 저장" : "이 기기에 알림 등록"}</button>
     {subscribed && <p className="push-status"><CheckCircle2 size={15} /> 이 기기는 실제 아침 브리핑 수신 등록이 완료됐습니다.</p>}
     {subscribed && <button className="secondary-button blue" onClick={sendTest} disabled={working}><Send size={16} /> 내 기기 실제 푸시 테스트</button>}
     {subscribed && <button className="text-button" onClick={unsubscribe} disabled={working}><BellOff size={15} /> 알림 해지</button>}
-    <p className="push-help">처음 한 번은 로그인과 브라우저 알림 허용이 필요합니다. API 키 입력은 없으며, 메일이 아니라 휴대폰 잠금화면·알림센터로 도착합니다.</p>
+    <p className="push-help">처음 한 번은 로그인과 브라우저 알림 허용이 필요합니다. 테스트 발송은 현재 로그인한 사용자의 이 기기에만 전송됩니다.</p>
   </div>;
 }
 

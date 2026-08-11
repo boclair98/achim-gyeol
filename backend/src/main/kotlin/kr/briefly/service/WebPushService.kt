@@ -141,7 +141,7 @@ class WebPushService(
         val payload = mapper.writeValueAsString(mapOf(
             "title" to title,
             "body" to body,
-            "url" to "${publicUrl.trimEnd('/')}/#delivery-deck",
+            "url" to "${publicUrl.trimEnd('/')}/briefing/",
             "tag" to if (test) "achim-gyeol-test" else "achim-gyeol-daily",
         ))
         val notification = Notification(subscription.endpoint, subscription.p256dh, subscription.auth, payload, Urgency.NORMAL)

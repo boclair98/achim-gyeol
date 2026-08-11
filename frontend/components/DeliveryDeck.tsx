@@ -151,7 +151,7 @@ export function DeliveryDeck({ briefing, onNotice }: Props) {
           <div className="card-stack" aria-live="polite">
             <div className="stack-sheet stack-two" aria-hidden="true" />
             <div className="stack-sheet stack-one" aria-hidden="true" />
-            <CardPreview card={currentCard} />
+            <BriefingCardPreview card={currentCard} />
           </div>
           <div className="deck-navigation">
             <button aria-label="이전 카드" onClick={() => setCurrentIndex((index) => Math.max(0, index - 1))} disabled={currentIndex === 0}><ChevronLeft /></button>
@@ -204,7 +204,7 @@ export function DeliveryDeck({ briefing, onNotice }: Props) {
   );
 }
 
-function CardPreview({ card }: { card: BriefingCard }) {
+export function BriefingCardPreview({ card }: { card: BriefingCard }) {
   if (card.kind === "cover") {
     return (
       <article className="delivery-card cover-card" style={{ "--tenant-accent": card.brand.accent, backgroundImage: `linear-gradient(180deg, rgba(6,20,44,.12), rgba(6,20,44,.95)), url(${assetBase}/briefing-card-bg.png)` } as CSSProperties}>
