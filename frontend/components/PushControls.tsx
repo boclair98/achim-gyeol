@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { BellOff, BellRing, CheckCircle2, Send } from "lucide-react";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+const serverSubscriptionKey = "achim-gyeol-server-subscription";
 
 type Props = { deliveryTime: string; selectedDays: number[]; onNotice: (message: string) => void; onSubscriptionChange?: (subscribed: boolean) => void };
 type PushConfig = { enabled: boolean; publicKey: string };
@@ -26,7 +27,12 @@ export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscript
     const available = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
     if (!available) { queueMicrotask(() => setSupported(false)); return; }
     navigator.serviceWorker.ready.then((registration) => registration.pushManager.getSubscription())
-      .then((subscription) => { const active = Boolean(subscription); setSubscribed(active); onSubscriptionChange?.(active); })
+      .then((subscription) => {
+        const savedEndpoint = window.localStorage.getItem(serverSubscriptionKey);
+        const active = Boolean(subscription && savedEndpoint === subscription.endpoint);
+        setSubscribed(active);
+        onSubscriptionChange?.(active);
+      })
       .catch(() => { setSubscribed(false); onSubscriptionChange?.(false); });
   }, [onSubscriptionChange]);
 
@@ -49,12 +55,21 @@ export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscript
         method: "POST", headers: deviceHeaders(),
         body: JSON.stringify({ endpoint: subscription.endpoint, keys: subscription.toJSON().keys, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Seoul", deliveryHour: hour, deliveryMinute: minute, weekdays: selectedDays }),
       });
-      if (!response.ok) throw new Error(await errorMessage(response, "알림 설정을 저장하지 못했습니다."));
+      if (!response.ok) {
+        if (!current) await subscription.unsubscribe().catch(() => false);
+        window.localStorage.removeItem(serverSubscriptionKey);
+        throw new Error(await errorMessage(response, "알림 설정을 저장하지 못했습니다."));
+      }
       window.localStorage.setItem("achim-gyeol-delivery", JSON.stringify({ time: deliveryTime, days: selectedDays }));
+      window.localStorage.setItem(serverSubscriptionKey, subscription.endpoint);
       setSubscribed(true);
       onSubscriptionChange?.(true);
       onNotice(`등록 완료! 선택한 요일 ${deliveryTime} 이후, 준비된 어제 뉴스 종합을 이 기기로 보내드려요.`);
-    } catch (error) { onNotice(error instanceof Error ? error.message : "알림 등록 중 오류가 발생했습니다."); }
+    } catch (error) {
+      setSubscribed(false);
+      onSubscriptionChange?.(false);
+      onNotice(error instanceof Error ? error.message : "알림 등록 중 오류가 발생했습니다.");
+    }
     finally { setWorking(false); }
   };
 
@@ -67,6 +82,7 @@ export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscript
         await fetch(`${apiBase}/api/push/subscriptions`, { method: "DELETE", headers: deviceHeaders(), body: JSON.stringify({ endpoint: subscription.endpoint }) });
         await subscription.unsubscribe();
       }
+      window.localStorage.removeItem(serverSubscriptionKey);
       setSubscribed(false); onSubscriptionChange?.(false); onNotice("이 기기의 뉴스 알림을 해지했습니다.");
     } catch { onNotice("알림 해지를 완료하지 못했습니다. 잠시 후 다시 시도해 주세요."); }
     finally { setWorking(false); }
