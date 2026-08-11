@@ -179,7 +179,10 @@ class OpenAiSummarizer(
         val refusal = root.path("output").flatMap { it.path("content").toList() }
             .firstOrNull { it.path("type").asText() == "refusal" }
             ?.path("refusal")?.asText()
-        val outputTypes = root.path("output").map { it.path("type").asText("unknown") }.distinct()
+        val outputTypes = root.path("output").elements().asSequence()
+            .map { it.path("type").asText("unknown") }
+            .distinct()
+            .toList()
         error(
             refusal?.let { "OpenAI가 요약을 거부했습니다: $it" }
                 ?: "OpenAI 요약 형식을 읽을 수 없습니다 (status=${root.path("status").asText("unknown")}, outputTypes=$outputTypes)",
