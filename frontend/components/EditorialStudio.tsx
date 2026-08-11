@@ -87,11 +87,11 @@ export function EditorialStudio() {
       return;
     }
     setPublishState("SCHEDULED");
-    setNotice("편집 승인 완료 · 오전 7시 발행 대기열에 등록했습니다. 실제 전송은 채널 API 연결 후 실행됩니다.");
+    setNotice("편집 승인 완료 · 오전 8시 실제 푸시 발행 대기열에 등록했습니다.");
   };
 
   const exportConfig = () => {
-    const blob = new Blob([JSON.stringify({ brand, statuses, schedule: "07:00", channels: ["web-push", "email", "kakao"] }, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify({ brand, statuses, schedule: "08:00", channels: ["web-push", "email", "kakao"] }, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement("a");
     anchor.href = url;
@@ -160,7 +160,7 @@ function DeskPanel({ statuses, updateStatus, readyCount, canPublish, approveBrie
     setReviewingStory(null);
   };
   return <div className="studio-panel">
-    <PanelHeader eyebrow="EDITORIAL DESK" title="오늘의 발행 대기열" description="AI 초안을 근거와 위험도 기준으로 검토합니다." action={<button className="studio-primary" onClick={approveBriefing}><Send size={15} />{publishState === "SCHEDULED" ? "오전 7시 예약됨" : canPublish ? "최종 발행 승인" : `${readyCount}/4 검토 완료`}</button>} />
+    <PanelHeader eyebrow="EDITORIAL DESK" title="오늘의 발행 대기열" description="AI 초안을 근거와 위험도 기준으로 검토합니다." action={<button className="studio-primary" onClick={approveBriefing}><Send size={15} />{publishState === "SCHEDULED" ? "오전 8시 예약됨" : canPublish ? "최종 발행 승인" : `${readyCount}/4 검토 완료`}</button>} />
     <div className="pipeline-strip">
       {[{ label: "수집", value: "126", sub: "원문" }, { label: "중복 병합", value: "37", sub: "클러스터" }, { label: "요약 초안", value: "4", sub: "기사" }, { label: "교차 검증", value: "3", sub: "완료" }, { label: "편집 승인", value: String(readyCount), sub: "준비" }].map((item, index) => <div key={item.label} className={index === 4 ? "active" : ""}><span>{item.label}</span><strong>{item.value}</strong><small>{item.sub}</small></div>)}
     </div>
@@ -220,7 +220,7 @@ function BrandPanel({ brand, setBrand, saveBrand }: { brand: BriefingBrand; setB
 function DeliveryPanel() {
   return <div className="studio-panel">
     <PanelHeader eyebrow="DELIVERY ORCHESTRATION" title="채널별 발송 계획" description="콘텐츠는 한 번 승인하고 채널 규격에 맞게 자동 변환합니다." action={<button className="studio-secondary"><Settings2 size={15} />기본 규칙 편집</button>} />
-    <div className="delivery-overview"><div><Clock3 /><span>다음 발행</span><strong>내일 오전 7:00</strong><small>Asia/Seoul · 평일</small></div><div><Users /><span>예상 수신자</span><strong>12,480명</strong><small>동의 상태 정상</small></div><div><Inbox /><span>콘텐츠</span><strong>카드 6장</strong><small>요약 4 · 표지 1 · 정리 1</small></div></div>
+    <div className="delivery-overview"><div><Clock3 /><span>다음 발행</span><strong>내일 오전 8:00</strong><small>Asia/Seoul · 평일</small></div><div><Users /><span>예상 수신자</span><strong>12,480명</strong><small>동의 상태 정상</small></div><div><Inbox /><span>콘텐츠</span><strong>카드 6장</strong><small>요약 4 · 표지 1 · 정리 1</small></div></div>
     <div className="channel-grid">
       <ChannelCard icon={BellRing} name="Web Push" format="도착 알림 + 카드 보관함" status="설정 준비" detail="VAPID/FCM 키 연결 대기" />
       <ChannelCard icon={MailCheck} name="Email" format="반응형 HTML + 원문 버튼" status="템플릿 준비" detail="발신 도메인·SMTP 연결 대기" />

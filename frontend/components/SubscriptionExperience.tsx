@@ -13,7 +13,7 @@ export function SubscriptionTrigger({ className, children }: { className?: strin
 
 export function SubscriptionExperience({ onNotice }: { onNotice: (message: string) => void }) {
   const [open, setOpen] = useState(false);
-  const [deliveryTime, setDeliveryTime] = useState("07:00");
+  const [deliveryTime, setDeliveryTime] = useState("08:00");
   const [selectedDays, setSelectedDays] = useState([0, 1, 2, 3, 4]);
   const [subscribed, setSubscribed] = useState(false);
   const [deviceLabel, setDeviceLabel] = useState("이 브라우저에서 바로 등록할 수 있어요");
@@ -25,8 +25,9 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
     let storedDays: number[] | undefined;
     try {
       const setting = stored ? JSON.parse(stored) as { time?: string; days?: number[] } : {};
-      storedTime = setting.time;
+      storedTime = setting.time === "07:00" ? "08:00" : setting.time;
       storedDays = setting.days;
+      if (setting.time === "07:00") window.localStorage.setItem("achim-gyeol-delivery", JSON.stringify({ ...setting, time: "08:00" }));
     } catch {
       window.localStorage.removeItem("achim-gyeol-delivery");
     }

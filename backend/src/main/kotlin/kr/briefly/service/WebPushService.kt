@@ -9,6 +9,9 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.scheduling.annotation.Scheduled
+import org.springframework.boot.ApplicationArguments
+import org.springframework.boot.ApplicationRunner
+import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import tools.jackson.module.kotlin.jacksonObjectMapper
@@ -34,6 +37,14 @@ data class PushRegistration(
 )
 data class PushConfigResponse(val enabled: Boolean, val publicKey: String)
 data class PushResult(val delivered: Boolean, val message: String)
+data class PushDeliverySummary(
+    val status: String,
+    val activeSubscriptions: Int,
+    val dueSubscriptions: Int,
+    val delivered: Int,
+    val failed: Int,
+    val message: String,
+)
 
 internal fun deliveryWeekdayIndex(dayOfWeek: DayOfWeek): Int = dayOfWeek.value - 1
 internal fun deliveryIsDue(current: LocalTime, scheduled: LocalTime): Boolean = !current.isBefore(scheduled)
@@ -115,16 +126,25 @@ class WebPushService(
     @Scheduled(cron = "0 * * * * *")
     @Transactional
     fun deliverScheduledBriefings() {
-        if (!isConfigured()) return
+        deliverDueBriefings()
+    }
+
+    @Transactional
+    fun deliverDueBriefings(): PushDeliverySummary {
+        if (!isConfigured()) return PushDeliverySummary("PUSH_DISABLED", 0, 0, 0, 0, "웹 푸시가 설정되지 않았습니다.")
         val briefing = runCatching { briefingService.latest() }.getOrElse {
             logger.info("Push delivery skipped: briefing is not available")
-            return
+            return PushDeliverySummary("BRIEFING_UNAVAILABLE", repository.findAllByActiveTrue().size, 0, 0, 0, "발송할 브리핑이 없습니다.")
         }
         if (briefing.briefingDate != LocalDate.now(ZoneId.of("Asia/Seoul")) || !briefing.productionReady) {
             logger.info("Push delivery skipped: today's pipeline-generated briefing is not ready")
-            return
+            return PushDeliverySummary("BRIEFING_NOT_READY", repository.findAllByActiveTrue().size, 0, 0, 0, "오늘의 실제 브리핑이 아직 준비되지 않았습니다.")
         }
-        repository.findAllByActiveTrue().forEach { subscription ->
+        val subscriptions = repository.findAllByActiveTrue()
+        var due = 0
+        var delivered = 0
+        var failed = 0
+        subscriptions.forEach { subscription ->
             val zone = runCatching { ZoneId.of(subscription.timezone) }.getOrDefault(ZoneId.of("Asia/Seoul"))
             val now = OffsetDateTime.now(zone)
             val weekday = deliveryWeekdayIndex(now.dayOfWeek)
@@ -132,10 +152,14 @@ class WebPushService(
             val alreadySentToday = subscription.lastSentAt?.atZoneSameInstant(zone)?.toLocalDate() == now.toLocalDate()
             val scheduledTime = LocalTime.of(subscription.deliveryHour, subscription.deliveryMinute)
             if (deliveryIsDue(now.toLocalTime(), scheduledTime) && weekday in scheduledDays && !alreadySentToday) {
-                send(subscription, "아침결 · 어제 뉴스 종합이 도착했어요", "어제 핵심 뉴스 ${briefing.stories.size}건 · 약 ${briefing.readMinutes}분", false)
+                due += 1
+                if (send(subscription, "아침결 · 어제 뉴스 종합이 도착했어요", "어제 핵심 뉴스 ${briefing.stories.size}건 · 약 ${briefing.readMinutes}분", false).delivered) delivered += 1 else failed += 1
             }
         }
+        return PushDeliverySummary("COMPLETED", subscriptions.size, due, delivered, failed, "오늘 브리핑 발송 검사를 완료했습니다.")
     }
+
+    fun activeSubscriptionCount(): Int = repository.findAllByActiveTrue().size
 
     private fun send(subscription: PushSubscription, title: String, body: String, test: Boolean): PushResult = try {
         val payload = mapper.writeValueAsString(mapOf(
@@ -173,5 +197,28 @@ class WebPushService(
     companion object {
         fun endpointHash(endpoint: String): String = MessageDigest.getInstance("SHA-256")
             .digest(endpoint.toByteArray(StandardCharsets.UTF_8)).joinToString("") { "%02x".format(it) }
+    }
+}
+
+@Component
+class DefaultDeliveryTimeMigration(
+    private val repository: PushSubscriptionRepository,
+    @Value("\${app.push.legacy-default-cutoff:2026-08-11T23:30:00Z}") private val legacyDefaultCutoff: String,
+) : ApplicationRunner {
+    private val logger = LoggerFactory.getLogger(javaClass)
+
+    @Transactional
+    override fun run(args: ApplicationArguments) {
+        val cutoff = OffsetDateTime.parse(legacyDefaultCutoff)
+        val migrated = repository.findAllByActiveTrue().filter {
+            it.deliveryHour == 7 && it.deliveryMinute == 0 && it.createdAt.isBefore(cutoff)
+        }
+        migrated.forEach {
+            it.deliveryHour = 8
+            it.deliveryMinute = 0
+            it.updatedAt = OffsetDateTime.now()
+        }
+        if (migrated.isNotEmpty()) repository.saveAll(migrated)
+        logger.info("Migrated {} legacy 07:00 push subscription(s) to 08:00", migrated.size)
     }
 }

@@ -50,7 +50,7 @@ export function DeliveryDeck({ briefing }: Props) {
             <div><span>30초 무료 등록</span><h3>내일부터 받아보세요</h3></div>
           </div>
           <p className="subscription-description">버튼을 누르면 시간과 요일을 고르는 작은 창이 열립니다. 다른 페이지로 이동하거나 회원가입할 필요가 없습니다.</p>
-          <div className="quick-arrival-card"><span>기본 도착 시간</span><strong>평일 오전 7:00</strong><small>등록 창에서 자유롭게 변경</small></div>
+          <div className="quick-arrival-card"><span>기본 도착 시간</span><strong>평일 오전 8:00</strong><small>등록 창에서 자유롭게 변경</small></div>
           <div className="simple-onboarding">
             <span><b>1</b> 시간과 요일 선택</span>
             <i />

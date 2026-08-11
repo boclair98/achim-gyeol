@@ -1,0 +1,59 @@
+name: Morning briefing operations
+
+on:
+  schedule:
+    # GitHub Actions cron uses UTC. These are 07:30 and 08:00 Asia/Seoul.
+    - cron: "30 22 * * *"
+    - cron: "0 23 * * *"
+  workflow_dispatch:
+    inputs:
+      operation:
+        description: Operation to run
+        required: true
+        default: run
+        type: choice
+        options:
+          - generate
+          - dispatch
+          - run
+
+permissions:
+  contents: read
+
+concurrency:
+  group: morning-briefing-production
+  cancel-in-progress: false
+
+jobs:
+  operate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Choose operation
+        id: operation
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          SCHEDULE: ${{ github.event.schedule }}
+          REQUESTED_OPERATION: ${{ inputs.operation }}
+        run: |
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            operation="$REQUESTED_OPERATION"
+          elif [[ "$SCHEDULE" == "30 22 * * *" ]]; then
+            operation="generate"
+          else
+            operation="run"
+          fi
+          echo "operation=$operation" >> "$GITHUB_OUTPUT"
+
+      - name: Wake service and run morning operation
+        shell: bash
+        env:
+          ADMIN_TOKEN: ${{ secrets.BRIEFING_ADMIN_TOKEN }}
+          OPERATION: ${{ steps.operation.outputs.operation }}
+        run: |
+          test -n "$ADMIN_TOKEN"
+          curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-all-errors --max-time 720 \
+            -X POST "https://morningnews.coders.kr/api/admin/briefings/$OPERATION" \
+            -H "X-Briefing-Admin-Token: $ADMIN_TOKEN"

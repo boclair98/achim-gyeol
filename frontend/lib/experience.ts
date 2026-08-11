@@ -30,7 +30,7 @@ export type ReaderPreferences = {
 
 export const defaultReaderPreferences: ReaderPreferences = {
   categories: ["정책", "경제", "사회", "테크"],
-  deliveryTime: "07:00",
+  deliveryTime: "08:00",
   weekdays: [0, 1, 2, 3, 4],
   digestSize: "standard",
   channels: ["PWA"],
