@@ -7,7 +7,7 @@ export function PwaRegister() {
     if ("serviceWorker" in navigator) {
       const hadController = Boolean(navigator.serviceWorker.controller);
       let refreshing = false;
-      navigator.serviceWorker.register(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/sw.js`, { updateViaCache: "none" })
+      navigator.serviceWorker.register(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/sw.js?v=7`, { updateViaCache: "none" })
         .then((registration) => registration.update()).catch(() => undefined);
       const updatePage = () => {
         if (hadController && !refreshing) { refreshing = true; window.location.reload(); }
