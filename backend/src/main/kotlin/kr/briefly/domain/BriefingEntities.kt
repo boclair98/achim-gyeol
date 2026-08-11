@@ -67,3 +67,24 @@ class StoryFeedback(
     @Column(nullable = false) var createdAt: OffsetDateTime = OffsetDateTime.now(),
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) var id: Long? = null,
 )
+
+@Entity
+@Table(name = "push_subscriptions", indexes = [Index(name = "idx_push_endpoint_hash", columnList = "endpointHash", unique = true)])
+class PushSubscription(
+    @Column(nullable = false, length = 80) var ownerId: String,
+    @Column(nullable = false, length = 64) var endpointHash: String,
+    @Column(nullable = false, length = 3000) var endpoint: String,
+    @Column(nullable = false, length = 255) var p256dh: String,
+    @Column(nullable = false, length = 255) var auth: String,
+    @Column(nullable = false, length = 64) var timezone: String = "Asia/Seoul",
+    @Column(nullable = false) var deliveryHour: Int = 7,
+    @Column(nullable = false) var deliveryMinute: Int = 0,
+    @Column(nullable = false, length = 32) var weekdays: String = "1,2,3,4,5",
+    @Column(length = 500) var userAgent: String? = null,
+    @Column(nullable = false) var active: Boolean = true,
+    @Column(nullable = false) var createdAt: OffsetDateTime = OffsetDateTime.now(),
+    @Column(nullable = false) var updatedAt: OffsetDateTime = OffsetDateTime.now(),
+    var lastSentAt: OffsetDateTime? = null,
+    @Column(length = 600) var lastError: String? = null,
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) var id: Long? = null,
+)

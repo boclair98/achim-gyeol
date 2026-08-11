@@ -94,7 +94,7 @@ class NaverNewsClient(
 @ConditionalOnExpression("T(org.springframework.util.StringUtils).hasText('\${app.ai.openai.api-key:}')")
 class OpenAiSummarizer(
     @Value("\${app.ai.openai.api-key}") private val apiKey: String,
-    @Value("\${app.ai.openai.model:gpt-5.6-luna}") private val model: String,
+    @Value("\${app.ai.openai.model:gpt-5-mini}") private val model: String,
 ) : AiSummarizer {
     private val mapper = jacksonObjectMapper()
     private val client = RestClient.builder()

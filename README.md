@@ -92,3 +92,15 @@ docker compose up --build
 ```
 
 프론트엔드는 `http://localhost:3000`, API는 `http://localhost:8080/api/briefings/today`에서 확인할 수 있습니다.
+
+## 실제 PWA 뉴스 알림 사용법
+
+1. 휴대폰에서 `https://moring-news.coders.kr`을 열고 coders.kr 계정으로 로그인합니다.
+2. iPhone은 Safari의 공유 버튼에서 **홈 화면에 추가**한 뒤 설치된 아이콘으로 다시 엽니다. Android는 Chrome에서 바로 사용하거나 **앱 설치**를 선택합니다.
+3. 메인 화면의 `ACTUAL DELIVERY`에서 시간과 요일을 고른 뒤 **이 기기에 알림 등록**을 누르고 브라우저 알림을 허용합니다.
+4. **내게 테스트 발송**을 누르면 현재 로그인한 계정의 이 기기로만 테스트 뉴스 알림이 갑니다.
+5. 이후 선택한 시각에 최신 발행 브리핑이 잠금화면과 알림센터에 도착하며, 알림을 누르면 뉴스 카드 묶음이 열립니다.
+
+구독 해지는 같은 화면의 **알림 해지**에서 할 수 있습니다. 푸시 구독 주소는 coders.kr의 검증된 사용자 ID와 묶어 저장하며 다른 사용자는 테스트 발송에 이용할 수 없습니다. 하단 Donate·후원 배지와 구독 결제는 플랫폼 설정과 프론트엔드 모두에서 비활성화되어 있습니다.
+
+운영 환경의 `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `NAVER_API_HUB_CLIENT_ID`, `NAVER_API_HUB_CLIENT_SECRET`, `OPENAI_API_KEY`, `BRIEFING_ADMIN_TOKEN`은 Git에 넣지 않고 coders.kr 비밀 환경변수로만 관리합니다.

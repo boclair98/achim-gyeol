@@ -15,6 +15,7 @@ import type { Briefing } from "@/lib/briefing";
 import { buildBriefingCards, renderBriefingCard, type BriefingCard } from "@/lib/briefing-card";
 import { createBriefingEml } from "@/lib/email-template";
 import { defaultBrand, type BriefingBrand } from "@/lib/product";
+import { PushControls } from "@/components/PushControls";
 
 const assetBase = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const weekdays = ["월", "화", "수", "목", "금", "토", "일"];
@@ -180,6 +181,7 @@ export function DeliveryDeck({ briefing, onNotice }: Props) {
             <div className="weekday-list" aria-label="발송 요일">
               {weekdays.map((day, index) => <button key={day} className={selectedDays.includes(index) ? "active" : ""} onClick={() => toggleDay(index)}>{day}</button>)}
             </div>
+            <PushControls deliveryTime={deliveryTime} selectedDays={selectedDays} onNotice={onNotice} />
             <div className="schedule-actions">
               <button className="secondary-button" onClick={savePreference}>설정 저장</button>
               <button className="secondary-button blue" onClick={testNotification}>도착 알림 테스트</button>

@@ -29,7 +29,13 @@ app:
   ai:
     openai:
       api-key: ${OPENAI_API_KEY:}
-      model: ${OPENAI_MODEL:gpt-5.6-luna}
+      model: ${OPENAI_MODEL:gpt-5-mini}
+  push:
+    enabled: ${WEB_PUSH_ENABLED:false}
+    public-key: ${VAPID_PUBLIC_KEY:}
+    private-key: ${VAPID_PRIVATE_KEY:}
+    subject: ${VAPID_SUBJECT:mailto:admin@moring-news.coders.kr}
+    public-url: ${PUBLIC_APP_URL:https://moring-news.coders.kr}
   demo:
     enabled: ${DEMO_DATA_ENABLED:true}
   pipeline:
