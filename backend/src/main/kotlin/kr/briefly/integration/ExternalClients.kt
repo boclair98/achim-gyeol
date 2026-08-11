@@ -49,10 +49,11 @@ class NaverNewsClient(
     @Value("\${app.news.naver.client-secret}") private val clientSecret: String,
     @Value("\${app.news.naver.base-url:https://naverapihub.apigw.ntruss.com}") baseUrl: String,
 ) : NewsProvider {
+    private val mapper = jacksonObjectMapper()
     private val client = RestClient.builder().baseUrl(baseUrl).build()
 
     override fun search(query: String, display: Int): List<CollectedArticle> {
-        val root = client.get()
+        val responseBody = client.get()
             .uri {
                 it.path("/search/v1/news")
                     .queryParam("query", query)
@@ -63,8 +64,9 @@ class NaverNewsClient(
             .header("X-NCP-APIGW-API-KEY-ID", clientId)
             .header("X-NCP-APIGW-API-KEY", clientSecret)
             .retrieve()
-            .body(JsonNode::class.java)
+            .body(String::class.java)
             ?: return emptyList()
+        val root = mapper.readTree(responseBody)
 
         return root.path("items").mapNotNull { item ->
             val originalUrl = item.path("originallink").asText().ifBlank { item.path("link").asText() }
