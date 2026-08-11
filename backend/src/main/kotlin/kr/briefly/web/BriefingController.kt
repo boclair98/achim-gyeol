@@ -8,7 +8,6 @@ import kr.briefly.service.BriefingService
 import org.springframework.format.annotation.DateTimeFormat
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
-import org.springframework.web.server.ResponseStatusException
 import java.time.LocalDate
 
 data class FeedbackRequest(val type: FeedbackType, @field:Size(max = 600) val detail: String? = null)
@@ -21,9 +20,8 @@ class BriefingController(private val briefingService: BriefingService) {
 
     @PostMapping("/stories/{storyId}/feedback")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    fun feedback(@PathVariable storyId: Long, @RequestHeader("X-Coders-User", required = false) user: String?, @Valid @RequestBody request: FeedbackRequest) {
-        val userId = user ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "로그인이 필요합니다")
-        briefingService.feedback(storyId, userId, request.type, request.detail)
+    fun feedback(@PathVariable storyId: Long, @RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("X-Achim-Device", required = false) deviceId: String?, @Valid @RequestBody request: FeedbackRequest) {
+        briefingService.feedback(storyId, RequesterIdentity.resolve(user, deviceId), request.type, request.detail)
     }
 }
 

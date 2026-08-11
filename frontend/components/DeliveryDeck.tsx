@@ -186,10 +186,10 @@ export function DeliveryDeck({ briefing, onNotice }: Props) {
               <ol>
                 <li><b>1</b><span>받을 시간과 요일 선택</span></li>
                 <li><b>2</b><span>‘이 기기에 알림 등록’ 누르기</span></li>
-                <li><b>3</b><span>첫 한 번만 로그인·알림 허용</span></li>
+                <li><b>3</b><span>첫 한 번만 브라우저 알림 허용</span></li>
               </ol>
               <p>오전 6:15부터 어제 00:00~23:59 뉴스를 종합합니다. 준비가 끝나면 선택 시각 이후 알림이 오고, 누르면 요약 카드와 출처가 열립니다.</p>
-              <small>뉴스·AI·발송 API는 운영자가 서버에서 관리합니다. 독자는 키를 입력하거나 별도 결제할 필요가 없습니다.</small>
+              <small>회원가입·API 키·결제가 없습니다. 이 브라우저가 익명 기기 ID를 만들고 알림 발송에만 사용합니다.</small>
             </div>
             <PushControls deliveryTime={deliveryTime} selectedDays={selectedDays} onNotice={onNotice} />
             <div className="schedule-actions">

@@ -10,7 +10,6 @@ import kr.briefly.service.PushRegistration
 import kr.briefly.service.WebPushService
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
-import org.springframework.web.server.ResponseStatusException
 
 data class PushKeysRequest(@field:NotBlank @field:Size(max = 255) val p256dh: String, @field:NotBlank @field:Size(max = 255) val auth: String)
 data class PushSubscriptionRequest(
@@ -27,15 +26,16 @@ data class PushEndpointRequest(@field:NotBlank @field:Size(max = 3000) val endpo
 @RequestMapping("/api/push")
 class PushController(private val webPushService: WebPushService) {
     @GetMapping("/session")
-    fun session(@RequestHeader("X-Coders-User", required = false) user: String?) = mapOf("authenticated" to (user != null))
+    fun session(@RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("X-Achim-Device", required = false) deviceId: String?) =
+        mapOf("identified" to runCatching { RequesterIdentity.resolve(user, deviceId) }.isSuccess)
 
     @GetMapping("/public-key")
     fun publicKey() = webPushService.config()
 
     @PostMapping("/subscriptions")
     @ResponseStatus(HttpStatus.CREATED)
-    fun subscribe(@Valid @RequestBody request: PushSubscriptionRequest, @RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("User-Agent", required = false) userAgent: String?) =
-        webPushService.subscribe(requireUser(user), PushRegistration(
+    fun subscribe(@Valid @RequestBody request: PushSubscriptionRequest, @RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("X-Achim-Device", required = false) deviceId: String?, @RequestHeader("User-Agent", required = false) userAgent: String?) =
+        webPushService.subscribe(RequesterIdentity.resolve(user, deviceId), PushRegistration(
             endpoint = request.endpoint,
             keys = PushKeys(request.keys.p256dh, request.keys.auth),
             timezone = request.timezone,
@@ -47,10 +47,10 @@ class PushController(private val webPushService: WebPushService) {
 
     @DeleteMapping("/subscriptions")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    fun unsubscribe(@Valid @RequestBody request: PushEndpointRequest, @RequestHeader("X-Coders-User", required = false) user: String?) = webPushService.unsubscribe(requireUser(user), request.endpoint)
+    fun unsubscribe(@Valid @RequestBody request: PushEndpointRequest, @RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("X-Achim-Device", required = false) deviceId: String?) =
+        webPushService.unsubscribe(RequesterIdentity.resolve(user, deviceId), request.endpoint)
 
     @PostMapping("/test")
-    fun test(@Valid @RequestBody request: PushEndpointRequest, @RequestHeader("X-Coders-User", required = false) user: String?) = webPushService.sendTest(requireUser(user), request.endpoint)
-
-    private fun requireUser(user: String?) = user ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "알림 등록에는 로그인이 필요합니다.")
+    fun test(@Valid @RequestBody request: PushEndpointRequest, @RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("X-Achim-Device", required = false) deviceId: String?) =
+        webPushService.sendTest(RequesterIdentity.resolve(user, deviceId), request.endpoint)
 }

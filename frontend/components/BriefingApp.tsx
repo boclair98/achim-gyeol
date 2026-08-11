@@ -57,7 +57,7 @@ export function BriefingApp() {
             <span><BookOpen size={15} /> 출처·검증 상태 포함</span>
             <span><Clock3 size={15} /> 원하는 시간에 전달</span>
           </div>
-          <div className="intro-ctas"><a className="primary-button" href="#delivery-deck">독자 카드 확인</a><Link href="/archive">브리핑 보관함 →</Link><Link href="/studio">편집 스튜디오 체험 →</Link></div>
+          <div className="intro-ctas"><a className="primary-button" href="#delivery-deck">30초 만에 알림 받기</a><Link href="/briefing">받을 카드 먼저 보기 →</Link><Link href="/archive">브리핑 보관함 →</Link></div>
         </div>
         <aside className="delivery-map" aria-label="서비스 흐름">
           <span className="map-label">HOW IT ARRIVES</span>

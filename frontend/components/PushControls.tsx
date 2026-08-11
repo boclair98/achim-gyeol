@@ -34,13 +34,6 @@ export function PushControls({ deliveryTime, selectedDays, onNotice }: Props) {
     try {
       if (!supported) throw new Error("이 브라우저는 웹푸시를 지원하지 않습니다.");
       if (selectedDays.length === 0) throw new Error("발송 요일을 하나 이상 선택해 주세요.");
-      const sessionResponse = await fetch(`${apiBase}/api/push/session`, { cache: "no-store" });
-      const session = sessionResponse.ok ? await sessionResponse.json() as { authenticated: boolean } : { authenticated: false };
-      if (!session.authenticated) {
-        window.sessionStorage.setItem("achim-gyeol-push-login-return", "true");
-        window.location.assign(`https://mcp.coders.kr/sso/login?return_to=${encodeURIComponent(`${window.location.origin}${window.location.pathname}#delivery-deck`)}`);
-        return;
-      }
       if (await Notification.requestPermission() !== "granted") throw new Error("브라우저 설정에서 알림을 허용해 주세요.");
       const configResponse = await fetch(`${apiBase}/api/push/public-key`, { cache: "no-store" });
       if (!configResponse.ok) throw new Error("푸시 설정을 불러오지 못했습니다.");
@@ -52,7 +45,7 @@ export function PushControls({ deliveryTime, selectedDays, onNotice }: Props) {
       const subscription = current ?? await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(config.publicKey) });
       const [hour, minute] = deliveryTime.split(":").map(Number);
       const response = await fetch(`${apiBase}/api/push/subscriptions`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: deviceHeaders(),
         body: JSON.stringify({ endpoint: subscription.endpoint, keys: subscription.toJSON().keys, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Seoul", deliveryHour: hour, deliveryMinute: minute, weekdays: selectedDays }),
       });
       if (!response.ok) throw new Error(await errorMessage(response, "알림 설정을 저장하지 못했습니다."));
@@ -69,7 +62,7 @@ export function PushControls({ deliveryTime, selectedDays, onNotice }: Props) {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
-        await fetch(`${apiBase}/api/push/subscriptions`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endpoint: subscription.endpoint }) });
+        await fetch(`${apiBase}/api/push/subscriptions`, { method: "DELETE", headers: deviceHeaders(), body: JSON.stringify({ endpoint: subscription.endpoint }) });
         await subscription.unsubscribe();
       }
       setSubscribed(false); onNotice("이 기기의 뉴스 알림을 해지했습니다.");
@@ -83,7 +76,7 @@ export function PushControls({ deliveryTime, selectedDays, onNotice }: Props) {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
       if (!subscription) throw new Error("먼저 이 기기에 알림을 등록해 주세요.");
-      const response = await fetch(`${apiBase}/api/push/test`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ endpoint: subscription.endpoint }) });
+      const response = await fetch(`${apiBase}/api/push/test`, { method: "POST", headers: deviceHeaders(), body: JSON.stringify({ endpoint: subscription.endpoint }) });
       if (!response.ok) throw new Error(await errorMessage(response, "테스트 알림을 발송하지 못했습니다."));
       const result = await response.json() as PushResponse;
       if (!result.delivered) throw new Error(result.message);
@@ -110,7 +103,7 @@ export function PushControls({ deliveryTime, selectedDays, onNotice }: Props) {
     {subscribed && <p className="push-status"><CheckCircle2 size={15} /> 이 기기는 실제 아침 브리핑 수신 등록이 완료됐습니다.</p>}
     {subscribed && <button className="secondary-button blue" onClick={sendTest} disabled={working}><Send size={16} /> 내 기기 실제 푸시 테스트</button>}
     {subscribed && <button className="text-button" onClick={unsubscribe} disabled={working}><BellOff size={15} /> 알림 해지</button>}
-    <p className="push-help">처음 한 번은 로그인과 브라우저 알림 허용이 필요합니다. 테스트 발송은 현재 로그인한 사용자의 이 기기에만 전송됩니다.</p>
+    <p className="push-help">회원가입 없이 바로 등록됩니다. 처음 한 번 브라우저 알림만 허용하면 되고, 테스트 발송은 이 기기에만 전송됩니다.</p>
   </div>;
 }
 
@@ -123,4 +116,13 @@ function urlBase64ToUint8Array(value: string) {
 async function errorMessage(response: Response, fallback: string) {
   const body = await response.json().catch(() => null) as { message?: string } | null;
   return body?.message || fallback;
+}
+
+function deviceHeaders(): Record<string, string> {
+  let deviceId = window.localStorage.getItem("achim-gyeol-device-id");
+  if (!deviceId) {
+    deviceId = window.crypto.randomUUID();
+    window.localStorage.setItem("achim-gyeol-device-id", deviceId);
+  }
+  return { "Content-Type": "application/json", "X-Achim-Device": deviceId };
 }
