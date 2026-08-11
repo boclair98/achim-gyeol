@@ -109,6 +109,7 @@ class NewsBriefingGenerator(
     private val qualityGate: QualityGate,
     private val editionRepository: BriefingEditionRepository,
 ) {
+    private val log = LoggerFactory.getLogger(javaClass)
     private val zone = ZoneId.of("Asia/Seoul")
     private val queries = linkedMapOf(
         Category.POLICY to listOf("정부 정책", "복지 주거 고용 정책"),
