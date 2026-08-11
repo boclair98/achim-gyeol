@@ -131,10 +131,19 @@ class NewsBriefingGenerator(
             clusterer.cluster(category, articles, limit = 2)
         }.sortedByDescending(ArticleCluster::rank)
 
+        val failures = mutableListOf<String>()
         val stories = clusters.take(8).mapNotNull { cluster ->
-            runCatching { buildStory(cluster, summarizer) }.getOrNull()
+            runCatching { buildStory(cluster, summarizer) }
+                .onFailure { exception ->
+                    val reason = "${cluster.category}: ${exception.message ?: exception.javaClass.simpleName}"
+                    failures += reason
+                    log.warn("Briefing candidate rejected: {}", reason)
+                }
+                .getOrNull()
         }.take(6)
-        check(stories.isNotEmpty()) { "교차 검증 기준을 통과한 뉴스가 없습니다" }
+        check(stories.isNotEmpty()) {
+            "교차 검증 기준을 통과한 뉴스가 없습니다 (수집 $collectedCount, 사건 ${clusters.size}, 실패 ${failures.take(3).joinToString(" | ")})"
+        }
 
         val edition = editionRepository.findByBriefingDate(briefingDate)
             ?: BriefingEdition(
@@ -169,7 +178,9 @@ class NewsBriefingGenerator(
             factsChecked = factsChecked,
             sourcesConflict = summary.sourcesConflict,
         )
-        if (!decision.publishable) return null
+        check(decision.publishable) {
+            "품질 게이트 탈락 sources=${articles.map(CollectedArticle::publisher).distinct().size}, factsChecked=$factsChecked, conflict=${summary.sourcesConflict}"
+        }
 
         val story = NewsStory(
             category = cluster.category,
