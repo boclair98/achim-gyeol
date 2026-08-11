@@ -203,7 +203,7 @@ class WebPushService(
 @Component
 class DefaultDeliveryTimeMigration(
     private val repository: PushSubscriptionRepository,
-    @Value("\${app.push.legacy-default-cutoff:2026-08-11T23:30:00Z}") private val legacyDefaultCutoff: String,
+    @Value("\${app.push.legacy-default-cutoff:2026-08-12T00:30:00Z}") private val legacyDefaultCutoff: String,
 ) : ApplicationRunner {
     private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -211,14 +211,14 @@ class DefaultDeliveryTimeMigration(
     override fun run(args: ApplicationArguments) {
         val cutoff = OffsetDateTime.parse(legacyDefaultCutoff)
         val migrated = repository.findAllByActiveTrue().filter {
-            it.deliveryHour == 7 && it.deliveryMinute == 0 && it.createdAt.isBefore(cutoff)
+            it.createdAt.isBefore(cutoff) && it.deliveryMinute == 0 && it.deliveryHour in setOf(7, 8)
         }
         migrated.forEach {
             it.deliveryHour = 8
-            it.deliveryMinute = 0
+            it.deliveryMinute = 30
             it.updatedAt = OffsetDateTime.now()
         }
         if (migrated.isNotEmpty()) repository.saveAll(migrated)
-        logger.info("Migrated {} legacy 07:00 push subscription(s) to 08:00", migrated.size)
+        logger.info("Migrated {} legacy 07:00/08:00 push subscription(s) to 08:30", migrated.size)
     }
 }

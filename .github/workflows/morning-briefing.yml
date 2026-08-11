@@ -2,9 +2,9 @@ name: Morning briefing operations
 
 on:
   schedule:
-    # GitHub Actions cron uses UTC. These are 07:30 and 08:00 Asia/Seoul.
-    - cron: "30 22 * * *"
+    # GitHub Actions cron uses UTC. These are 08:00 and 08:30 Asia/Seoul.
     - cron: "0 23 * * *"
+    - cron: "30 23 * * *"
   workflow_dispatch:
     inputs:
       operation:
@@ -39,7 +39,7 @@ jobs:
         run: |
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
             operation="$REQUESTED_OPERATION"
-          elif [[ "$SCHEDULE" == "30 22 * * *" ]]; then
+          elif [[ "$SCHEDULE" == "0 23 * * *" ]]; then
             operation="generate"
           else
             operation="run"

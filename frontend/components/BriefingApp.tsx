@@ -76,7 +76,7 @@ export function BriefingApp() {
           <div className="hero-orbit hero-orbit-one" aria-hidden="true" />
           <div className="hero-orbit hero-orbit-two" aria-hidden="true" />
           <div className="phone-mockup">
-            <div className="phone-status"><span>8:00</span><span>● ● ●</span></div>
+            <div className="phone-status"><span>8:30</span><span>● ● ●</span></div>
             <div className="push-mockup">
               <div className="push-app-icon"><Newspaper size={19} /></div>
               <div><strong>아침결</strong><span>지금</span><p>어제 핵심 뉴스 {briefing.stories.length}건이 도착했어요</p></div>
@@ -93,7 +93,7 @@ export function BriefingApp() {
       </section>
 
       <section className="landing-proof" aria-label="서비스 핵심 특징">
-        <div><strong>07:30</strong><span>매일 아침 자동 종합</span></div>
+        <div><strong>08:00</strong><span>매일 아침 자동 종합</span></div>
         <div><strong>2+</strong><span>서로 다른 출처 확인</span></div>
         <div><strong>3줄</strong><span>뉴스별 핵심 요약</span></div>
         <div><strong>0원</strong><span>회원가입 없이 무료</span></div>

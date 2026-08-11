@@ -15,10 +15,10 @@ class WebPushServiceTest {
 
     @Test
     fun `a briefing remains due after the selected minute until it is delivered`() {
-        val scheduled = LocalTime.of(8, 0)
+        val scheduled = LocalTime.of(8, 30)
 
-        assertThat(deliveryIsDue(LocalTime.of(7, 59), scheduled)).isFalse()
-        assertThat(deliveryIsDue(LocalTime.of(8, 0), scheduled)).isTrue()
-        assertThat(deliveryIsDue(LocalTime.of(8, 12), scheduled)).isTrue()
+        assertThat(deliveryIsDue(LocalTime.of(8, 29), scheduled)).isFalse()
+        assertThat(deliveryIsDue(LocalTime.of(8, 30), scheduled)).isTrue()
+        assertThat(deliveryIsDue(LocalTime.of(8, 42), scheduled)).isTrue()
     }
 }

@@ -218,7 +218,7 @@ class NewsBriefingGenerator(
 class NewsGenerationScheduler(private val generator: NewsBriefingGenerator) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    @Scheduled(cron = "\${app.pipeline.cron:0 15 6 * * *}", zone = "Asia/Seoul")
+    @Scheduled(cron = "\${app.pipeline.cron:0 0 8 * * *}", zone = "Asia/Seoul")
     fun generateEveryMorning() {
         runCatching { generator.generate() }
             .onSuccess { log.info("Morning briefing generated: {}", it) }

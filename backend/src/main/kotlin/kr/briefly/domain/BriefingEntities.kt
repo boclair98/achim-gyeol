@@ -79,7 +79,7 @@ class PushSubscription(
     @Column(nullable = false, length = 255) var auth: String,
     @Column(nullable = false, length = 64) var timezone: String = "Asia/Seoul",
     @Column(nullable = false) var deliveryHour: Int = 8,
-    @Column(nullable = false) var deliveryMinute: Int = 0,
+    @Column(nullable = false) var deliveryMinute: Int = 30,
     @Column(nullable = false, length = 32) var weekdays: String = "0,1,2,3,4",
     @Column(length = 500) var userAgent: String? = null,
     @Column(nullable = false) var active: Boolean = true,
