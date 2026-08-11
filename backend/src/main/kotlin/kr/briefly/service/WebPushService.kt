@@ -15,6 +15,9 @@ import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.security.Security
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.zone.ZoneRulesException
@@ -31,6 +34,9 @@ data class PushRegistration(
 )
 data class PushConfigResponse(val enabled: Boolean, val publicKey: String)
 data class PushResult(val delivered: Boolean, val message: String)
+
+internal fun deliveryWeekdayIndex(dayOfWeek: DayOfWeek): Int = dayOfWeek.value - 1
+internal fun deliveryIsDue(current: LocalTime, scheduled: LocalTime): Boolean = !current.isBefore(scheduled)
 
 @Service
 class WebPushService(
@@ -114,14 +120,19 @@ class WebPushService(
             logger.info("Push delivery skipped: briefing is not available")
             return
         }
+        if (briefing.briefingDate != LocalDate.now(ZoneId.of("Asia/Seoul")) || !briefing.productionReady) {
+            logger.info("Push delivery skipped: today's pipeline-generated briefing is not ready")
+            return
+        }
         repository.findAllByActiveTrue().forEach { subscription ->
             val zone = runCatching { ZoneId.of(subscription.timezone) }.getOrDefault(ZoneId.of("Asia/Seoul"))
             val now = OffsetDateTime.now(zone)
-            val weekday = now.dayOfWeek.value % 7
+            val weekday = deliveryWeekdayIndex(now.dayOfWeek)
             val scheduledDays = subscription.weekdays.split(',').mapNotNull(String::toIntOrNull).toSet()
             val alreadySentToday = subscription.lastSentAt?.atZoneSameInstant(zone)?.toLocalDate() == now.toLocalDate()
-            if (now.hour == subscription.deliveryHour && now.minute == subscription.deliveryMinute && weekday in scheduledDays && !alreadySentToday) {
-                send(subscription, "아침결 · 오늘의 뉴스 카드가 도착했어요", "핵심 뉴스 ${briefing.stories.size}건 · 약 ${briefing.readMinutes}분", false)
+            val scheduledTime = LocalTime.of(subscription.deliveryHour, subscription.deliveryMinute)
+            if (deliveryIsDue(now.toLocalTime(), scheduledTime) && weekday in scheduledDays && !alreadySentToday) {
+                send(subscription, "아침결 · 어제 뉴스 종합이 도착했어요", "어제 핵심 뉴스 ${briefing.stories.size}건 · 약 ${briefing.readMinutes}분", false)
             }
         }
     }
@@ -137,7 +148,9 @@ class WebPushService(
         val response = PushService(publicKey, privateKey, subject).send(notification)
         val status = response.statusLine.statusCode
         if (status in 200..299) {
-            subscription.lastSentAt = OffsetDateTime.now()
+            // An operator test proves the device connection only. It must not consume
+            // the subscriber's once-per-day production delivery slot.
+            if (!test) subscription.lastSentAt = OffsetDateTime.now()
             subscription.lastError = null
             repository.save(subscription)
             PushResult(true, "푸시 알림을 발송했습니다.")

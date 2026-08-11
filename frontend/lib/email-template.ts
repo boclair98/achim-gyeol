@@ -2,7 +2,7 @@ import type { Briefing } from "@/lib/briefing";
 import { defaultBrand, type BriefingBrand } from "@/lib/product";
 
 export function createBriefingEml(briefing: Briefing, serviceUrl: string, brand: BriefingBrand = defaultBrand) {
-  const subject = `[${brand.name}] ${briefing.stories.length}개 핵심 뉴스가 카드로 도착했어요`;
+  const subject = `[${brand.name}] 어제 핵심 뉴스 ${briefing.stories.length}개를 종합했어요`;
   const html = createEmailHtml(briefing, serviceUrl, brand);
   const encodedSubject = toBase64(subject);
   return [

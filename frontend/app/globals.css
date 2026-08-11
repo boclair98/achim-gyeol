@@ -23,6 +23,14 @@ html { scroll-behavior: smooth; }
 .push-controls .primary-button, .push-controls .secondary-button { width: 100%; }
 .push-controls .text-button { grid-column: 1 / -1; justify-self: start; border: 0; background: transparent; color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 4px 0; font-size: 11px; font-weight: 800; }
 .push-help { grid-column: 1 / -1; margin: 3px 0 0; color: var(--muted); font-size: 10px; line-height: 1.6; }
+.push-status { grid-column: 1 / -1; display: flex; align-items: center; gap: 7px; margin: 0; border-radius: 10px; background: #e9f8f1; padding: 10px 12px; color: #147a56; font-size: 10px; font-weight: 850; }
+.push-onboarding { margin-top: 14px; border: 1px solid #cbd4df; border-radius: 15px; background: #f7f9fc; padding: 15px; }
+.push-onboarding > strong { display: block; color: var(--ink); font-size: 12px; line-height: 1.45; }
+.push-onboarding ol { display: grid; gap: 7px; margin: 12px 0; padding: 0; list-style: none; }
+.push-onboarding li { display: flex; align-items: center; gap: 8px; color: #384656; font-size: 10px; font-weight: 800; }
+.push-onboarding li b { display: grid; flex: 0 0 20px; height: 20px; place-items: center; border-radius: 50%; background: var(--blue); color: white; font-size: 9px; }
+.push-onboarding p { margin: 0; color: #455568; font-size: 10px; line-height: 1.65; }
+.push-onboarding small { display: block; margin-top: 9px; border-top: 1px solid #dce3eb; padding-top: 9px; color: #6b7785; font-size: 9px; line-height: 1.6; }
 .schedule-card > .schedule-actions, .schedule-card > .api-note { display: none; }
 
 body {

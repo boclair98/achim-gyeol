@@ -144,6 +144,7 @@ class NewsBriefingGenerator(
         edition.lead = "${coverageDate.monthValue}월 ${coverageDate.dayOfMonth}일 보도 중 서로 다른 출처에서 공통으로 확인된 핵심만 정리했습니다."
         edition.readMinutes = max(3, stories.size)
         edition.lastVerifiedAt = OffsetDateTime.now(zone)
+        edition.pipelineGenerated = true
         edition.stories.clear()
         stories.forEachIndexed { index, story ->
             story.displayOrder = index + 1

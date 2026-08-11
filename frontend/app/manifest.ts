@@ -7,7 +7,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "아침결 — AI 뉴스 요약 카드",
     short_name: "아침결",
-    description: "매일 아침 핵심 뉴스의 AI 3줄 요약과 출처를 카드 묶음으로 전달합니다.",
+    description: "매일 아침 전날 핵심 뉴스의 AI 3줄 요약과 출처를 종합 카드로 전달합니다.",
     start_url: ".",
     display: "standalone",
     background_color: "#f7f7f5",

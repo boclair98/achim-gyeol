@@ -19,11 +19,10 @@ const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 export function BriefingApp() {
   const [briefing, setBriefing] = useState<Briefing>(demoBriefing);
   const [category, setCategory] = useState("전체");
-  const [loading, setLoading] = useState(Boolean(apiBase));
-  const [notice, setNotice] = useState("API 연결 전이라 데모 뉴스로 실제 전송 카드를 만들고 있어요.");
+  const [loading, setLoading] = useState(true);
+  const [notice, setNotice] = useState("어제 뉴스 종합 브리핑을 불러오고 있어요.");
 
   useEffect(() => {
-    if (!apiBase) return;
     const controller = new AbortController();
     fetch(`${apiBase}/api/briefings/today`, { signal: controller.signal })
       .then((response) => {
@@ -32,9 +31,9 @@ export function BriefingApp() {
       })
       .then((data: Briefing) => {
         setBriefing(data);
-        setNotice("");
+        setNotice(data.productionReady ? "" : "현재는 사용법 확인용 예시 브리핑입니다. 실제 사용자 알림은 전날 뉴스 자동 종합이 성공한 뒤에만 발송됩니다.");
       })
-      .catch(() => setNotice("API 연결 전이라 데모 뉴스로 실제 전송 카드를 만들고 있어요."))
+      .catch(() => setNotice("오늘의 브리핑을 불러오지 못해 예시 뉴스 카드를 보여드리고 있어요. 잠시 후 다시 확인해 주세요."))
       .finally(() => setLoading(false));
     return () => controller.abort();
   }, []);
@@ -51,8 +50,8 @@ export function BriefingApp() {
       <section className="service-intro" id="top">
         <div className="intro-copy">
           <span className="hero-badge"><i aria-hidden="true" /> WHITE-LABEL NEWS DELIVERY</span>
-          <h1>뉴스를 찾지 않아도,<br /><em>요약 카드가 도착해요.</em></h1>
-          <p>웹은 구독 설정과 보관함입니다. 실제 사용자는 매일 아침, 핵심 뉴스가 모두 정리된 카드 묶음을 받아봅니다.</p>
+          <h1>어제 뉴스를 찾지 않아도,<br /><em>종합 카드가 도착해요.</em></h1>
+          <p>웹은 구독 설정과 보관함입니다. 휴대폰 알림을 누르면 매일 아침 핵심 뉴스가 정리된 카드 묶음이 열립니다.</p>
           <div className="intro-points">
             <span><CheckCircle2 size={15} /> 뉴스별 AI 3줄 요약</span>
             <span><BookOpen size={15} /> 출처·검증 상태 포함</span>
@@ -63,10 +62,10 @@ export function BriefingApp() {
         <aside className="delivery-map" aria-label="서비스 흐름">
           <span className="map-label">HOW IT ARRIVES</span>
           <ol>
-            <li><strong>01</strong><div><b>밤사이 뉴스 수집</b><span>외부 뉴스 API 연결 예정</span></div></li>
+            <li><strong>01</strong><div><b>전날 주요 뉴스 수집</b><span>매일 오전 6:15 자동 실행</span></div></li>
             <li><strong>02</strong><div><b>AI 요약·교차 확인</b><span>제목, 3줄 요약, 중요성, 출처</span></div></li>
             <li className="active"><strong>03</strong><div><b>카드 묶음 자동 생성</b><span>1080×1350 전송 이미지</span></div></li>
-            <li><strong>04</strong><div><b>아침 알림과 함께 전달</b><span>PWA·카카오·메신저 API 연결 예정</span></div></li>
+            <li><strong>04</strong><div><b>아침 알림과 함께 전달</b><span>알림을 누르면 뉴스 카드가 열림</span></div></li>
           </ol>
         </aside>
       </section>

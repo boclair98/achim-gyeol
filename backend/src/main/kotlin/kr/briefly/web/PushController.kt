@@ -19,7 +19,7 @@ data class PushSubscriptionRequest(
     @field:NotBlank @field:Size(max = 64) val timezone: String = "Asia/Seoul",
     @field:Min(0) @field:Max(23) val deliveryHour: Int = 7,
     @field:Min(0) @field:Max(59) val deliveryMinute: Int = 0,
-    @field:Size(min = 1, max = 7) val weekdays: Set<Int> = setOf(1, 2, 3, 4, 5),
+    @field:Size(min = 1, max = 7) val weekdays: Set<Int> = setOf(0, 1, 2, 3, 4),
 )
 data class PushEndpointRequest(@field:NotBlank @field:Size(max = 3000) val endpoint: String)
 

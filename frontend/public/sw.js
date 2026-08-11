@@ -7,7 +7,7 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(fetch(event.request).then((response) => { const copy = response.clone(); caches.open(CACHE).then((cache) => cache.put(event.request, copy)); return response; }).catch(() => caches.match(event.request).then((response) => response || caches.match("./"))));
 });
 self.addEventListener("push", (event) => {
-  const data = event.data?.json() ?? { title: "아침결 · 뉴스 카드가 도착했어요", body: "밤사이 핵심 뉴스를 카드로 확인하세요." };
+  const data = event.data?.json() ?? { title: "아침결 · 어제 뉴스 종합이 도착했어요", body: "어제 하루의 핵심 뉴스를 카드로 확인하세요." };
   event.waitUntil(self.registration.showNotification(data.title, {
     body: data.body, icon: "./icon.svg", badge: "./icon.svg",
     tag: data.tag || "achim-gyeol-daily", renotify: true,

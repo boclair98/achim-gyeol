@@ -11,7 +11,7 @@ import java.time.format.DateTimeFormatter
 
 data class SourceResponse(val publisher: String, val url: String, val publishedAt: String)
 data class StoryResponse(val id: Long, val category: String, val title: String, val summary: String, val whyItMatters: String, val verificationStatus: VerificationStatus, val qualityScore: Int, val uncertainty: String?, val sources: List<SourceResponse>)
-data class BriefingResponse(val id: Long, val dateLabel: String, val lead: String, val readMinutes: Int, val verifiedCount: Int, val lastVerifiedAt: String, val stories: List<StoryResponse>)
+data class BriefingResponse(val id: Long, val briefingDate: LocalDate, val productionReady: Boolean, val dateLabel: String, val lead: String, val readMinutes: Int, val verifiedCount: Int, val lastVerifiedAt: String, val stories: List<StoryResponse>)
 
 @Service
 class BriefingService(
@@ -33,6 +33,8 @@ class BriefingService(
         val zone = ZoneId.of("Asia/Seoul")
         return BriefingResponse(
             id = requireNotNull(id),
+            briefingDate = briefingDate,
+            productionReady = pipelineGenerated == true,
             dateLabel = briefingDate.format(DateTimeFormatter.ofPattern("M월 d일 EEEE")),
             lead = lead,
             readMinutes = readMinutes,

@@ -52,7 +52,7 @@ export function DeliveryDeck({ briefing, onNotice }: Props) {
 
   const savePreference = () => {
     window.localStorage.setItem("achim-gyeol-delivery", JSON.stringify({ time: deliveryTime, days: selectedDays }));
-    onNotice(`전송 설정을 저장했어요. 실제 예약 발송은 메시징 API 연결 후 ${deliveryTime}에 동작합니다.`);
+    onNotice("이 브라우저에 화면 설정을 저장했어요. 실제 예약 발송에도 반영하려면 위의 ‘시간·요일 저장’을 눌러주세요.");
   };
 
   const toggleDay = (index: number) => {
@@ -76,7 +76,7 @@ export function DeliveryDeck({ briefing, onNotice }: Props) {
       const blob = await renderBriefingCard(currentCard, assetBase);
       const file = new File([blob], cardFileName(currentCard, currentIndex), { type: "image/png" });
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ title: `${brand.name} 모닝 브리핑`, text: "오늘 꼭 알아둘 뉴스 요약이에요.", files: [file] });
+        await navigator.share({ title: `${brand.name} 모닝 브리핑`, text: "어제 하루를 정리한 뉴스 요약이에요.", files: [file] });
       } else {
         downloadBlob(blob, file.name);
         onNotice("이 브라우저는 이미지 직접 공유를 지원하지 않아 파일로 저장했어요.");
@@ -96,7 +96,7 @@ export function DeliveryDeck({ briefing, onNotice }: Props) {
         return new File([blob], cardFileName(card, index), { type: "image/png" });
       }));
       if (navigator.canShare?.({ files })) {
-        await navigator.share({ title: `${brand.name} 오늘의 뉴스 카드`, text: `${briefing.stories.length}개 핵심 뉴스를 카드로 정리했어요.`, files });
+        await navigator.share({ title: `${brand.name} 어제 뉴스 종합 카드`, text: `어제 핵심 뉴스 ${briefing.stories.length}개를 카드로 정리했어요.`, files });
       } else {
         files.forEach((file, index) => window.setTimeout(() => downloadBlob(file, file.name), index * 180));
         onNotice(`카드 ${files.length}장을 모두 PNG로 저장했어요.`);
@@ -181,12 +181,22 @@ export function DeliveryDeck({ briefing, onNotice }: Props) {
             <div className="weekday-list" aria-label="발송 요일">
               {weekdays.map((day, index) => <button key={day} className={selectedDays.includes(index) ? "active" : ""} onClick={() => toggleDay(index)}>{day}</button>)}
             </div>
+            <div className="push-onboarding">
+              <strong>등록 한 번이면 다음 아침부터 자동으로 도착해요</strong>
+              <ol>
+                <li><b>1</b><span>받을 시간과 요일 선택</span></li>
+                <li><b>2</b><span>‘이 기기에 알림 등록’ 누르기</span></li>
+                <li><b>3</b><span>첫 한 번만 로그인·알림 허용</span></li>
+              </ol>
+              <p>오전 6:15부터 어제 00:00~23:59 뉴스를 종합합니다. 준비가 끝나면 선택 시각 이후 알림이 오고, 누르면 요약 카드와 출처가 열립니다.</p>
+              <small>뉴스·AI·발송 API는 운영자가 서버에서 관리합니다. 독자는 키를 입력하거나 별도 결제할 필요가 없습니다.</small>
+            </div>
             <PushControls deliveryTime={deliveryTime} selectedDays={selectedDays} onNotice={onNotice} />
             <div className="schedule-actions">
-              <button className="secondary-button" onClick={savePreference}>설정 저장</button>
-              <button className="secondary-button blue" onClick={testNotification}>도착 알림 테스트</button>
+              <button className="secondary-button" onClick={savePreference}>화면 설정만 저장</button>
+              <button className="secondary-button blue" onClick={testNotification}>로컬 알림 미리보기</button>
             </div>
-            <p className="api-note"><i /> 화면·카드 생성·알림 미리보기 준비 완료 · 실제 예약 발송 API만 연결 대기</p>
+            <p className="api-note"><i /> PWA 실제 예약 발송·내 기기 푸시 테스트 운영 중 · 메일·카카오 채널은 아직 미연결</p>
           </div>
         </div>
       </div>
@@ -208,7 +218,7 @@ function CardPreview({ card }: { card: BriefingCard }) {
   if (card.kind === "closing") {
     return (
       <article className="delivery-card closing-card">
-        <span style={{ color: card.brand.accent }}>TODAY IN ONE PAGE</span><h3>오늘의 흐름,<br />이렇게 기억하세요.</h3>
+        <span style={{ color: card.brand.accent }}>YESTERDAY IN ONE PAGE</span><h3>어제의 흐름,<br />이렇게 기억하세요.</h3>
         <ol>{card.briefing.stories.map((story, index) => <li key={story.id}><strong>{String(index + 1).padStart(2, "0")}</strong><span>{story.title}</span></li>)}</ol>
         <footer><strong>{card.brand.name}</strong><span>출처를 확인하고 · 사실과 전망을 나눕니다</span></footer>
       </article>

@@ -12,10 +12,11 @@ export type Story = {
   totalClaims: number;
   sources: Source[];
 };
-export type Briefing = { id: number; dateLabel: string; lead: string; readMinutes: number; verifiedCount: number; lastVerifiedAt: string; stories: Story[] };
+export type Briefing = { id: number; briefingDate?: string; productionReady?: boolean; dateLabel: string; lead: string; readMinutes: number; verifiedCount: number; lastVerifiedAt: string; stories: Story[] };
 
 export const demoBriefing: Briefing = {
   id: 1,
+  productionReady: false,
   dateLabel: "데모 에디션",
   lead: "어제의 소음을 걷어내고, 서로 다른 출처에서 공통으로 확인된 사실과 오늘의 의미만 담았습니다.",
   readMinutes: 5,

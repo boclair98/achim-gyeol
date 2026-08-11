@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BellOff, BellRing, Send } from "lucide-react";
+import { BellOff, BellRing, CheckCircle2, Send } from "lucide-react";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
@@ -29,6 +29,7 @@ export function PushControls({ deliveryTime, selectedDays, onNotice }: Props) {
       const sessionResponse = await fetch(`${apiBase}/api/push/session`, { cache: "no-store" });
       const session = sessionResponse.ok ? await sessionResponse.json() as { authenticated: boolean } : { authenticated: false };
       if (!session.authenticated) {
+        window.sessionStorage.setItem("achim-gyeol-push-login-return", "true");
         window.location.assign(`https://mcp.coders.kr/sso/login?return_to=${encodeURIComponent(`${window.location.origin}${window.location.pathname}#delivery-deck`)}`);
         return;
       }
@@ -36,7 +37,7 @@ export function PushControls({ deliveryTime, selectedDays, onNotice }: Props) {
       const configResponse = await fetch(`${apiBase}/api/push/public-key`, { cache: "no-store" });
       if (!configResponse.ok) throw new Error("푸시 설정을 불러오지 못했습니다.");
       const config = await configResponse.json() as PushConfig;
-      if (!config.enabled || !config.publicKey) throw new Error("서버의 웹푸시 설정이 아직 완료되지 않았습니다.");
+      if (!config.enabled || !config.publicKey) throw new Error("알림 서비스가 잠시 준비 중입니다. 운영자에게 알려주세요.");
 
       const registration = await navigator.serviceWorker.ready;
       const current = await registration.pushManager.getSubscription();
@@ -49,7 +50,7 @@ export function PushControls({ deliveryTime, selectedDays, onNotice }: Props) {
       if (!response.ok) throw new Error(await errorMessage(response, "알림 설정을 저장하지 못했습니다."));
       window.localStorage.setItem("achim-gyeol-delivery", JSON.stringify({ time: deliveryTime, days: selectedDays }));
       setSubscribed(true);
-      onNotice(`알림 등록 완료! 선택한 요일 ${deliveryTime}에 이 기기로 뉴스 브리핑을 보내드려요.`);
+      onNotice(`등록 완료! 선택한 요일 ${deliveryTime} 이후, 준비된 어제 뉴스 종합을 이 기기로 보내드려요.`);
     } catch (error) { onNotice(error instanceof Error ? error.message : "알림 등록 중 오류가 발생했습니다."); }
     finally { setWorking(false); }
   };
@@ -78,7 +79,7 @@ export function PushControls({ deliveryTime, selectedDays, onNotice }: Props) {
       if (!response.ok) throw new Error(await errorMessage(response, "테스트 알림을 발송하지 못했습니다."));
       const result = await response.json() as PushResponse;
       if (!result.delivered) throw new Error(result.message);
-      onNotice("이 기기로 테스트 뉴스 알림을 보냈습니다. 알림창을 확인해 주세요.");
+      onNotice("실제 푸시 서버를 통해 이 기기로 운영 테스트를 보냈습니다. 잠금화면·알림센터를 확인해 주세요.");
     } catch (error) { onNotice(error instanceof Error ? error.message : "테스트 발송 중 오류가 발생했습니다."); }
     finally { setWorking(false); }
   };
@@ -86,9 +87,10 @@ export function PushControls({ deliveryTime, selectedDays, onNotice }: Props) {
   if (!supported) return <p className="push-help">최신 Chrome·Edge 또는 홈 화면에 설치한 Safari에서 열어 주세요.</p>;
   return <div className="push-controls">
     <button className="primary-button" onClick={subscribe} disabled={working}><BellRing size={16} /> {subscribed ? "시간·요일 저장" : "이 기기에 알림 등록"}</button>
-    {subscribed && <button className="secondary-button blue" onClick={sendTest} disabled={working}><Send size={16} /> 내게 테스트 발송</button>}
+    {subscribed && <p className="push-status"><CheckCircle2 size={15} /> 이 기기는 실제 아침 브리핑 수신 등록이 완료됐습니다.</p>}
+    {subscribed && <button className="secondary-button blue" onClick={sendTest} disabled={working}><Send size={16} /> 내 기기 실제 푸시 테스트</button>}
     {subscribed && <button className="text-button" onClick={unsubscribe} disabled={working}><BellOff size={15} /> 알림 해지</button>}
-    <p className="push-help">메일이 아니라 휴대폰 잠금화면·알림센터로 도착합니다. 구독 주소는 이 기기의 발송에만 사용됩니다.</p>
+    <p className="push-help">처음 한 번은 로그인과 브라우저 알림 허용이 필요합니다. API 키 입력은 없으며, 메일이 아니라 휴대폰 잠금화면·알림센터로 도착합니다.</p>
   </div>;
 }
 

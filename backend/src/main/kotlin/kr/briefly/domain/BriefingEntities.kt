@@ -16,6 +16,7 @@ class BriefingEdition(
     @Column(nullable = false) var readMinutes: Int = 5,
     @Column(nullable = false) var publishedAt: OffsetDateTime = OffsetDateTime.now(),
     @Column(nullable = false) var lastVerifiedAt: OffsetDateTime = OffsetDateTime.now(),
+    @Column var pipelineGenerated: Boolean? = false,
     @OneToMany(mappedBy = "edition", cascade = [CascadeType.ALL], orphanRemoval = true)
     @OrderBy("displayOrder ASC")
     var stories: MutableList<NewsStory> = mutableListOf(),
@@ -79,7 +80,7 @@ class PushSubscription(
     @Column(nullable = false, length = 64) var timezone: String = "Asia/Seoul",
     @Column(nullable = false) var deliveryHour: Int = 7,
     @Column(nullable = false) var deliveryMinute: Int = 0,
-    @Column(nullable = false, length = 32) var weekdays: String = "1,2,3,4,5",
+    @Column(nullable = false, length = 32) var weekdays: String = "0,1,2,3,4",
     @Column(length = 500) var userAgent: String? = null,
     @Column(nullable = false) var active: Boolean = true,
     @Column(nullable = false) var createdAt: OffsetDateTime = OffsetDateTime.now(),

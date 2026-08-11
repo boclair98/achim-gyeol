@@ -123,7 +123,7 @@ function drawClosing(ctx: CanvasRenderingContext2D, card: Extract<BriefingCard, 
   ctx.fillStyle = card.brand.accent;
   ctx.fillRect(0, 0, 28, CARD_HEIGHT);
   text(ctx, "TODAY IN ONE PAGE", 76, 78, 28, 900, card.brand.accent);
-  text(ctx, "오늘의 흐름,", 76, 152, 72, 900, "#ffffff");
+  text(ctx, "어제의 흐름,", 76, 152, 72, 900, "#ffffff");
   text(ctx, "이렇게 기억하세요.", 76, 242, 72, 900, "#ffffff");
 
   let y = 388;
