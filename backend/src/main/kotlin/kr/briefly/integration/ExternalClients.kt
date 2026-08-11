@@ -115,7 +115,10 @@ class OpenAiSummarizer(
         val body = mapOf(
             "model" to model,
             "store" to false,
-            "max_output_tokens" to 1400,
+            // GPT-5 reasoning tokens share this budget with the visible JSON output.
+            // A very small limit can therefore finish before output_text is emitted.
+            "max_output_tokens" to 5000,
+            "reasoning" to mapOf("effort" to "low"),
             "input" to listOf(
                 mapOf(
                     "role" to "developer",
@@ -160,6 +163,11 @@ class OpenAiSummarizer(
     }
 
     private fun extractOutputText(root: JsonNode): String {
+        if (root.path("status").asText() == "incomplete") {
+            val reason = root.path("incomplete_details").path("reason").asText("unknown")
+            error("OpenAI 요약이 완료되지 않았습니다 (reason=$reason)")
+        }
+
         for (output in root.path("output")) {
             for (content in output.path("content")) {
                 if (content.path("type").asText() == "output_text") {
@@ -171,7 +179,11 @@ class OpenAiSummarizer(
         val refusal = root.path("output").flatMap { it.path("content").toList() }
             .firstOrNull { it.path("type").asText() == "refusal" }
             ?.path("refusal")?.asText()
-        error(refusal?.let { "OpenAI가 요약을 거부했습니다: $it" } ?: "OpenAI 요약 형식을 읽을 수 없습니다")
+        val outputTypes = root.path("output").map { it.path("type").asText("unknown") }.distinct()
+        error(
+            refusal?.let { "OpenAI가 요약을 거부했습니다: $it" }
+                ?: "OpenAI 요약 형식을 읽을 수 없습니다 (status=${root.path("status").asText("unknown")}, outputTypes=$outputTypes)",
+        )
     }
 
     private fun summarySchema(sourceIds: List<String>): Map<String, Any> = mapOf(
