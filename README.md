@@ -4,6 +4,16 @@
 
 현재 저장소는 NAVER API HUB와 OpenAI Responses API를 연결해 전날 뉴스를 수집·교차 검증·요약할 수 있습니다. API 키가 없는 로컬 환경에서는 샘플 기사로 동작하며, 편집·브랜드·카드 생성·PWA·신뢰 정책 화면도 함께 제공합니다.
 
+## 공개 서비스
+
+- 서비스: [https://moring-news.coders.kr](https://moring-news.coders.kr)
+- 소스 저장소: [https://github.com/boclair98/achim-gyeol](https://github.com/boclair98/achim-gyeol) (Public)
+- 배포 구성: `coders.yaml`의 Next.js 정적 웹 + Kotlin/Spring Boot API + PostgreSQL
+- 현재 기능 브랜치: `agent/delivery-card-deck`
+- 수익화 상태: Donate, 유료 구독, 하단 후원 배지를 모두 비활성화
+
+운영 비밀값은 공개 저장소에 포함하지 않습니다. NAVER·OpenAI·VAPID 키와 관리자 토큰은 coders.kr의 비밀 환경변수로만 주입합니다.
+
 ## 지금 바로 확인할 수 있는 것
 
 - 독자용 PWA: 뉴스별 3줄 요약, 중요성, 출처, 검증 상태, 원문 링크
