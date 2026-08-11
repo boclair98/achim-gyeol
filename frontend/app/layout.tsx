@@ -4,33 +4,34 @@ import { PwaRegister } from "@/components/PwaRegister";
 
 import "./globals.css";
 import "./enterprise.css";
+import "./landing.css";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://boclair98.github.io/Moring_news";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://morningnews.coders.kr";
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const socialImageUrl = new URL("og-v2.png", `${siteUrl.replace(/\/$/, "")}/`).toString();
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "아침결 — 독자 경험부터 편집 책임까지 연결하는 뉴스룸 브리핑 OS",
-  description: "개인화 뉴스 카드, 검색 가능한 보관함, 주장별 근거 검수와 사람의 최종 승인을 연결하는 화이트라벨 브리핑 운영체제.",
+  title: "아침결 — 어제 뉴스를 매일 아침 한 번에",
+  description: "전날 주요 뉴스를 교차 확인하고 AI로 짧게 요약해 원하는 시간에 PWA 알림으로 전하는 무료 뉴스 브리핑.",
   manifest: `${basePath}/manifest.webmanifest`,
   applicationName: "아침결",
   appleWebApp: { capable: true, title: "아침결", statusBarStyle: "default" },
   openGraph: {
-    title: "아침결 — 읽는 경험부터 편집 책임까지, 한 번에",
-    description: "개인화 · 근거 검수 · 사람의 승인을 연결하는 Newsroom Briefing OS",
-    images: [{ url: socialImageUrl, width: 1792, height: 896, alt: "아침결 뉴스룸 브리핑 OS" }],
+    title: "아침결 — 어제 뉴스를 매일 아침 한 번에",
+    description: "출처를 확인한 전날의 핵심 뉴스를 짧은 카드로 받아보세요.",
+    images: [{ url: socialImageUrl, width: 1792, height: 896, alt: "아침결 AI 뉴스 브리핑" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "아침결 — 읽는 경험부터 편집 책임까지, 한 번에",
-    description: "개인화 · 근거 검수 · 사람의 승인을 연결하는 Newsroom Briefing OS",
+    title: "아침결 — 어제 뉴스를 매일 아침 한 번에",
+    description: "출처를 확인한 전날의 핵심 뉴스를 짧은 카드로 받아보세요.",
     images: [socialImageUrl],
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#101d32",
+  themeColor: "#18b779",
   colorScheme: "light",
 };
 

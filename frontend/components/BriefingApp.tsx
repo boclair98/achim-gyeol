@@ -3,11 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  ArrowRight,
+  BellRing,
   BookOpen,
+  Check,
   CheckCircle2,
   Clock3,
   ExternalLink,
+  Newspaper,
   RefreshCw,
+  ShieldCheck,
+  Smartphone,
+  Sparkles,
 } from "lucide-react";
 import { DeliveryDeck } from "@/components/DeliveryDeck";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
@@ -31,7 +38,7 @@ export function BriefingApp() {
       })
       .then((data: Briefing) => {
         setBriefing(data);
-        setNotice(data.productionReady ? "" : "현재는 사용법 확인용 예시 브리핑입니다. 실제 사용자 알림은 전날 뉴스 자동 종합이 성공한 뒤에만 발송됩니다.");
+        setNotice(data.productionReady ? "" : "현재는 사용법 확인용 예시 브리핑입니다. 실제 알림은 전날 뉴스 종합이 완료된 뒤에만 발송됩니다.");
       })
       .catch(() => setNotice("오늘의 브리핑을 불러오지 못해 예시 뉴스 카드를 보여드리고 있어요. 잠시 후 다시 확인해 주세요."))
       .finally(() => setLoading(false));
@@ -42,64 +49,106 @@ export function BriefingApp() {
     () => category === "전체" ? briefing.stories : briefing.stories.filter((story) => story.category === category),
     [briefing, category],
   );
+  const leadStory = briefing.stories[0] ?? demoBriefing.stories[0];
 
   return (
-    <main className="page-shell">
-      <SiteHeader context={`${briefing.dateLabel} · DELIVERY READY`} />
+    <main className="page-shell landing-shell">
+      <SiteHeader />
 
-      <section className="service-intro" id="top">
-        <div className="intro-copy">
-          <span className="hero-badge"><i aria-hidden="true" /> WHITE-LABEL NEWS DELIVERY</span>
-          <h1>어제 뉴스를 찾지 않아도,<br /><em>종합 카드가 도착해요.</em></h1>
-          <p>웹은 구독 설정과 보관함입니다. 휴대폰 알림을 누르면 매일 아침 핵심 뉴스가 정리된 카드 묶음이 열립니다.</p>
-          <div className="intro-points">
-            <span><CheckCircle2 size={15} /> 뉴스별 AI 3줄 요약</span>
-            <span><BookOpen size={15} /> 출처·검증 상태 포함</span>
-            <span><Clock3 size={15} /> 원하는 시간에 전달</span>
+      <section className="landing-hero" id="top">
+        <div className="landing-hero-copy">
+          <span className="landing-kicker"><Sparkles size={15} /> 바쁜 사람을 위한 AI 뉴스 브리핑</span>
+          <h1>어제 뉴스를,<br /><em>매일 아침 한 번에.</em></h1>
+          <p>하루 종일 뉴스를 따라가지 않아도 괜찮아요. 서로 다른 언론사의 보도를 확인하고, 꼭 알아야 할 흐름만 짧은 카드로 정리해 드립니다.</p>
+          <div className="landing-hero-actions">
+            <a className="landing-primary" href="#delivery-deck"><BellRing size={18} /> 무료 알림 받기</a>
+            <Link className="landing-text-link" href="/briefing">오늘의 카드 미리보기 <ArrowRight size={16} /></Link>
           </div>
-          <div className="intro-ctas"><a className="primary-button" href="#delivery-deck">30초 만에 알림 받기</a><Link href="/briefing">받을 카드 먼저 보기 →</Link><Link href="/archive">브리핑 보관함 →</Link></div>
+          <div className="landing-promises">
+            <span><Check size={14} /> 회원가입 없음</span>
+            <span><Check size={14} /> 무료 이용</span>
+            <span><Check size={14} /> 원문 출처 제공</span>
+          </div>
         </div>
-        <aside className="delivery-map" aria-label="서비스 흐름">
-          <span className="map-label">HOW IT ARRIVES</span>
-          <ol>
-            <li><strong>01</strong><div><b>전날 주요 뉴스 수집</b><span>매일 오전 6:15 자동 실행</span></div></li>
-            <li><strong>02</strong><div><b>AI 요약·교차 확인</b><span>제목, 3줄 요약, 중요성, 출처</span></div></li>
-            <li className="active"><strong>03</strong><div><b>카드 묶음 자동 생성</b><span>1080×1350 전송 이미지</span></div></li>
-            <li><strong>04</strong><div><b>아침 알림과 함께 전달</b><span>알림을 누르면 뉴스 카드가 열림</span></div></li>
-          </ol>
-        </aside>
+
+        <div className="landing-hero-visual" aria-label="아침결 알림과 뉴스 카드 예시">
+          <div className="hero-orbit hero-orbit-one" aria-hidden="true" />
+          <div className="hero-orbit hero-orbit-two" aria-hidden="true" />
+          <div className="phone-mockup">
+            <div className="phone-status"><span>7:00</span><span>● ● ●</span></div>
+            <div className="push-mockup">
+              <div className="push-app-icon"><Newspaper size={19} /></div>
+              <div><strong>아침결</strong><span>지금</span><p>어제 핵심 뉴스 {briefing.stories.length}건이 도착했어요</p></div>
+            </div>
+            <article className="hero-news-card">
+              <div><span>{leadStory.category}</span><b>교차 확인</b></div>
+              <h2>{leadStory.title}</h2>
+              <p>{leadStory.summary}</p>
+              <footer><span>약 {briefing.readMinutes}분</span><span>출처 {leadStory.sources.length}개</span></footer>
+            </article>
+          </div>
+          <div className="hero-floating-note"><ShieldCheck size={18} /><div><strong>출처까지 함께</strong><span>요약만 믿지 않아도 돼요</span></div></div>
+        </div>
       </section>
 
-      <div className="commercial-proof" aria-label="상용 운영 기능"><span><strong>01</strong> 사람의 발행 승인</span><span><strong>02</strong> 고객사 화이트라벨</span><span><strong>03</strong> 공개 정정 이력</span><span><strong>04</strong> 다중 채널 발송 준비</span></div>
+      <section className="landing-proof" aria-label="서비스 핵심 특징">
+        <div><strong>06:15</strong><span>매일 아침 자동 종합</span></div>
+        <div><strong>2+</strong><span>서로 다른 출처 확인</span></div>
+        <div><strong>3줄</strong><span>뉴스별 핵심 요약</span></div>
+        <div><strong>0원</strong><span>회원가입 없이 무료</span></div>
+      </section>
+
+      <section className="how-section" id="how-it-works">
+        <div className="landing-section-heading">
+          <span>HOW IT WORKS</span>
+          <h2>아침결은 이렇게 도착해요</h2>
+          <p>설정은 한 번만. 그다음부터는 전날의 중요한 흐름을 매일 아침 가볍게 확인하세요.</p>
+        </div>
+        <div className="how-grid">
+          <article><div className="how-icon mint"><Clock3 /></div><small>01 · 뉴스 종합</small><h3>전날 뉴스를 모아요</h3><p>전날 00:00~23:59에 보도된 주요 뉴스를 분야별로 수집하고 같은 사건끼리 묶습니다.</p></article>
+          <article><div className="how-icon violet"><Sparkles /></div><small>02 · AI 요약</small><h3>핵심과 출처를 정리해요</h3><p>AI가 3줄 요약과 중요성을 작성하고, 서로 다른 출처가 연결됐는지 다시 확인합니다.</p></article>
+          <article><div className="how-icon yellow"><Smartphone /></div><small>03 · 아침 전달</small><h3>원하는 시간에 받아요</h3><p>휴대폰 알림을 누르면 뉴스 카드가 열립니다. 메일이나 별도 앱 설치는 필요하지 않아요.</p></article>
+        </div>
+      </section>
 
       <DeliveryDeck briefing={briefing} onNotice={setNotice} />
 
       <section className="archive-section" id="archive">
-        <div className="section-heading">
-          <div><span className="section-label">WEB ARCHIVE</span><h2>웹에서는 자세히 확인해요.</h2></div>
-          <p>전달 카드에서 더 알아보고 싶은 뉴스만 원문과 함께 펼쳐봅니다.</p>
+        <div className="landing-section-heading split-heading">
+          <div><span>TODAY&apos;S BRIEFING</span><h2>오늘 아침, 이 뉴스부터</h2></div>
+          <p>짧게 읽고 더 궁금한 뉴스만 원문으로 이어서 확인할 수 있습니다.</p>
         </div>
         <nav className="archive-nav" aria-label="뉴스 분야">
           {categories.map((item) => <button key={item} className={category === item ? "active" : ""} onClick={() => setCategory(item)}>{item}</button>)}
         </nav>
         <div className="story-list">
-          {loading ? <LoadingRows /> : stories.length ? stories.map((story, index) => <StoryRow key={story.id} story={story} index={index + 1} onNotice={setNotice} />) : <div className="empty">오늘 이 분야에 선정된 브리핑은 없습니다.</div>}
+          {loading ? <LoadingRows /> : stories.length ? stories.slice(0, 4).map((story, index) => <StoryRow key={story.id} story={story} index={index + 1} onNotice={setNotice} />) : <div className="empty">오늘 이 분야에 선정된 브리핑은 없습니다.</div>}
         </div>
-        <div className="archive-more"><Link href="/archive">지난 브리핑 전체 보기</Link><Link href="/preferences">내 관심 분야와 도착 시간 설정</Link></div>
+        <div className="archive-more"><Link href="/archive">지난 브리핑 전체 보기 <ArrowRight size={15} /></Link></div>
       </section>
 
-      <section className="standards">
-        <div>
-          <span className="section-label light">QUALITY BEFORE SPEED</span>
-          <h2>짧게 보내도,<br />근거는 빼지 않아요.</h2>
-          <p>카드 한 장마다 사용자가 사실 여부와 출처를 직접 확인할 수 있게 설계했습니다.</p>
-        </div>
+      <section className="trust-strip">
+        <div><span>WHY ACHIMGYEOL</span><h2>빠른 요약보다<br />믿을 수 있는 요약</h2><p>한 언론사의 시선만 반복하지 않습니다. 출처와 검증 상태를 독자가 직접 확인할 수 있게 남깁니다.</p><Link href="/trust">편집 원칙 자세히 보기 <ArrowRight size={15} /></Link></div>
         <ol>
-          <li><strong>01</strong><span>독립된 출처 두 곳 이상을 우선 확인합니다.</span></li>
-          <li><strong>02</strong><span>사실, 주장, 전망을 같은 문장에 섞지 않습니다.</span></li>
-          <li><strong>03</strong><span>숫자·날짜·인명은 별도 검증 상태를 기록합니다.</span></li>
-          <li><strong>04</strong><span>오류는 숨기지 않고 수정 시각과 이유를 남깁니다.</span></li>
+          <li><ShieldCheck /><div><strong>두 곳 이상 교차 확인</strong><span>같은 사건을 다룬 독립된 출처를 우선 연결합니다.</span></div></li>
+          <li><BookOpen /><div><strong>원문을 바로 확인</strong><span>모든 뉴스 카드에 언론사와 원문 링크를 표시합니다.</span></div></li>
+          <li><RefreshCw /><div><strong>수정 이력을 공개</strong><span>오류를 발견하면 수정 시각과 이유를 남깁니다.</span></div></li>
         </ol>
+      </section>
+
+      <section className="faq-section">
+        <div className="landing-section-heading"><span>FAQ</span><h2>자주 묻는 질문</h2></div>
+        <div className="faq-list">
+          <details open><summary>아침결은 무료인가요?</summary><p>네. 현재 회원가입과 결제 없이 무료로 이용할 수 있으며, 도네이트·유료 구독 기능도 사용하지 않습니다.</p></details>
+          <details><summary>어떤 뉴스가 오나요?</summary><p>오늘의 속보가 아니라 전날 하루 동안 보도된 정책·경제·사회·테크 분야의 주요 흐름을 다음 날 아침에 종합해 보냅니다.</p></details>
+          <details><summary>아이폰에서도 알림을 받을 수 있나요?</summary><p>네. Safari에서 아침결을 홈 화면에 추가한 뒤 홈 화면 아이콘으로 열고 ‘이 기기에 알림 등록’을 누르면 됩니다.</p></details>
+          <details><summary>API 키를 직접 입력해야 하나요?</summary><p>아니요. 뉴스와 AI API는 운영자가 서버에 설정합니다. 사용자는 받을 시간과 요일만 선택하면 됩니다.</p></details>
+        </div>
+      </section>
+
+      <section className="closing-cta">
+        <div><span>내일부터 시작해요</span><h2>어제의 뉴스를<br />아침 한 번으로 끝내세요.</h2><p>30초면 설정이 끝납니다. 회원가입 없이 이 기기에 바로 등록하세요.</p></div>
+        <a className="landing-primary light" href="#delivery-deck"><BellRing size={18} /> 무료 알림 받기</a>
       </section>
 
       <SiteFooter />
@@ -122,7 +171,7 @@ function StoryRow({ story, index, onNotice }: { story: Story; index: number; onN
         <div className="source-row">
           <span>출처 {story.sources.map((source) => source.publisher).join(" · ")}</span>
           <div className="story-actions">
-            <button aria-label="오류 신고" onClick={() => onNotice("오류 신고를 기록했어요. API 연결 후 검수 대기열로 전송됩니다.")}><RefreshCw size={15} /></button>
+            <button aria-label="오류 신고" onClick={() => onNotice("오류 신고를 기록했어요. 검수 대기열에서 확인하겠습니다.")}><RefreshCw size={15} /></button>
             <a aria-label="첫 번째 원문 열기" href={story.sources[0]?.url ?? "#"} target="_blank" rel="noreferrer">원문 <ExternalLink size={14} /></a>
           </div>
         </div>

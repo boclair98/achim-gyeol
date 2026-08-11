@@ -1,17 +1,21 @@
 import Link from "next/link";
-import { ArrowUpRight, CheckCircle2 } from "lucide-react";
+import { ArrowUpRight, BellRing, Leaf } from "lucide-react";
 
-export function SiteHeader({ context = "NEWS DELIVERY PLATFORM" }: { context?: string }) {
+export function SiteHeader({ context = "무료 알림 받기" }: { context?: string }) {
   return (
     <header className="site-header">
-      <Link className="site-brand" href="/"><i aria-hidden="true" />아침결<span>BRIEFING OS</span></Link>
+      <Link className="site-brand" href="/">
+        <i aria-hidden="true"><Leaf size={15} /></i>
+        <strong>아침결</strong>
+        <span>매일 아침, 어제의 뉴스</span>
+      </Link>
       <nav aria-label="주요 메뉴">
-        <Link href="/">브리핑</Link>
-        <Link href="/archive">보관함</Link>
-        <Link href="/studio">편집 스튜디오</Link>
-        <Link href="/trust">신뢰센터</Link>
+        <Link href="/#how-it-works">이용 방법</Link>
+        <Link href="/briefing">오늘의 카드</Link>
+        <Link href="/archive">지난 뉴스</Link>
+        <Link href="/trust">편집 원칙</Link>
       </nav>
-      <div className="site-context"><CheckCircle2 size={14} /> {context}</div>
+      <Link className="site-context" href="/#delivery-deck"><BellRing size={14} /> {context}</Link>
     </header>
   );
 }
@@ -19,16 +23,19 @@ export function SiteHeader({ context = "NEWS DELIVERY PLATFORM" }: { context?: s
 export function SiteFooter() {
   return (
     <footer className="enterprise-footer">
-      <div><strong>아침결 Briefing OS</strong><p>뉴스 조직과 전문 커뮤니티를 위한 화이트라벨 AI 브리핑 제작·전송 플랫폼</p></div>
+      <div>
+        <strong>아침결</strong>
+        <p>어제 쏟아진 뉴스에서 오늘 알아야 할 흐름만 골라, 매일 아침 한 번에 전합니다.</p>
+      </div>
       <nav aria-label="정책 문서">
         <Link href="/trust">편집 원칙</Link>
-        <Link href="/archive">브리핑 보관함</Link>
-        <Link href="/preferences">내 브리핑 설정</Link>
+        <Link href="/archive">지난 뉴스</Link>
+        <Link href="/preferences">알림 설정</Link>
         <Link href="/privacy">개인정보처리방침</Link>
         <Link href="/terms">이용약관</Link>
-        <a href="mailto:editor@achim-gyeol.example">편집 문의 <ArrowUpRight size={12} /></a>
+        <a href="https://github.com/boclair98/achim-gyeol" target="_blank" rel="noreferrer">GitHub <ArrowUpRight size={12} /></a>
       </nav>
-      <span>AI가 초안을 만들며, 발행 전 편집 검토를 전제로 설계되었습니다.</span>
+      <span>회원가입 없이 무료로 이용할 수 있습니다. AI 요약에는 항상 원문 출처와 검증 상태를 함께 표시합니다.</span>
     </footer>
   );
 }
