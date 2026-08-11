@@ -6,7 +6,7 @@
 
 ## 공개 서비스
 
-- 서비스: [https://moring-news.coders.kr](https://moring-news.coders.kr)
+- 서비스: [https://morningnews.coders.kr](https://morningnews.coders.kr)
 - 소스 저장소: [https://github.com/boclair98/achim-gyeol](https://github.com/boclair98/achim-gyeol) (Public)
 - 배포 구성: `coders.yaml`의 Next.js 정적 웹 + Kotlin/Spring Boot API + PostgreSQL
 - 현재 기능 브랜치: `agent/delivery-card-deck`
@@ -105,7 +105,7 @@ docker compose up --build
 
 ## 실제 PWA 뉴스 알림 사용법
 
-1. 휴대폰에서 `https://moring-news.coders.kr`을 열고 coders.kr 계정으로 로그인합니다.
+1. 휴대폰에서 `https://morningnews.coders.kr`을 열고 coders.kr 계정으로 로그인합니다.
 2. iPhone은 Safari의 공유 버튼에서 **홈 화면에 추가**한 뒤 설치된 아이콘으로 다시 엽니다. Android는 Chrome에서 바로 사용하거나 **앱 설치**를 선택합니다.
 3. 메인 화면의 `ACTUAL DELIVERY`에서 시간과 요일을 고른 뒤 **이 기기에 알림 등록**을 누르고 브라우저 알림을 허용합니다.
 4. **내게 테스트 발송**을 누르면 현재 로그인한 계정의 이 기기로만 테스트 뉴스 알림이 갑니다.

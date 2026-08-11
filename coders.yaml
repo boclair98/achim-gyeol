@@ -23,7 +23,7 @@ services:
       DEMO_DATA_ENABLED: "false"
       OPENAI_MODEL: "gpt-5-mini"
       WEB_PUSH_ENABLED: "true"
-      PUBLIC_APP_URL: "https://moring-news.coders.kr"
+      PUBLIC_APP_URL: "https://morningnews.coders.kr"
 
   db:
     type: postgres

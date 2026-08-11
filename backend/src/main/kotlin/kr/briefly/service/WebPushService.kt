@@ -39,8 +39,8 @@ class WebPushService(
     @Value("\${app.push.enabled:false}") private val enabled: Boolean,
     @Value("\${app.push.public-key:}") private val publicKey: String,
     @Value("\${app.push.private-key:}") private val privateKey: String,
-    @Value("\${app.push.subject:mailto:admin@moring-news.coders.kr}") private val subject: String,
-    @Value("\${app.push.public-url:https://moring-news.coders.kr}") private val publicUrl: String,
+    @Value("\${app.push.subject:https://morningnews.coders.kr}") private val subject: String,
+    @Value("\${app.push.public-url:https://morningnews.coders.kr}") private val publicUrl: String,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val mapper = jacksonObjectMapper()

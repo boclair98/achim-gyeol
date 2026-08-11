@@ -34,8 +34,8 @@ app:
     enabled: ${WEB_PUSH_ENABLED:false}
     public-key: ${VAPID_PUBLIC_KEY:}
     private-key: ${VAPID_PRIVATE_KEY:}
-    subject: ${VAPID_SUBJECT:mailto:admin@moring-news.coders.kr}
-    public-url: ${PUBLIC_APP_URL:https://moring-news.coders.kr}
+    subject: ${VAPID_SUBJECT:https://morningnews.coders.kr}
+    public-url: ${PUBLIC_APP_URL:https://morningnews.coders.kr}
   demo:
     enabled: ${DEMO_DATA_ENABLED:true}
   pipeline:
