@@ -32,7 +32,7 @@ class GenerationController(
     @PostMapping("/generate")
     fun generate(@RequestHeader("X-Briefing-Admin-Token", required = false) suppliedToken: String?): GenerationResult {
         authorize(suppliedToken)
-        return generator.generate()
+        return generator.generate(LocalDate.now(ZoneId.of("Asia/Seoul")))
     }
 
     @PostMapping("/dispatch")

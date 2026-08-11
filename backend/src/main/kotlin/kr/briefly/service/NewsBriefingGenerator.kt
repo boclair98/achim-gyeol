@@ -118,7 +118,7 @@ class NewsBriefingGenerator(
     )
 
     @Transactional
-    fun generate(briefingDate: LocalDate = LocalDate.now(zone)): GenerationResult {
+    fun generate(briefingDate: LocalDate = LocalDate.now(ZoneId.of("Asia/Seoul"))): GenerationResult {
         val provider = newsProvider.ifAvailable ?: error("NAVER API HUB 키가 설정되지 않았습니다")
         val summarizer = aiSummarizer.ifAvailable ?: error("OpenAI API 키가 설정되지 않았습니다")
         val coverageDate = briefingDate.minusDays(1)
