@@ -73,11 +73,7 @@ export function BriefingDelivery() {
 function DailyBriefingSheets({ briefing, loading }: { briefing: Briefing; loading: boolean }) {
   const [page, setPage] = useState(0);
   const trackRef = useRef<HTMLDivElement>(null);
-  const pages = useMemo(() => {
-    const result: Story[][] = [];
-    for (let index = 0; index < briefing.stories.length; index += 2) result.push(briefing.stories.slice(index, index + 2));
-    return result;
-  }, [briefing.stories]);
+  const pages = useMemo(() => briefing.stories.map((story) => [story]), [briefing.stories]);
 
   const moveTo = (nextPage: number) => {
     const safePage = Math.max(0, Math.min(pages.length - 1, nextPage));

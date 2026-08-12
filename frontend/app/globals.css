@@ -280,7 +280,7 @@ button:disabled { cursor: wait; opacity: .55; }
 .brief-sheet-intro h1 { margin: 23px 0 0; font-size: clamp(47px, 5.6vw, 74px); line-height: 1.02; letter-spacing: -.07em; font-weight: 950; word-break: keep-all; }
 .brief-sheet-intro > p { margin: 22px 0 0; color: #4f5964; font-size: 16px; line-height: 1.78; }
 .brief-sheet-deck { min-width: 0; }
-.brief-sheet-track { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; overflow-x: auto; scroll-behavior: smooth; scroll-snap-type: x mandatory; scrollbar-width: none; }
+.brief-sheet-track { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; overflow-x: auto; overflow-y: hidden; overscroll-behavior-inline: contain; scroll-behavior: smooth; scroll-snap-type: x mandatory; scrollbar-width: none; touch-action: pan-x; }
 .brief-sheet-track::-webkit-scrollbar { display: none; }
 .brief-sheet { position: relative; box-sizing: border-box; width: 100%; min-height: 790px; overflow: hidden; scroll-snap-align: start; border: 1px solid #d9d0bf; border-radius: 6px 28px 28px 6px; background: #fffaf0; padding: 33px 38px 37px 51px; box-shadow: 0 28px 70px rgba(36,43,57,.16); }
 .brief-sheet::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 8px; background: linear-gradient(#19af78 0 34%, #d3ef6c 34% 67%, #16372e 67%); }
@@ -412,7 +412,7 @@ button:disabled { cursor: wait; opacity: .55; }
   .brief-sheet-deck { margin-top: 30px; }
   .brief-sheet-track { scroll-padding-inline: 14px; padding: 0 14px 22px; }
   .brief-sheet-track::after { content: ""; width: 1px; }
-  .brief-sheet { width: calc(100% - 4px); min-height: 0; margin-right: 13px; border-radius: 5px 23px 23px 5px; padding: 25px 21px 27px 30px; box-shadow: 0 17px 36px rgba(36,43,57,.14); }
+  .brief-sheet { width: calc(100% - 4px); min-height: 610px; margin-right: 13px; border-radius: 5px 23px 23px 5px; padding: 25px 21px 27px 30px; box-shadow: 0 17px 36px rgba(36,43,57,.14); }
   .brief-sheet > header strong { font-size: 13px; }
   .brief-sheet > header b { font-size: 10px; }
   .brief-sheet-story { padding: 24px 0 22px; }
