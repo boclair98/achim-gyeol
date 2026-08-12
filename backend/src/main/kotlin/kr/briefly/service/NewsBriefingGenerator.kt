@@ -40,6 +40,7 @@ data class ArticleCluster(val category: Category, val articles: List<CollectedAr
 class ArticleClusterer {
     private val stopWords = setOf(
         "관련", "대한", "위해", "통해", "이번", "오늘", "어제", "내일", "정부", "발표", "공개", "기자", "뉴스",
+        "주요", "내용", "세부안", "개편", "조정", "확대", "변경", "확정", "결정", "추진", "검토", "계획",
     )
     private val publicImpactTerms = setOf(
         "정부", "국회", "대통령", "법원", "헌법", "전국", "시행", "법안", "규제", "지원금", "세금",
