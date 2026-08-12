@@ -11,7 +11,6 @@ import kr.briefly.integration.NewsProvider
 import kr.briefly.repository.BriefingEditionRepository
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.ObjectProvider
-import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.ApplicationRunner
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
@@ -49,7 +48,7 @@ class ArticleClusterer {
         "개인정보", "해킹", "보안", "인공지능", "AI", "반도체", "플랫폼",
     )
 
-    fun cluster(category: Category, articles: List<CollectedArticle>, limit: Int = 20): List<ArticleCluster> {
+    fun cluster(category: Category, articles: List<CollectedArticle>): List<ArticleCluster> {
         val unique = articles
             .filter { it.title.isNotBlank() && it.originalUrl.isNotBlank() }
             .distinctBy { canonicalUrl(it.originalUrl) }
@@ -76,7 +75,7 @@ class ArticleClusterer {
             if (!broadCoverage && primarySources == 0 && impactSignals == 0) return@mapNotNull null
             val rank = selected.size * 100 + primarySources * 80 + impactSignals.coerceAtMost(5) * 30 + group.size.coerceAtMost(10) * 5
             ArticleCluster(category, selected, rank)
-        }.sortedByDescending(ArticleCluster::rank).take(limit)
+        }.sortedByDescending(ArticleCluster::rank)
     }
 
     internal fun similarity(left: String, right: String): Double {
@@ -134,8 +133,6 @@ class NewsBriefingGenerator(
         Category.SOCIETY to listOf("사회 주요 뉴스", "재난 사고 의료 교통", "법원 검찰 교육 노동"),
         Category.TECH to listOf("AI 반도체 과학 기술", "플랫폼 개인정보 보안", "통신 모빌리티 바이오"),
     )
-    @Value("\${app.pipeline.max-candidates:20}") private var maxCandidates: Int = 20
-
     @Transactional
     fun generate(briefingDate: LocalDate = LocalDate.now(ZoneId.of("Asia/Seoul"))): GenerationResult {
         val provider = newsProvider.ifAvailable ?: error("NAVER API HUB 키가 설정되지 않았습니다")
@@ -147,8 +144,8 @@ class NewsBriefingGenerator(
                 .filter { it.publishedAt.atZoneSameInstant(zone).toLocalDate() == coverageDate }
                 .distinctBy { it.originalUrl }
             collectedCount += articles.size
-            clusterer.cluster(category, articles, limit = maxCandidates.coerceAtLeast(1))
-        }.sortedByDescending(ArticleCluster::rank)).take(maxCandidates.coerceAtLeast(1))
+            clusterer.cluster(category, articles)
+        }.sortedByDescending(ArticleCluster::rank))
 
         val failures = mutableListOf<String>()
         val stories = clusters.mapNotNull { cluster ->
