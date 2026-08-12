@@ -60,9 +60,24 @@ jobs:
             if (( remaining <= 0 )); then break; fi
             curl --silent --show-error --max-time 30 \
               --retry 3 --retry-all-errors \
-              "https://morningnews.coders.kr/actuator/health" >/dev/null || true
+              "https://morningnews.coders.kr/api/push/public-key" >/dev/null || true
             if (( remaining > 60 )); then sleep 60; else sleep "$remaining"; fi
           done
+
+      - name: Wake backend API
+        shell: bash
+        run: |
+          for attempt in $(seq 1 36); do
+            config="$(curl --fail-with-body --silent --show-error \
+              --max-time 45 \
+              "https://morningnews.coders.kr/api/push/public-key" 2>/dev/null || true)"
+            if jq -e '.enabled == true' <<< "$config" >/dev/null 2>&1; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Backend API did not become ready within the wake-up window" >&2
+          exit 1
 
       - name: Wake service and run morning operation
         shell: bash

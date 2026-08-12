@@ -333,6 +333,7 @@ GET https://morningnews.coders.kr/api/push/public-key
 운영 자동화 파일은 `.github/workflows/morning-briefing.yml`입니다.
 
 - 오전 6시: 서버를 깨우고 전날 뉴스 생성 시작
+- 작업 시작 전: 웹 화면이 아닌 백엔드 푸시 API가 응답할 때까지 최대 3분간 대기
 - 생성 중: 10초마다 상태를 조회해 무료 호스팅이 잠들지 않도록 유지
 - 오전 6시 45분: 발송 작업을 미리 시작해 서버를 깨우고 준비 상태 유지
 - 오전 7시 30분: 준비된 브리핑을 등록 기기에 푸시
