@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, BellRing, BookOpen, CheckCircle2, Clock3, ExternalLink, FileCheck2, Flag, Settings2 } from "lucide-react";
+import { AlertTriangle, BellRing, BookOpen, CheckCircle2, ChevronLeft, ChevronRight, Clock3, ExternalLink, FileCheck2, Flag, Settings2 } from "lucide-react";
 import { briefingCategoryOrder, demoBriefing, type Briefing, type Story } from "@/lib/briefing";
 import { deviceHeaders } from "@/lib/device";
 import { defaultBrand, type BriefingBrand } from "@/lib/product";
@@ -45,18 +45,7 @@ export function BriefingDelivery() {
       <Link href="/#delivery-deck" className="delivered-settings"><Settings2 size={16} /> 알림 설정</Link>
     </header>
 
-    <section className="news-reader-hero">
-      <div className="reader-date"><span>{briefing.productionReady ? "오늘의 실제 브리핑" : "미리보기 브리핑"}</span><strong>{briefing.dateLabel}</strong></div>
-      <h1>오늘 꼭 알아야 할<br />어제의 뉴스</h1>
-      <p>{loading ? "정확한 뉴스 브리핑을 불러오고 있습니다." : briefing.lead}</p>
-      <div className="reader-stats">
-        <span><strong>{briefing.stories.length}</strong> 중요 뉴스</span>
-        <span><strong>{briefing.verifiedCount}</strong> 근거 확인</span>
-        <span><Clock3 size={16} /><strong>{briefing.readMinutes}분</strong> 예상</span>
-        <span><FileCheck2 size={16} /><strong>{briefing.lastVerifiedAt}</strong> 자동 점검</span>
-      </div>
-      <p className="reader-disclosure"><strong>작성: 아침결 자동 브리핑 시스템</strong> · AI가 요약하고 출처 독립성·주장별 근거·충돌 여부를 자동 검사합니다. 현재 모든 브리핑을 사람이 발행 전 검토하지는 않습니다.</p>
-    </section>
+    <DailyBriefingSheets briefing={briefing} loading={loading} />
 
     <nav className="news-category-nav" aria-label="뉴스 분야">
       <div>{categories.map((item) => <button key={item} className={category === item ? "active" : ""} onClick={() => setCategory(item)}>{item}{item !== "전체" && <small>{briefing.stories.filter((story) => story.category === item).length}</small>}</button>)}</div>
@@ -79,6 +68,74 @@ export function BriefingDelivery() {
       </aside>
     </div>
   </main>;
+}
+
+function DailyBriefingSheets({ briefing, loading }: { briefing: Briefing; loading: boolean }) {
+  const [page, setPage] = useState(0);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const pages = useMemo(() => {
+    const result: Story[][] = [];
+    for (let index = 0; index < briefing.stories.length; index += 2) result.push(briefing.stories.slice(index, index + 2));
+    return result;
+  }, [briefing.stories]);
+
+  const moveTo = (nextPage: number) => {
+    const safePage = Math.max(0, Math.min(pages.length - 1, nextPage));
+    const track = trackRef.current;
+    if (!track) return;
+    track.scrollTo({ left: track.clientWidth * safePage, behavior: "smooth" });
+    setPage(safePage);
+  };
+
+  return <section className="brief-sheet-section" aria-label="오늘의 아침결 카드 브리핑">
+    <div className="brief-sheet-intro">
+      <div className="reader-date"><span>{briefing.productionReady ? "오늘의 실제 브리핑" : "미리보기 브리핑"}</span><strong>{briefing.dateLabel}</strong></div>
+      <h1>정확하게 확인하고,<br />핵심만 넘겨보세요.</h1>
+      <p>{loading ? "정확한 뉴스 브리핑을 불러오고 있습니다." : briefing.lead}</p>
+      <div className="reader-stats">
+        <span><strong>{briefing.stories.length}</strong> 중요 뉴스</span>
+        <span><strong>{briefing.verifiedCount}</strong> 근거 확인</span>
+        <span><Clock3 size={16} /><strong>{briefing.readMinutes}분</strong> 예상</span>
+        <span><FileCheck2 size={16} /><strong>{briefing.lastVerifiedAt}</strong> 자동 점검</span>
+      </div>
+      <p className="reader-disclosure"><strong>AI 요약 · 자동 품질검사</strong> · 확인된 사실, 의미, 아직 불확실한 내용을 나누고 원문을 연결합니다.</p>
+    </div>
+
+    <div className="brief-sheet-deck">
+      <div className="brief-sheet-track" ref={trackRef} onScroll={(event) => {
+        const track = event.currentTarget;
+        if (track.clientWidth) setPage(Math.round(track.scrollLeft / track.clientWidth));
+      }}>
+        {pages.map((stories, pageIndex) => <article className="brief-sheet" key={`sheet-${pageIndex}`}>
+          <header>
+            <div><span>ACHIMGYEOL</span><strong>어제 뉴스 · 오늘 아침 한 번에</strong></div>
+            <div><b>{briefing.dateLabel}</b><small>{pageIndex + 1} / {pages.length}</small></div>
+          </header>
+          <div className="brief-sheet-rule"><i /></div>
+          <div className="brief-sheet-stories">
+            {stories.map((story) => {
+              const storyIndex = briefing.stories.findIndex((item) => item.id === story.id) + 1;
+              const evidenceReady = story.evidenceAvailable && Boolean(story.claims?.length);
+              const facts = evidenceReady ? story.claims!.slice(0, 3).map((claim) => claim.statement) : summaryPoints(story.summary).slice(0, 3);
+              return <section className="brief-sheet-story" key={story.id}>
+                <div className="brief-sheet-meta"><b>{String(storyIndex).padStart(2, "0")}</b><span>{story.category}</span><em className={story.verificationStatus === "VERIFIED" && evidenceReady ? "confirmed" : "checking"}>{evidenceReady ? (story.verificationStatus === "VERIFIED" ? "근거 연결" : "확인 진행 중") : "원문 제공"}</em></div>
+                <h2><a href={`#news-${story.id}`}>{story.title}</a></h2>
+                <p className="brief-sheet-conclusion"><strong>한 줄 결론</strong>{story.oneLineSummary || facts[0] || story.title}</p>
+                <ul>{facts.map((fact, factIndex) => <li key={`${story.id}-fact-${factIndex}`}>{fact}</li>)}</ul>
+                <div className="brief-sheet-matter"><strong>왜 중요한가</strong><p>{story.whyItMatters}</p></div>
+                <footer><span>출처 {story.sources.map((source) => source.publisher).join(" · ")}</span><a href={`#news-${story.id}`}>근거 자세히 보기 →</a></footer>
+              </section>;
+            })}
+          </div>
+        </article>)}
+      </div>
+      <div className="brief-sheet-controls">
+        <button type="button" aria-label="이전 브리핑 카드" onClick={() => moveTo(page - 1)} disabled={page === 0}><ChevronLeft /></button>
+        <div><strong>{page + 1}</strong><span>/ {Math.max(pages.length, 1)}</span><small>옆으로 넘겨보세요</small></div>
+        <button type="button" aria-label="다음 브리핑 카드" onClick={() => moveTo(page + 1)} disabled={page >= pages.length - 1}><ChevronRight /></button>
+      </div>
+    </div>
+  </section>;
 }
 
 function NewsArticle({ story, index, reportingEnabled }: { story: Story; index: number; reportingEnabled: boolean }) {
