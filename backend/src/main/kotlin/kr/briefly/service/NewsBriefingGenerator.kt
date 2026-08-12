@@ -86,7 +86,10 @@ class ArticleClusterer {
         val common = leftTokens.intersect(rightTokens).size.toDouble()
         val containment = common / minOf(leftTokens.size, rightTokens.size)
         val dice = (2.0 * common) / (leftTokens.size + rightTokens.size)
-        return max(containment * 0.65 + dice * 0.35, characterSimilarity(left, right))
+        return max(
+            containment * 0.65 + dice * 0.35,
+            characterSimilarity(leftTokens.sorted().joinToString(" "), rightTokens.sorted().joinToString(" ")),
+        )
     }
 
     private fun tokens(title: String): Set<String> = title.lowercase()
