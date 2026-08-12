@@ -101,6 +101,10 @@ jobs:
               echo "- 마지막 수 변경: ${changed_at}"
               echo "- 변경 사유: ${reason}"
               echo ""
+              echo "| 기기 종류 | 브라우저 | 활성 수 |"
+              echo "|---|---|---:|"
+              jq -r '.deviceBreakdown[] | "| \(.deviceType) | \(.browser) | \(.count)대 |"' <<< "$status"
+              echo ""
               echo "> 사용자 화면에는 표시되지 않는 운영자용 집계입니다."
             } >> "$GITHUB_STEP_SUMMARY"
           elif [[ "$OPERATION" == "test-push" ]]; then
