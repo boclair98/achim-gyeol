@@ -106,7 +106,8 @@ export function BriefingDelivery() {
 }
 
 function BriefingAvailability({ state, briefing, liveToday, onRetry }: { state: BriefingLoadState; briefing: Briefing; liveToday: boolean; onRetry: () => void }) {
-  if (state === "live" && liveToday) return <div className="briefing-availability live" role="status"><CheckCircle2 size={16} /><span><strong>오늘 브리핑 연결됨</strong> · {briefing.dateLabel} 검증본입니다.</span></div>;
+  if (state === "live" && liveToday && briefing.productionReady) return <div className="briefing-availability live" role="status"><CheckCircle2 size={16} /><span><strong>오늘 브리핑 연결됨</strong> · {briefing.dateLabel} 검증본입니다.</span></div>;
+  if (state === "live" && liveToday) return <div className="briefing-availability partial" role="status"><AlertTriangle size={16} /><span><strong>오늘 브리핑 보완 중</strong> · 현재 {briefing.stories.length}건은 발송 최소 기준을 충족하지 않아 다시 수집·검증하고 있습니다.</span><button type="button" onClick={onRetry}><RefreshCw size={14} /> 새로 확인</button></div>;
   const message = state === "loading"
     ? "오늘 브리핑을 연결하고 있습니다."
     : state === "cached"
@@ -124,6 +125,7 @@ function DailyBriefingSheets({ briefing, loading, reportingEnabled }: { briefing
   const [digestSize, setDigestSize] = useState<"compact" | "standard" | "deep">("standard");
   const trackRef = useRef<HTMLDivElement>(null);
   const orderedStories = useMemo(() => [...briefing.stories].sort((a, b) => Number(preferredCategories.includes(b.category)) - Number(preferredCategories.includes(a.category))), [briefing.stories, preferredCategories]);
+  const categoryCount = useMemo(() => new Set(briefing.stories.map((story) => story.category)).size, [briefing.stories]);
   const deckPages = useMemo(() => [{ kind: "overview" as const }, ...orderedStories.map((story) => ({ kind: "story" as const, story }))], [orderedStories]);
 
   useEffect(() => {
@@ -171,7 +173,7 @@ function DailyBriefingSheets({ briefing, loading, reportingEnabled }: { briefing
   return <section className="brief-sheet-section" aria-label="오늘의 아침결 카드 브리핑">
     <div className="brief-sheet-intro">
       <div className="reader-date"><span>{reportingEnabled ? "오늘의 실제 브리핑" : briefing.productionReady ? "최근 검증 브리핑" : "미리보기 브리핑"}</span><strong>{briefing.dateLabel}</strong></div>
-      <h1>어제 핵심 뉴스 {briefing.stories.length}건,<br /><em>먼저 30초로 훑어보세요.</em></h1>
+      <h1>어제 핵심 {briefing.stories.length}건 · {categoryCount}개 분야,<br /><em>먼저 30초로 훑어보세요.</em></h1>
       <p>{loading ? "정확한 뉴스 브리핑을 불러오고 있습니다." : "첫 장에서 오늘의 흐름을 잡고, 옆으로 넘기며 사실·영향·다음 확인 포인트를 읽을 수 있습니다."}</p>
       <div className="reader-stats">
         <span><strong>{briefing.stories.length}</strong> 중요 뉴스</span>
@@ -215,7 +217,7 @@ function DailyBriefingSheets({ briefing, loading, reportingEnabled }: { briefing
           <ol className="brief-overview-list">
             {orderedStories.slice(0, 5).map((story, index) => <li key={story.id}><button type="button" onClick={() => moveTo(index + 1)}><b>{String(index + 1).padStart(2, "0")}</b><span><small>{story.category}</small><strong>{story.oneLineSummary || story.title}</strong></span><ChevronRight size={16} /></button></li>)}
           </ol>
-          <footer className="brief-overview-footer"><span>선정 뉴스 {orderedStories.length}건 · 예상 {briefing.readMinutes}분</span><button type="button" onClick={() => moveTo(1)}>첫 뉴스 보기 <ChevronRight size={14} /></button></footer>
+          <footer className="brief-overview-footer"><span>위에는 우선 5건 · 옆으로 전체 {orderedStories.length}건 · 예상 {briefing.readMinutes}분</span><button type="button" onClick={() => moveTo(1)}>전체 뉴스 보기 <ChevronRight size={14} /></button></footer>
         </article>
 
         {orderedStories.map((story, storyPageIndex) => {

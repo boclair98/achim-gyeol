@@ -277,6 +277,7 @@ button:disabled { cursor: wait; opacity: .55; }
 .news-reader-topbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 68px; border-bottom: 1px solid #dfe2de; background: rgba(255,255,255,.94); padding: 0 max(22px, calc((100vw - 1180px) / 2)); backdrop-filter: blur(14px); }
 .briefing-availability { display: flex; align-items: center; gap: 9px; max-width: 1180px; margin: 18px auto 0; border: 1px solid #d8ddda; border-radius: 12px; background: #fff; padding: 11px 14px; color: #53605a; font-size: 12px; line-height: 1.5; }
 .briefing-availability.live { border-color: #b9dfcd; background: #edf9f3; color: #126d52; }
+.briefing-availability.partial { border-color: #e7c880; background: #fff8e8; color: #715018; }
 .briefing-availability.cached,.briefing-availability.demo { border-color: #e7c880; background: #fff8e8; color: #715018; }
 .briefing-availability svg { flex: 0 0 auto; }
 .briefing-availability span { flex: 1; }

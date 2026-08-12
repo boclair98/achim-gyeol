@@ -74,6 +74,7 @@
 .ops-console-head > div:first-child span { color: var(--success); font-size: 9px; font-weight: 900; }
 .ops-console-head h2 { margin: 6px 0; font-size: clamp(30px,4vw,48px); letter-spacing: -.06em; }
 .ops-console-head p { margin: 0; color: var(--muted); font-size: 10px; }
+.ops-console-head .ops-coverage-warning { display: flex; align-items: center; gap: 6px; margin-top: 9px; border-radius: 8px; background: #fff4dc; padding: 8px 10px; color: #8a5700; font-weight: 800; }
 .ops-console-head > div:last-child { display: flex; flex-wrap: wrap; justify-content: end; gap: 7px; }
 .ops-metrics { display: grid; grid-template-columns: repeat(6,1fr); gap: 9px; margin-top: 20px; }
 .ops-metrics article { display: grid; grid-template-columns: auto 1fr; gap: 5px 8px; border: 1px solid #d8ddda; border-radius: 14px; background: white; padding: 14px; }

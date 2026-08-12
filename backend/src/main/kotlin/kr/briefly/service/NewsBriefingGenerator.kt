@@ -32,10 +32,33 @@ data class GenerationResult(
     val collectedArticles: Int,
     val candidateClusters: Int,
     val publishedStories: Int,
+    val rejectedCandidates: Int,
+    val categoryCounts: Map<String, Int>,
+    val minimumDeliveryStories: Int,
+    val minimumDeliveryCategories: Int,
+    val deliveryReady: Boolean,
+    val deliveryBlockReasons: List<String>,
 )
 
 data class ArticleCluster(val category: Category, val articles: List<CollectedArticle>, val rank: Int)
 data class EditorialStory(val story: NewsStory, val importanceScore: Int, val clusterRank: Int)
+
+internal fun collectArticlesForDate(
+    coverageDate: LocalDate,
+    zone: ZoneId,
+    maxPages: Int,
+    fetchPage: (start: Int) -> List<CollectedArticle>,
+): List<CollectedArticle> {
+    val collected = mutableListOf<CollectedArticle>()
+    for (pageIndex in 0 until maxPages.coerceIn(1, 10)) {
+        val page = fetchPage(pageIndex * 100 + 1)
+        if (page.isEmpty()) break
+        collected += page
+        val pageDates = page.map { it.publishedAt.atZoneSameInstant(zone).toLocalDate() }
+        if (page.size < 100 || pageDates.any { it.isBefore(coverageDate) }) break
+    }
+    return collected.filter { it.publishedAt.atZoneSameInstant(zone).toLocalDate() == coverageDate }
+}
 
 @Component
 class ArticleClusterer {
@@ -62,8 +85,8 @@ class ArticleClusterer {
 
         unique.forEach { article ->
             val target = groups
-                .map { group -> group to similarity(article.title, group.first().title) }
-                .filter { (_, score) -> score >= 0.42 }
+                .map { group -> group to group.maxOf { existing -> eventSimilarity(article, existing) } }
+                .filter { (_, score) -> score >= 0.36 }
                 .maxByOrNull { (_, score) -> score }
                 ?.first
             if (target == null) groups.add(mutableListOf(article)) else target.add(article)
@@ -94,6 +117,18 @@ class ArticleClusterer {
             containment * 0.65 + dice * 0.35,
             characterSimilarity(leftTokens.sorted().joinToString(" "), rightTokens.sorted().joinToString(" ")),
         )
+    }
+
+    private fun eventSimilarity(left: CollectedArticle, right: CollectedArticle): Double {
+        val titleScore = similarity(left.title, right.title)
+        if (titleScore >= 0.42) return titleScore
+        val sharedTitleTokens = tokens(left.title).intersect(tokens(right.title)).size
+        if (sharedTitleTokens < 2) return 0.0
+        val contextScore = similarity(
+            "${left.title} ${left.description.take(180)}",
+            "${right.title} ${right.description.take(180)}",
+        )
+        return max(titleScore, contextScore * 0.9)
     }
 
     private fun tokens(title: String): Set<String> = title.lowercase()
@@ -128,68 +163,87 @@ class NewsBriefingGenerator(
     private val aiSummarizer: AiSummarizer?,
     private val clusterer: ArticleClusterer,
     private val qualityGate: QualityGate,
+    private val coveragePolicy: BriefingCoveragePolicy,
     private val editionRepository: BriefingEditionRepository,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val zone = ZoneId.of("Asia/Seoul")
+    private val coverageHoldMarker = "COVERAGE_GATE"
     private val queries = linkedMapOf(
-        Category.POLICY to listOf("정부 국회 주요 정책", "복지 노동 주거 교육 정책", "법안 시행 규제"),
-        Category.ECONOMY to listOf("한국 경제 금융 주요", "금리 물가 환율 부동산", "기업 실적 수출 관세"),
-        Category.SOCIETY to listOf("사회 주요 뉴스", "재난 사고 의료 교통", "법원 검찰 교육 노동"),
-        Category.INTERNATIONAL to listOf("국제 외교 안보 주요 뉴스", "미국 중국 일본 유럽 국제", "전쟁 휴전 관세 제재 선거"),
-        Category.TECH to listOf("AI 반도체 과학 기술", "플랫폼 개인정보 보안", "통신 모빌리티 바이오"),
-        Category.LIFE to listOf("생활 건강 소비자 주요 뉴스", "날씨 식품 주거 교통 생활", "여행 환경 기후 교육"),
-        Category.CULTURE to listOf("문화 예술 주요 뉴스", "영화 드라마 음악 공연", "출판 전시 방송 수상"),
-        Category.SPORTS to listOf("스포츠 주요 뉴스", "축구 야구 농구 배구", "국가대표 올림픽 월드컵 우승"),
-        Category.ESPORTS to listOf("e스포츠 주요 뉴스", "LCK MSI 월즈 리그오브레전드", "발로란트 오버워치 e스포츠 대회"),
+        Category.POLICY to listOf("정부 정책", "국회 법안", "복지 노동", "주거 교육 정책", "대통령 국무회의"),
+        Category.ECONOMY to listOf("금리 물가 환율", "증시 금융 시장", "부동산 가계대출", "기업 실적 수출", "고용 소비"),
+        Category.SOCIETY to listOf("사건 사고 재난", "법원 판결 수사", "의료 보건", "교육 노동", "교통 안전"),
+        Category.INTERNATIONAL to listOf("국제 외교 안보", "미국 중국", "일본 유럽", "전쟁 휴전 제재", "정상회담 선거"),
+        Category.TECH to listOf("AI 인공지능", "반도체 배터리", "개인정보 보안 해킹", "과학 우주 바이오", "플랫폼 모빌리티"),
+        Category.LIFE to listOf("날씨 재난 생활", "식품 리콜 소비자", "건강 질병", "주거 교통 요금", "환경 기후 여행"),
+        Category.CULTURE to listOf("영화 드라마", "음악 공연", "출판 전시", "방송 콘텐츠", "문화재 수상"),
+        Category.SPORTS to listOf("프로야구 경기 결과", "축구 경기 결과", "농구 배구 경기 결과", "국가대표 경기", "올림픽 월드컵"),
+        Category.ESPORTS to listOf("LCK e스포츠", "리그오브레전드 대회", "발로란트 e스포츠", "오버워치 e스포츠", "e스포츠 경기 결과"),
     )
-    @Value("\${app.pipeline.max-candidates-per-category:4}") private var maxCandidatesPerCategory: Int = 4
+    @Value("\${app.pipeline.max-candidates-per-category:6}") private var maxCandidatesPerCategory: Int = 6
+    @Value("\${app.pipeline.search-max-pages:3}") private var searchMaxPages: Int = 3
     @Value("\${app.pipeline.max-stories-per-category:3}") private var maxStoriesPerCategory: Int = 3
     @Value("\${app.pipeline.max-stories:15}") private var maxStories: Int = 15
+    @Value("\${app.pipeline.minimum-importance-score:60}") private var minimumImportanceScore: Int = 60
     @Value("\${app.pipeline.require-human-approval:false}") private var requireHumanApproval: Boolean = false
     @Synchronized
     @Transactional
     fun generate(briefingDate: LocalDate = LocalDate.now(ZoneId.of("Asia/Seoul"))): GenerationResult {
         editionRepository.findByBriefingDate(briefingDate)
-            ?.takeIf { it.pipelineGenerated == true && it.stories.isNotEmpty() }
+            ?.takeIf(::shouldReuseExistingEdition)
             ?.let { existing ->
+                val coverage = coveragePolicy.evaluate(existing.stories)
                 log.info("Morning briefing generation skipped because the edition already exists: date={}, stories={}", briefingDate, existing.stories.size)
-                return GenerationResult(briefingDate, briefingDate.minusDays(1), 0, 0, existing.stories.size)
+                return generationResult(
+                    briefingDate = briefingDate,
+                    coverageDate = briefingDate.minusDays(1),
+                    collectedArticles = 0,
+                    candidateClusters = 0,
+                    stories = existing.stories,
+                    rejectedCandidates = 0,
+                    coverage = coverage,
+                )
             }
         check(newsProviders.isNotEmpty()) { "뉴스 공급원 API가 설정되지 않았습니다" }
         val summarizer = aiSummarizer ?: error("OpenAI API 키가 설정되지 않았습니다")
         val coverageDate = briefingDate.minusDays(1)
         var collectedCount = 0
         val clusters = deduplicateClusters(queries.flatMap { (category, categoryQueries) ->
-            val articles = categoryQueries.flatMap { query -> newsProviders.flatMap { provider -> runCatching { provider.search(query, 100) }.onFailure { log.warn("News provider failed: {}", it.message) }.getOrDefault(emptyList()) } }
-                .filter { it.publishedAt.atZoneSameInstant(zone).toLocalDate() == coverageDate }
+            val articles = categoryQueries.flatMap { query -> newsProviders.flatMap { provider -> collectCoverageArticles(provider, query, coverageDate) } }
                 .distinctBy { it.originalUrl }
             collectedCount += articles.size
             clusterer.cluster(category, articles, limit = maxCandidatesPerCategory)
         }.sortedByDescending(ArticleCluster::rank))
 
         val failures = mutableListOf<String>()
-        val editorialStories = clusters.mapNotNull { cluster ->
-            runCatching { buildStory(cluster, summarizer) }
+        val editorialStories = mutableListOf<EditorialStory>()
+        val acceptedByCategory = mutableMapOf<Category, Int>()
+        clusters.forEach { cluster ->
+            if ((acceptedByCategory[cluster.category] ?: 0) >= maxStoriesPerCategory.coerceAtLeast(1)) return@forEach
+            val candidate = runCatching { buildStory(cluster, summarizer) }
                 .onFailure { exception ->
                     val reason = "${cluster.category}: ${exception.message ?: exception.javaClass.simpleName}"
                     failures += reason
                     log.warn("Briefing candidate rejected: {}", reason)
                 }
                 .getOrNull()
-        }
-        val stories = editorialStories
-            .groupBy { it.story.category }
-            .values
-            .flatMap { categoryStories ->
-                categoryStories.sortedWith(compareByDescending<EditorialStory> { it.importanceScore }.thenByDescending { it.clusterRank })
-                    .take(maxStoriesPerCategory.coerceAtLeast(1))
+                ?: return@forEach
+            if (editorialStories.any { existing -> sameEditorialEvent(existing, candidate) }) {
+                log.info("Duplicate morning briefing candidate excluded after AI summary: category={}, title={}", candidate.story.category, candidate.story.title)
+                return@forEach
             }
-            .sortedWith(compareByDescending<EditorialStory> { it.importanceScore }.thenByDescending { it.clusterRank })
-            .take(maxStories.coerceAtLeast(1))
-            .map(EditorialStory::story)
+            editorialStories += candidate
+            acceptedByCategory[cluster.category] = (acceptedByCategory[cluster.category] ?: 0) + 1
+        }
+        val stories = selectBalancedStories(editorialStories)
         check(stories.isNotEmpty()) {
             "교차 검증 기준을 통과한 뉴스가 없습니다 (수집 $collectedCount, 사건 ${clusters.size}, 실패 ${failures.take(3).joinToString(" | ")})"
+        }
+        val coverage = coveragePolicy.evaluate(stories)
+        val editionState = when {
+            !coverage.ready -> EditorialState.HELD
+            requireHumanApproval -> EditorialState.REVIEW
+            else -> EditorialState.AUTO_APPROVED
         }
 
         val edition = editionRepository.findByBriefingDate(briefingDate)
@@ -197,28 +251,47 @@ class NewsBriefingGenerator(
                 briefingDate = briefingDate,
                 lead = "",
             )
-        edition.lead = "${coverageDate.monthValue}월 ${coverageDate.dayOfMonth}일 보도 중 서로 다른 출처에서 공통으로 확인된 핵심만 정리했습니다."
+        edition.lead = "${coverageDate.monthValue}월 ${coverageDate.dayOfMonth}일 보도 중 ${stories.map(NewsStory::category).distinct().size}개 분야 핵심 ${stories.size}건을 서로 다른 출처로 교차 확인했습니다."
         edition.readMinutes = max(3, ceil(stories.size * 1.25).toInt())
         edition.lastVerifiedAt = OffsetDateTime.now(zone)
         edition.pipelineGenerated = true
-        edition.editorialState = if (requireHumanApproval) EditorialState.REVIEW else EditorialState.AUTO_APPROVED
-        edition.approvedAt = if (requireHumanApproval) null else OffsetDateTime.now(zone)
-        edition.approvedBy = if (requireHumanApproval) null else "QUALITY_GATE"
+        edition.editorialState = editionState
+        edition.approvedAt = if (editionState == EditorialState.AUTO_APPROVED) OffsetDateTime.now(zone) else null
+        edition.approvedBy = when (editionState) {
+            EditorialState.AUTO_APPROVED -> "QUALITY_GATE"
+            EditorialState.HELD -> coverageHoldMarker
+            else -> null
+        }
         edition.stories.clear()
         stories.forEachIndexed { index, story ->
             story.displayOrder = index + 1
-            story.editorialState = if (requireHumanApproval) EditorialState.REVIEW else EditorialState.AUTO_APPROVED
+            story.editorialState = editionState
             edition.addStory(story)
         }
         editionRepository.save(edition)
 
-        return GenerationResult(briefingDate, coverageDate, collectedCount, clusters.size, stories.size)
+        if (!coverage.ready) {
+            log.error(
+                "Morning briefing held by coverage gate: date={}, stories={}, categories={}, reasons={}",
+                briefingDate, coverage.storyCount, coverage.categoryCount, coverage.reasons.joinToString(),
+            )
+        }
+
+        return generationResult(
+            briefingDate = briefingDate,
+            coverageDate = coverageDate,
+            collectedArticles = collectedCount,
+            candidateClusters = clusters.size,
+            stories = stories,
+            rejectedCandidates = (clusters.size - editorialStories.size).coerceAtLeast(0),
+            coverage = coverage,
+        )
     }
 
     private fun buildStory(cluster: ArticleCluster, summarizer: AiSummarizer): EditorialStory? {
         val articles = cluster.articles.distinctBy { newsSourceFamily(it.originalUrl) }.take(6)
         val summary = summarizer.summarize(articles)
-        if (!summary.recommendedForMorningBriefing || summary.importanceScore < 70) {
+        if (!summary.recommendedForMorningBriefing || summary.importanceScore < minimumImportanceScore.coerceIn(0, 100)) {
             log.info("Morning briefing candidate excluded: category={}, score={}, reason={}", cluster.category, summary.importanceScore, summary.importanceReason)
             return null
         }
@@ -275,12 +348,80 @@ class NewsBriefingGenerator(
         return EditorialStory(story, summary.importanceScore, cluster.rank)
     }
 
+    private fun shouldReuseExistingEdition(edition: BriefingEdition): Boolean {
+        if (edition.pipelineGenerated != true || edition.stories.isEmpty()) return false
+        val state = edition.editorialState ?: EditorialState.AUTO_APPROVED
+        if (state in setOf(EditorialState.REVIEW, EditorialState.APPROVED, EditorialState.PUBLISHED)) return true
+        if (state == EditorialState.HELD && edition.approvedBy != coverageHoldMarker) return true
+        return coveragePolicy.evaluate(edition.stories).ready
+    }
+
+    private fun collectCoverageArticles(provider: NewsProvider, query: String, coverageDate: LocalDate): List<CollectedArticle> {
+        return collectArticlesForDate(coverageDate, zone, searchMaxPages) { start ->
+            runCatching { provider.search(query, display = 100, start = start) }
+                .onFailure { log.warn("News provider failed: query={}, start={}, message={}", query, start, it.message) }
+                .getOrDefault(emptyList())
+        }
+    }
+
+    private fun selectBalancedStories(candidates: List<EditorialStory>): List<NewsStory> {
+        val comparator = compareByDescending<EditorialStory> { it.importanceScore }
+            .thenByDescending { it.clusterRank }
+        val sortedByCategory = candidates.groupBy { it.story.category }
+            .mapValues { (_, stories) -> stories.sortedWith(comparator) }
+        val categoryLeads = Category.entries.mapNotNull { category -> sortedByCategory[category]?.firstOrNull() }
+        val leadStories = categoryLeads.map { it.story }.toSet()
+        val remaining = candidates.filterNot { it.story in leadStories }.sortedWith(comparator)
+        val limit = maxStories.coerceAtLeast(1)
+        val selected = if (categoryLeads.size >= limit) {
+            categoryLeads.sortedWith(comparator).take(limit)
+        } else {
+            categoryLeads + remaining.take(limit - categoryLeads.size)
+        }
+        return selected.sortedWith(comparator).map(EditorialStory::story)
+    }
+
+    private fun sameEditorialEvent(left: EditorialStory, right: EditorialStory): Boolean {
+        val leftUrls = left.story.sources.map(NewsSource::url).toSet()
+        val rightUrls = right.story.sources.map(NewsSource::url).toSet()
+        if (leftUrls.intersect(rightUrls).isNotEmpty()) return true
+        val sameCategory = left.story.category == right.story.category
+        val titleThreshold = if (sameCategory) 0.38 else 0.52
+        if (clusterer.similarity(left.story.title, right.story.title) >= titleThreshold) return true
+        val leftConclusion = left.story.oneLineSummary.orEmpty()
+        val rightConclusion = right.story.oneLineSummary.orEmpty()
+        return leftConclusion.isNotBlank() && rightConclusion.isNotBlank() &&
+            clusterer.similarity(leftConclusion, rightConclusion) >= if (sameCategory) 0.44 else 0.58
+    }
+
+    private fun generationResult(
+        briefingDate: LocalDate,
+        coverageDate: LocalDate,
+        collectedArticles: Int,
+        candidateClusters: Int,
+        stories: Collection<NewsStory>,
+        rejectedCandidates: Int,
+        coverage: BriefingCoverageDecision,
+    ) = GenerationResult(
+        briefingDate = briefingDate,
+        coverageDate = coverageDate,
+        collectedArticles = collectedArticles,
+        candidateClusters = candidateClusters,
+        publishedStories = stories.size,
+        rejectedCandidates = rejectedCandidates,
+        categoryCounts = stories.groupingBy { it.category.name }.eachCount().toSortedMap(),
+        minimumDeliveryStories = coverage.minimumStories,
+        minimumDeliveryCategories = coverage.minimumCategories,
+        deliveryReady = coverage.ready,
+        deliveryBlockReasons = coverage.reasons,
+    )
+
     private fun deduplicateClusters(clusters: List<ArticleCluster>): List<ArticleCluster> = clusters.fold(mutableListOf<ArticleCluster>()) { unique, candidate ->
         val candidateUrls = candidate.articles.map(CollectedArticle::originalUrl).toSet()
         val duplicate = unique.any { existing ->
             val existingUrls = existing.articles.map(CollectedArticle::originalUrl).toSet()
-            candidateUrls.intersect(existingUrls).size >= 2 ||
-                clusterer.similarity(candidate.articles.first().title, existing.articles.first().title) >= 0.62
+            candidateUrls.intersect(existingUrls).isNotEmpty() ||
+                clusterer.similarity(candidate.articles.first().title, existing.articles.first().title) >= 0.50
         }
         if (!duplicate) unique += candidate
         unique

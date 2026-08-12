@@ -21,7 +21,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 data class MorningRunResult(val generationStarted: Boolean, val generationJob: GenerationJobSnapshot, val delivery: PushDeliverySummary?)
-data class MorningStatusResponse(val date: LocalDate?, val productionReady: Boolean, val stories: Int, val activeSubscriptions: Int, val generationJob: GenerationJobSnapshot)
+data class MorningStatusResponse(val date: LocalDate?, val coverageReady: Boolean, val productionReady: Boolean, val stories: Int, val categories: Int, val minimumStories: Int, val minimumCategories: Int, val blockReasons: List<String>, val activeSubscriptions: Int, val generationJob: GenerationJobSnapshot)
 data class OperatorTestRequest(val expectedActiveSubscriptions: Int)
 
 @RestController
@@ -38,8 +38,8 @@ class GenerationController(
     fun generate(@RequestHeader("X-Briefing-Admin-Token", required = false) suppliedToken: String?): GenerationJobSnapshot {
         adminAuthorizer.authorize(suppliedToken)
         val today = LocalDate.now(ZoneId.of("Asia/Seoul"))
-        val current = runCatching { briefingService.latest() }.getOrNull()
-        return if (current?.briefingDate == today && current.productionReady) generationJob.status() else generationJob.start(today)
+        val current = briefingService.buildStatus(today)
+        return if (current?.productionReady == true) generationJob.status() else generationJob.start(today)
     }
 
     @PostMapping("/dispatch")
@@ -67,8 +67,8 @@ class GenerationController(
     fun runMorning(@RequestHeader("X-Briefing-Admin-Token", required = false) suppliedToken: String?): MorningRunResult {
         adminAuthorizer.authorize(suppliedToken)
         val today = LocalDate.now(ZoneId.of("Asia/Seoul"))
-        val current = runCatching { briefingService.latest() }.getOrNull()
-        return if (current?.briefingDate == today && current.productionReady) {
+        val current = briefingService.buildStatus(today)
+        return if (current?.productionReady == true) {
             MorningRunResult(false, generationJob.status(), webPushService.deliverDueBriefings())
         } else {
             MorningRunResult(true, generationJob.start(today), null)
@@ -78,8 +78,19 @@ class GenerationController(
     @GetMapping("/status")
     fun status(@RequestHeader("X-Briefing-Admin-Token", required = false) suppliedToken: String?): MorningStatusResponse {
         adminAuthorizer.authorize(suppliedToken)
-        val current = runCatching { briefingService.latest() }.getOrNull()
-        return MorningStatusResponse(current?.briefingDate, current?.productionReady == true, current?.stories?.size ?: 0, webPushService.activeSubscriptionCount(), generationJob.status())
+        val current = briefingService.buildStatus(LocalDate.now(ZoneId.of("Asia/Seoul")))
+        return MorningStatusResponse(
+            date = current?.briefingDate,
+            coverageReady = current?.coverageReady == true,
+            productionReady = current?.productionReady == true,
+            stories = current?.stories ?: 0,
+            categories = current?.categories ?: 0,
+            minimumStories = current?.minimumStories ?: 0,
+            minimumCategories = current?.minimumCategories ?: 0,
+            blockReasons = current?.blockReasons ?: listOf("오늘 브리핑이 없습니다"),
+            activeSubscriptions = webPushService.activeSubscriptionCount(),
+            generationJob = generationJob.status(),
+        )
     }
 
     @GetMapping("/subscriptions")

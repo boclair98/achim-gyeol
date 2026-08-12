@@ -56,6 +56,20 @@ class ArticleClustererTest {
         assertThat(clusterer.cluster(Category.POLICY, articles, limit = 20)).hasSize(7)
     }
 
+    @Test
+    fun `표현이 달라도 중간 기사를 통해 같은 사건으로 이어 묶는다`() {
+        val articles = listOf(
+            article("정부, 7대 첨단기술 SEED 프로젝트 발표", "a-news.com", "https://a-news.com/seed"),
+            article("7대 첨단기술 씨앗 프로젝트에 SMR·양자 포함", "b-media.net", "https://b-media.net/seed"),
+            article("SMR·양자 포함 첨단기술 씨앗 육성안 공개", "c-daily.kr", "https://c-daily.kr/seed"),
+        )
+
+        val clusters = clusterer.cluster(Category.TECH, articles)
+
+        assertThat(clusters).hasSize(1)
+        assertThat(clusters.first().articles).hasSize(3)
+    }
+
     private fun article(title: String, publisher: String, url: String) = CollectedArticle(
         title = title,
         description = title,
