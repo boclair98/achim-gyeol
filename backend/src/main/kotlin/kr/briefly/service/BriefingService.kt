@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 data class SourceResponse(val publisher: String, val url: String, val publishedAt: String, val primarySource: Boolean)
 data class ClaimResponse(val statement: String, val sources: List<SourceResponse>)
@@ -36,11 +37,11 @@ class BriefingService(
             id = requireNotNull(id),
             briefingDate = briefingDate,
             productionReady = pipelineGenerated == true,
-            dateLabel = briefingDate.format(DateTimeFormatter.ofPattern("M월 d일 EEEE")),
+            dateLabel = briefingDate.format(DateTimeFormatter.ofPattern("M월 d일 EEEE", Locale.KOREAN)),
             lead = lead,
             readMinutes = readMinutes,
             verifiedCount = stories.count { it.verificationStatus == VerificationStatus.VERIFIED },
-            lastVerifiedAt = lastVerifiedAt.atZoneSameInstant(zone).format(DateTimeFormatter.ofPattern("a h:mm")),
+            lastVerifiedAt = lastVerifiedAt.atZoneSameInstant(zone).format(DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)),
             stories = stories.map { story ->
                 val sources = story.sources.map { SourceResponse(it.publisher, it.url, it.publishedAt.toString(), it.primarySource) }
                 val claims = story.claims.map { claim ->

@@ -126,11 +126,14 @@ class OpenAiSummarizer(
                     "content" to """
                         당신은 한국어 아침 뉴스 브리핑의 팩트 에디터입니다.
                         제공된 기사 제목과 설명에 공통으로 명시된 사실만 사용하세요. 한 출처에만 있는 주장, 추측, 선정적 표현은 제외하세요.
+                        기사 게시 시각과 사건 발생 시각을 혼동하지 마세요. 날짜·수치·인명·기관명·정책 시행 여부는 서로 독립된 출처 두 곳에서 같은 의미로 확인될 때만 확정 사실로 쓰세요.
+                        기사 설명만으로 알 수 없는 배경, 원인, 전망을 상식으로 보충하지 마세요. 정부·기업의 계획이나 검토는 확정·시행으로 바꾸어 표현하지 마세요.
                         title은 한눈에 사건을 이해할 수 있는 중립적인 자체 제목으로 작성하세요.
                         oneLineSummary는 기사에 공통으로 확인된 가장 중요한 결론 하나만 70자 이내의 완결된 문장으로 작성하세요.
-                        summary는 '무슨 일이 있었는지 → 핵심 수치·대상·시점 → 현재 확정된 상태' 순서로 정확히 3문장을 작성하고, 문장마다 하나의 핵심 사실만 담으세요.
+                        summary는 '무슨 일이 있었는지 → 확인된 핵심 수치·대상·시점 → 현재 확정된 상태' 순서로 2~4문장을 작성하고, 문장마다 하나의 핵심 사실만 담으세요.
                         whyItMatters는 독자가 오늘 알아야 할 영향, 적용 시점, 확인하거나 행동할 사항을 1~2문장으로 구체적으로 작성하세요. 실질적인 행동 사항이 없으면 억지로 만들지 마세요.
-                        keyFacts의 각 사실에는 그 사실을 직접 뒷받침하는 sourceIds를 두 개 이상 넣으세요. 출처가 충돌하면 sourcesConflict=true로 하고 uncertainty에 충돌 내용을 적으세요.
+                        keyFacts에는 독자가 원문을 읽지 않아도 사건의 확정된 골격을 이해할 수 있도록 중요한 사실을 빠뜨리지 말고 2~5개 담으세요. 각 사실에는 그 사실을 직접 뒷받침하는 sourceIds를 두 개 이상 넣으세요.
+                        출처가 충돌하거나 발표 전·검토 중·추산 상태이면 sourcesConflict 또는 uncertainty에 구체적으로 적고 확정형으로 쓰지 마세요.
                         근거가 부족하면 사실을 만들어내지 말고 uncertainty에 명시하세요.
                     """.trimIndent(),
                 ),
@@ -199,11 +202,11 @@ class OpenAiSummarizer(
         "properties" to mapOf(
             "title" to mapOf("type" to "string"),
             "oneLineSummary" to mapOf("type" to "string", "description" to "공통으로 확인된 가장 중요한 결론 한 문장, 70자 이내"),
-            "summary" to mapOf("type" to "string", "description" to "무슨 일, 핵심 수치·대상·시점, 현재 상태를 담은 정확히 3문장"),
+            "summary" to mapOf("type" to "string", "description" to "무슨 일, 확인된 핵심 수치·대상·시점, 현재 상태를 담은 2~4문장"),
             "whyItMatters" to mapOf("type" to "string", "description" to "독자가 알아야 할 영향·적용 시점·행동 사항 1~2문장"),
             "keyFacts" to mapOf(
                 "type" to "array",
-                "minItems" to 1,
+                "minItems" to 2,
                 "maxItems" to 5,
                 "items" to mapOf(
                     "type" to "object",

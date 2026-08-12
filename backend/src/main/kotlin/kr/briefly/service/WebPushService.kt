@@ -160,9 +160,9 @@ class WebPushService(
                 due += 1
                 val lead = briefing.stories.firstOrNull()
                 val body = lead?.let {
-                    "핵심: ${it.title.take(38)} · 알아둘 것: ${it.whyItMatters.take(48)}"
+                    "한 줄 결론: ${it.oneLineSummary.take(72)}"
                 } ?: "어제 핵심 뉴스 ${briefing.stories.size}건 · 약 ${briefing.readMinutes}분"
-                if (send(subscription, "아침결 · 오늘 알아야 할 뉴스 ${briefing.stories.size}건", body, false).delivered) delivered += 1 else failed += 1
+                if (send(subscription, "아침결 · 오늘 꼭 알아야 할 뉴스 ${briefing.stories.size}건", body, false).delivered) delivered += 1 else failed += 1
             }
         }
         return PushDeliverySummary("COMPLETED", subscriptions.size, due, delivered, failed, "오늘 브리핑 발송 검사를 완료했습니다.")

@@ -60,10 +60,10 @@ export function BriefingApp() {
         <div className="landing-hero-copy">
           <span className="landing-kicker"><Sparkles size={15} /> 바쁜 사람을 위한 AI 뉴스 브리핑</span>
           <h1>어제 뉴스를,<br /><em>매일 아침 한 번에.</em></h1>
-          <p>하루 종일 뉴스를 따라가지 않아도 괜찮아요. 서로 다른 언론사의 보도를 확인하고, 꼭 알아야 할 흐름만 짧은 카드로 정리해 드립니다.</p>
+          <p>하루 종일 뉴스를 따라가지 않아도 괜찮아요. 서로 다른 언론사의 보도를 확인하고, 꼭 알아야 할 흐름을 빠뜨리지 않은 모바일 뉴스 브리핑으로 정리해 드립니다.</p>
           <div className="landing-hero-actions">
             <SubscriptionTrigger className="landing-primary"><BellRing size={18} /> 무료 알림 받기</SubscriptionTrigger>
-            <Link className="landing-text-link" href="/briefing">오늘의 카드 미리보기 <ArrowRight size={16} /></Link>
+            <Link className="landing-text-link" href="/briefing">오늘의 뉴스 읽기 <ArrowRight size={16} /></Link>
           </div>
           <div className="landing-promises">
             <span><Check size={14} /> 회원가입 없음</span>
@@ -108,7 +108,7 @@ export function BriefingApp() {
         <div className="how-grid">
           <article><div className="how-icon mint"><Clock3 /></div><small>01 · 뉴스 종합</small><h3>전날 뉴스를 모아요</h3><p>전날 00:00~23:59에 보도된 주요 뉴스를 분야별로 수집하고 같은 사건끼리 묶습니다.</p></article>
           <article><div className="how-icon violet"><Sparkles /></div><small>02 · AI 요약</small><h3>핵심과 출처를 정리해요</h3><p>AI가 3줄 요약과 중요성을 작성하고, 서로 다른 출처가 연결됐는지 다시 확인합니다.</p></article>
-          <article><div className="how-icon yellow"><Smartphone /></div><small>03 · 아침 전달</small><h3>오전 7시 30분에 받아요</h3><p>휴대폰 알림을 누르면 핵심 내용과 알아야 할 것이 정리된 카드가 열립니다.</p></article>
+          <article><div className="how-icon yellow"><Smartphone /></div><small>03 · 아침 전달</small><h3>오전 7시 30분에 받아요</h3><p>휴대폰 알림을 누르면 큰 글자로 정리된 뉴스 전용 화면이 바로 열립니다.</p></article>
         </div>
       </section>
 

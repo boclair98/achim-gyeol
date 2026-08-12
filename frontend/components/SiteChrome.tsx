@@ -12,7 +12,7 @@ export function SiteHeader({ context = "무료 알림 받기" }: { context?: str
       </Link>
       <nav aria-label="주요 메뉴">
         <Link href="/#how-it-works">이용 방법</Link>
-        <Link href="/briefing">오늘의 카드</Link>
+        <Link href="/briefing">오늘의 뉴스</Link>
         <Link href="/archive">지난 뉴스</Link>
         <Link href="/trust">편집 원칙</Link>
       </nav>

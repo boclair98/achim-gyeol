@@ -28,7 +28,7 @@ export function DeliveryDeck({ briefing }: Props) {
 
       <div className="delivery-layout subscription-layout">
         <div className="deck-preview">
-          <div className="deck-counter"><Images size={15} /> 실제로 도착하는 카드 · {currentIndex + 1}/{cards.length}</div>
+          <div className="deck-counter"><Images size={15} /> 공유용 뉴스 카드 미리보기 · {currentIndex + 1}/{cards.length}</div>
           <div className="card-stack" aria-live="polite">
             <div className="stack-sheet stack-two" aria-hidden="true" />
             <div className="stack-sheet stack-one" aria-hidden="true" />
@@ -41,7 +41,7 @@ export function DeliveryDeck({ briefing }: Props) {
             </div>
             <button aria-label="다음 카드" onClick={() => setCurrentIndex((index) => Math.min(cards.length - 1, index + 1))} disabled={currentIndex === cards.length - 1}><ChevronRight /></button>
           </div>
-          <Link className="deck-detail-link" href="/briefing">오늘의 카드 전체 화면으로 보기 →</Link>
+          <Link className="deck-detail-link" href="/briefing">오늘의 모바일 뉴스 전체 보기 →</Link>
         </div>
 
         <div className="subscription-panel quick-subscription-card">
