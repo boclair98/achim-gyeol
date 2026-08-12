@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AppWindow, BellOff, BellRing, CheckCircle2, ChevronRight, Send, Share2, SquarePlus } from "lucide-react";
+import Image from "next/image";
+import { BellOff, BellRing, CheckCircle2, Send } from "lucide-react";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 const serverSubscriptionKey = "achim-gyeol-server-subscription";
@@ -124,43 +125,21 @@ function IosInstallGuide() {
       <h3 id="ios-guide-title">아이폰 알림은 이렇게 켜세요</h3>
       <p>앱스토어 설치 없이, Safari에서 아래 순서대로 하면 됩니다.</p>
     </div>
-
-    <div className="ios-guide-steps">
-      <article className="ios-guide-step">
-        <span className="ios-guide-number">1</span>
-        <div className="ios-visual safari-visual" aria-hidden="true">
-          <div className="mini-browser-title">morningnews.coders.kr</div>
-          <div className="mini-news-card"><i>아침결</i><b>어제 뉴스,<br />오늘 아침 한 번에</b></div>
-          <div className="safari-toolbar"><span>‹</span><span>›</span><strong><Share2 size={20} /></strong><span>▢</span><span>☰</span></div>
-        </div>
-        <div><strong>Safari의 공유 버튼</strong><p>화면 아래 <Share2 size={14} /> 모양을 눌러요.</p></div>
-      </article>
-
-      <ChevronRight className="ios-guide-arrow" aria-hidden="true" />
-
-      <article className="ios-guide-step">
-        <span className="ios-guide-number">2</span>
-        <div className="ios-visual share-sheet-visual" aria-hidden="true">
-          <div className="share-sheet-handle" />
-          <div className="share-sheet-row"><span><SquarePlus size={22} /></span><b>홈 화면에 추가</b><i>›</i></div>
-          <div className="share-sheet-row muted"><span>☆</span><b>즐겨찾기에 추가</b><i>›</i></div>
-        </div>
-        <div><strong>‘홈 화면에 추가’</strong><p>공유 메뉴를 올려 이 항목을 눌러요.</p></div>
-      </article>
-
-      <ChevronRight className="ios-guide-arrow" aria-hidden="true" />
-
-      <article className="ios-guide-step">
-        <span className="ios-guide-number">3</span>
-        <div className="ios-visual home-visual" aria-hidden="true">
-          <div className="home-app"><span><AppWindow size={24} /></span><b>아침결</b></div>
-          <div className="notification-preview"><BellRing size={15} /><div><b>아침결 알림</b><span>오늘 알아야 할 뉴스가 도착했어요</span></div></div>
-        </div>
-        <div><strong>아침결 아이콘으로 열기</strong><p><b>이 기기에 알림 등록</b> → <b>허용</b>을 눌러요.</p></div>
-      </article>
-    </div>
-
-    <p className="ios-guide-finish"><CheckCircle2 size={16} /> 여기까지 하면 선택한 요일 오전 7시 30분에 브리핑이 와요.</p>
+    <Image
+      className="ios-guide-image"
+      src="/iphone-pwa-guide.png"
+      width={864}
+      height={1792}
+      sizes="(max-width: 600px) calc(100vw - 66px), 470px"
+      alt="아이폰 Safari에서 오른쪽 아래 점 세 개, 더 보기, 홈 화면에 추가, 오른쪽 위 추가를 차례로 누르는 방법"
+      priority
+    />
+    <ol className="ios-guide-text-steps">
+      <li><b>…</b> 버튼을 누르고 <b>더 보기</b>를 선택해요.</li>
+      <li>아래로 내려 <b>홈 화면에 추가</b>를 눌러요.</li>
+      <li><b>추가</b> 후 홈 화면의 아침결에서 알림을 허용해요.</li>
+    </ol>
+    <p className="ios-guide-finish"><CheckCircle2 size={16} /> 실제 화면의 초록색 표시만 순서대로 따라 하세요.</p>
   </section>;
 }
 
