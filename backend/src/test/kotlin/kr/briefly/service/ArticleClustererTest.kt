@@ -53,19 +53,7 @@ class ArticleClustererTest {
             )
         }.flatten()
 
-        assertThat(clusterer.cluster(Category.POLICY, articles)).hasSize(7)
-    }
-
-    @Test
-    fun `중요도 기준을 통과하면 20건을 넘어도 모두 반환한다`() {
-        val articles = (1..25).flatMap { event ->
-            listOf(
-                article("ZXTOPIC$event ALPHA$event BETA$event", "정부 원문", "https://www.mois.go.kr/topic/$event/a"),
-                article("ZXTOPIC$event ALPHA$event BETA$event confirmed", "news-$event", "https://news-$event.example.com/topic/$event/b"),
-            )
-        }
-
-        assertThat(clusterer.cluster(Category.POLICY, articles)).hasSize(25)
+        assertThat(clusterer.cluster(Category.POLICY, articles, limit = 20)).hasSize(7)
     }
 
     private fun article(title: String, publisher: String, url: String) = CollectedArticle(

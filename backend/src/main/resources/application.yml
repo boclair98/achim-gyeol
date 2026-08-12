@@ -42,4 +42,7 @@ app:
     enabled: ${NEWS_PIPELINE_ENABLED:false}
     generate-on-startup: ${NEWS_GENERATE_ON_STARTUP:false}
     cron: ${NEWS_GENERATION_CRON:0 0 6 * * *}
+    max-candidates-per-category: ${NEWS_MAX_CANDIDATES_PER_CATEGORY:4}
+    max-stories-per-category: ${NEWS_MAX_STORIES_PER_CATEGORY:3}
+    max-stories: ${NEWS_MAX_STORIES:15}
     admin-token: ${BRIEFING_ADMIN_TOKEN:}

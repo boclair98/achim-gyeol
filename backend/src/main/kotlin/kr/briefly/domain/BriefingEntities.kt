@@ -4,7 +4,7 @@ import jakarta.persistence.*
 import java.time.LocalDate
 import java.time.OffsetDateTime
 
-enum class Category { POLICY, ECONOMY, SOCIETY, TECH }
+enum class Category { POLICY, ECONOMY, SOCIETY, INTERNATIONAL, TECH, LIFE, CULTURE, SPORTS, ESPORTS }
 enum class VerificationStatus { VERIFIED, DEVELOPING, CONFLICTING, SINGLE_SOURCE }
 enum class FeedbackType { INCORRECT, BIASED, UNCLEAR, HELPFUL }
 

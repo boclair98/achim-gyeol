@@ -59,5 +59,15 @@ class BriefingService(
 
     private fun firstSentence(summary: String): String = summary.split(Regex("(?<=[.!?])\\s+")).firstOrNull()?.trim().orEmpty().ifBlank { summary.take(120) }
 
-    private fun categoryLabel(category: Category) = when (category) { Category.POLICY -> "정책"; Category.ECONOMY -> "경제"; Category.SOCIETY -> "사회"; Category.TECH -> "테크" }
+    private fun categoryLabel(category: Category) = when (category) {
+        Category.POLICY -> "정책"
+        Category.ECONOMY -> "경제"
+        Category.SOCIETY -> "사회"
+        Category.INTERNATIONAL -> "국제"
+        Category.TECH -> "테크"
+        Category.LIFE -> "생활"
+        Category.CULTURE -> "문화"
+        Category.SPORTS -> "스포츠"
+        Category.ESPORTS -> "e스포츠"
+    }
 }

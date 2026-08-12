@@ -3,19 +3,22 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, BellRing, BookOpen, CheckCircle2, Clock3, ExternalLink, FileCheck2, Settings2 } from "lucide-react";
-import { demoBriefing, type Briefing, type Story } from "@/lib/briefing";
+import { briefingCategoryOrder, demoBriefing, type Briefing, type Story } from "@/lib/briefing";
 import { defaultBrand, type BriefingBrand } from "@/lib/product";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
-const categories = ["전체", "정책", "경제", "사회", "테크"] as const;
 
 export function BriefingDelivery() {
   const [briefing, setBriefing] = useState<Briefing>(demoBriefing);
   const [brand, setBrand] = useState<BriefingBrand>(defaultBrand);
-  const [category, setCategory] = useState<(typeof categories)[number]>("전체");
+  const [category, setCategory] = useState<string>("전체");
   const [loading, setLoading] = useState(true);
   const [subscribed, setSubscribed] = useState(false);
   const stories = useMemo(() => category === "전체" ? briefing.stories : briefing.stories.filter((story) => story.category === category), [briefing, category]);
+  const categories = useMemo(
+    () => ["전체", ...briefingCategoryOrder.filter((item) => briefing.stories.some((story) => story.category === item))],
+    [briefing.stories],
+  );
 
   useEffect(() => {
     const brandTimer = window.setTimeout(() => {
