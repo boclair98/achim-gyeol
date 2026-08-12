@@ -16,6 +16,7 @@ data class EditorialStoryItem(
     val oneLineSummary: String?,
     val summary: String,
     val whyItMatters: String,
+    val whatToWatch: String?,
     val uncertainty: String?,
     val verificationStatus: VerificationStatus,
     val qualityScore: Int,
@@ -37,6 +38,7 @@ data class EditorialStoryUpdate(
     val oneLineSummary: String? = null,
     val summary: String? = null,
     val whyItMatters: String? = null,
+    val whatToWatch: String? = null,
     val uncertainty: String? = null,
     val state: EditorialState? = null,
 )
@@ -75,7 +77,7 @@ class EditorialOperationsService(
                 EditorialStoryItem(
                     id = requireNotNull(story.id), order = story.displayOrder, category = story.category.name,
                     title = story.title, oneLineSummary = story.oneLineSummary, summary = story.summary,
-                    whyItMatters = story.whyItMatters, uncertainty = story.uncertainty,
+                    whyItMatters = story.whyItMatters, whatToWatch = story.whatToWatch, uncertainty = story.uncertainty,
                     verificationStatus = story.verificationStatus, qualityScore = story.qualityScore,
                     editorialState = story.editorialState ?: EditorialState.AUTO_APPROVED,
                     claims = story.claims.size, sources = story.sources.size,
@@ -92,6 +94,7 @@ class EditorialOperationsService(
         input.oneLineSummary?.trim()?.let { story.oneLineSummary = it.take(400) }
         input.summary?.trim()?.takeIf(String::isNotBlank)?.let { story.summary = it.take(1200) }
         input.whyItMatters?.trim()?.takeIf(String::isNotBlank)?.let { story.whyItMatters = it.take(700) }
+        input.whatToWatch?.trim()?.let { story.whatToWatch = it.take(500).ifBlank { null } }
         input.uncertainty?.trim()?.let { story.uncertainty = it.take(600).ifBlank { null } }
         input.state?.let { requested ->
             require(requested != EditorialState.PUBLISHED) { "뉴스 단위로 발행 완료 상태를 지정할 수 없습니다" }
@@ -102,7 +105,7 @@ class EditorialOperationsService(
         audit("STORY_UPDATED", "STORY", storyId, actor, "before=${before.take(420)}; state=${story.editorialState}")
         return EditorialStoryItem(
             requireNotNull(story.id), story.displayOrder, story.category.name, story.title, story.oneLineSummary,
-            story.summary, story.whyItMatters, story.uncertainty, story.verificationStatus, story.qualityScore,
+            story.summary, story.whyItMatters, story.whatToWatch, story.uncertainty, story.verificationStatus, story.qualityScore,
             story.editorialState ?: EditorialState.AUTO_APPROVED, story.claims.size, story.sources.size,
         )
     }

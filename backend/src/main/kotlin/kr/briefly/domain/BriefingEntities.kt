@@ -39,6 +39,7 @@ class NewsStory(
     @Column(nullable = false, length = 1200) var summary: String,
     @Column(length = 400) var oneLineSummary: String? = null,
     @Column(nullable = false, length = 700) var whyItMatters: String,
+    @Column(length = 500) var whatToWatch: String? = null,
     @Enumerated(EnumType.STRING) @Column(nullable = false) var verificationStatus: VerificationStatus,
     @Column(nullable = false) var qualityScore: Int,
     @Column(nullable = false) var displayOrder: Int,

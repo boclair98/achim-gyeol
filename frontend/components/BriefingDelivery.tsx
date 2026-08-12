@@ -2,12 +2,14 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, BellRing, BookOpen, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock3, ExternalLink, FileCheck2, Flag, Share2, Settings2 } from "lucide-react";
+import { AlertTriangle, BellRing, BookOpen, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock3, ExternalLink, FileCheck2, Flag, Radar, RefreshCw, Share2, Settings2, WifiOff } from "lucide-react";
 import { briefingCategoryOrder, demoBriefing, type Briefing, type Story } from "@/lib/briefing";
 import { deviceHeaders } from "@/lib/device";
 import { defaultBrand, type BriefingBrand } from "@/lib/product";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
+const lastBriefingKey = "achim-gyeol-last-live-briefing";
+type BriefingLoadState = "loading" | "live" | "cached" | "demo";
 
 export function BriefingDelivery() {
   const [briefing, setBriefing] = useState<Briefing>(demoBriefing);
@@ -16,6 +18,8 @@ export function BriefingDelivery() {
   const [loading, setLoading] = useState(true);
   const [subscribed, setSubscribed] = useState(false);
   const [readerFont, setReaderFont] = useState<"small" | "normal" | "large">("normal");
+  const [loadState, setLoadState] = useState<BriefingLoadState>("loading");
+  const [reloadVersion, setReloadVersion] = useState(0);
   const stories = useMemo(() => category === "전체" ? briefing.stories : briefing.stories.filter((story) => story.category === category), [briefing, category]);
   const categories = useMemo(
     () => ["전체", ...briefingCategoryOrder.filter((item) => briefing.stories.some((story) => story.category === item))],
@@ -29,22 +33,45 @@ export function BriefingDelivery() {
       const storedFont = window.localStorage.getItem("achim-gyeol-reader-font");
       if (storedFont === "small" || storedFont === "normal" || storedFont === "large") setReaderFont(storedFont);
     }, 0);
+    if ("serviceWorker" in navigator && "PushManager" in window) {
+      navigator.serviceWorker.ready.then((registration) => registration.pushManager.getSubscription())
+        .then((subscription) => setSubscribed(Boolean(subscription))).catch(() => setSubscribed(false));
+    }
+    return () => window.clearTimeout(brandTimer);
+  }, []);
+
+  useEffect(() => {
     const controller = new AbortController();
     const requestedDate = new URLSearchParams(window.location.search).get("date");
     const briefingPath = requestedDate ? `/api/briefings/${encodeURIComponent(requestedDate)}` : "/api/briefings/today";
     fetch(`${apiBase}${briefingPath}`, { cache: "no-store", signal: controller.signal })
       .then((response) => { if (!response.ok) throw new Error("briefing unavailable"); return response.json(); })
-      .then((data: Briefing) => setBriefing(data))
-      .catch(() => setBriefing(demoBriefing))
+      .then((data: Briefing) => {
+        if (!Array.isArray(data.stories) || data.stories.length === 0) throw new Error("empty briefing");
+        setBriefing(data);
+        setLoadState("live");
+        if (!requestedDate && data.productionReady) window.localStorage.setItem(lastBriefingKey, JSON.stringify(data));
+      })
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        const cached = !requestedDate ? readCachedBriefing() : null;
+        if (cached) {
+          setBriefing(cached);
+          setLoadState("cached");
+        } else {
+          setBriefing(demoBriefing);
+          setLoadState("demo");
+        }
+      })
       .finally(() => setLoading(false));
-    if ("serviceWorker" in navigator && "PushManager" in window) {
-      navigator.serviceWorker.ready.then((registration) => registration.pushManager.getSubscription())
-        .then((subscription) => setSubscribed(Boolean(subscription))).catch(() => setSubscribed(false));
-    }
-    return () => { window.clearTimeout(brandTimer); controller.abort(); };
-  }, []);
+    return () => controller.abort();
+  }, [reloadVersion]);
 
   const changeFont = (font: "small" | "normal" | "large") => { setReaderFont(font); window.localStorage.setItem("achim-gyeol-reader-font", font); };
+  const retryBriefing = () => { setLoading(true); setLoadState("loading"); setReloadVersion((current) => current + 1); };
+
+  const liveToday = loadState === "live" && isTodayInKorea(briefing.briefingDate);
+  const reportingEnabled = loadState === "live" && liveToday && briefing.productionReady === true;
 
   return <main className={`news-reader-shell font-${readerFont}`}>
     <header className="news-reader-topbar">
@@ -52,7 +79,8 @@ export function BriefingDelivery() {
       <div className="reader-top-actions"><div aria-label="글자 크기"><button className={readerFont === "small" ? "active" : ""} onClick={() => changeFont("small")}>가</button><button className={readerFont === "normal" ? "active" : ""} onClick={() => changeFont("normal")}>가</button><button className={readerFont === "large" ? "active" : ""} onClick={() => changeFont("large")}>가</button></div><Link href="/#delivery-deck" className="delivered-settings"><Settings2 size={16} /> 알림 설정</Link></div>
     </header>
 
-    <DailyBriefingSheets briefing={briefing} loading={loading} />
+    <BriefingAvailability state={loadState} briefing={briefing} liveToday={liveToday} onRetry={retryBriefing} />
+    <DailyBriefingSheets briefing={briefing} loading={loading} reportingEnabled={reportingEnabled} />
 
     <nav className="news-category-nav" aria-label="뉴스 분야">
       <div>{categories.map((item) => <button key={item} className={category === item ? "active" : ""} onClick={() => setCategory(item)}>{item}{item !== "전체" && <small>{briefing.stories.filter((story) => story.category === item).length}</small>}</button>)}</div>
@@ -61,7 +89,7 @@ export function BriefingDelivery() {
     <div className="news-reader-layout">
       <section className="news-feed" aria-live="polite">
         <header className="news-feed-heading"><div><span>NEWS BRIEF</span><h2>{category === "전체" ? "품질 기준을 통과한 중요 뉴스" : `${category} 분야 중요 뉴스`}</h2></div><p>확인된 사실과 아직 확인되지 않은 내용을 구분했습니다.</p></header>
-        {stories.map((story) => <NewsArticle key={story.id} story={story} editionId={briefing.id} index={briefing.stories.findIndex((item) => item.id === story.id) + 1} reportingEnabled={briefing.productionReady === true} />)}
+        {stories.map((story) => <NewsArticle key={story.id} story={story} editionId={briefing.id} index={briefing.stories.findIndex((item) => item.id === story.id) + 1} reportingEnabled={reportingEnabled} />)}
         {!loading && stories.length === 0 && <div className="reader-empty">이 분야에서 품질 기준을 통과한 중요 뉴스가 없습니다.</div>}
       </section>
 
@@ -77,32 +105,46 @@ export function BriefingDelivery() {
   </main>;
 }
 
-function DailyBriefingSheets({ briefing, loading }: { briefing: Briefing; loading: boolean }) {
+function BriefingAvailability({ state, briefing, liveToday, onRetry }: { state: BriefingLoadState; briefing: Briefing; liveToday: boolean; onRetry: () => void }) {
+  if (state === "live" && liveToday) return <div className="briefing-availability live" role="status"><CheckCircle2 size={16} /><span><strong>오늘 브리핑 연결됨</strong> · {briefing.dateLabel} 검증본입니다.</span></div>;
+  const message = state === "loading"
+    ? "오늘 브리핑을 연결하고 있습니다."
+    : state === "cached"
+      ? `서버 연결이 느려 마지막 정상 브리핑(${briefing.dateLabel})을 보여드립니다.`
+      : state === "demo"
+        ? "실제 브리핑을 불러오지 못해 사용법 확인용 예시만 보여드립니다."
+        : `오늘 에디션을 준비 중이라 가장 최근 검증본(${briefing.dateLabel})을 보여드립니다.`;
+  return <div className={`briefing-availability ${state}`} role="status"><WifiOff size={16} /><span><strong>{state === "demo" ? "예시 뉴스 · 실제 뉴스 아님" : state === "cached" ? "오프라인 안전 모드" : state === "loading" ? "연결 중" : "최신 발행본"}</strong> · {message}</span>{state !== "loading" && <button type="button" onClick={onRetry}><RefreshCw size={14} /> 다시 연결</button>}</div>;
+}
+
+function DailyBriefingSheets({ briefing, loading, reportingEnabled }: { briefing: Briefing; loading: boolean; reportingEnabled: boolean }) {
   const [page, setPage] = useState(0);
   const [readStories, setReadStories] = useState<number[]>([]);
   const [preferredCategories, setPreferredCategories] = useState<string[]>([]);
   const [digestSize, setDigestSize] = useState<"compact" | "standard" | "deep">("standard");
   const trackRef = useRef<HTMLDivElement>(null);
   const orderedStories = useMemo(() => [...briefing.stories].sort((a, b) => Number(preferredCategories.includes(b.category)) - Number(preferredCategories.includes(a.category))), [briefing.stories, preferredCategories]);
-  const pages = useMemo(() => orderedStories.map((story) => [story]), [orderedStories]);
+  const deckPages = useMemo(() => [{ kind: "overview" as const }, ...orderedStories.map((story) => ({ kind: "story" as const, story }))], [orderedStories]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      const savedRead = JSON.parse(window.localStorage.getItem(`achim-gyeol-read-${briefing.id}`) ?? "[]") as number[];
-      const savedPreferences = JSON.parse(window.localStorage.getItem("achim-gyeol-reader-preferences") ?? "{}") as { categories?: string[]; digestSize?: "compact" | "standard" | "deep" };
+      const savedRead = safeJsonParse<number[]>(window.localStorage.getItem(`achim-gyeol-read-${briefing.id}`), []);
+      const savedPreferences = safeJsonParse<{ categories?: string[]; digestSize?: "compact" | "standard" | "deep" }>(window.localStorage.getItem("achim-gyeol-reader-preferences"), {});
       setReadStories(savedRead);
       setPreferredCategories(savedPreferences.categories ?? []);
       setDigestSize(savedPreferences.digestSize ?? "standard");
+      setPage(0);
     }, 0);
-    if (briefing.productionReady) void trackReaderEvent("BRIEFING_OPEN", briefing.id);
+    if (reportingEnabled) void trackReaderEvent("BRIEFING_OPEN", briefing.id);
     return () => window.clearTimeout(timer);
-  }, [briefing.id, briefing.productionReady]);
+  }, [briefing.id, reportingEnabled]);
 
   const moveTo = (nextPage: number) => {
-    const safePage = Math.max(0, Math.min(pages.length - 1, nextPage));
+    const safePage = Math.max(0, Math.min(deckPages.length - 1, nextPage));
     const track = trackRef.current;
     if (!track) return;
-    track.scrollTo({ left: track.clientWidth * safePage, behavior: "smooth" });
+    const target = track.querySelector<HTMLElement>(`[data-page-index="${safePage}"]`);
+    if (target) track.scrollTo({ left: Math.max(0, target.offsetLeft - track.offsetLeft - 14), behavior: "smooth" });
     setPage(safePage);
   };
 
@@ -110,10 +152,10 @@ function DailyBriefingSheets({ briefing, loading }: { briefing: Briefing; loadin
     setReadStories((current) => {
       const next = current.includes(storyId) ? current : [...current, storyId];
       window.localStorage.setItem(`achim-gyeol-read-${briefing.id}`, JSON.stringify(next));
-      if (next.length === briefing.stories.length) void trackReaderEvent("COMPLETE", briefing.id);
+      if (reportingEnabled && next.length === briefing.stories.length) void trackReaderEvent("COMPLETE", briefing.id);
       return next;
     });
-    if (briefing.productionReady) void trackReaderEvent("CARD_VIEW", briefing.id, storyId);
+    if (reportingEnabled && !readStories.includes(storyId)) void trackReaderEvent("CARD_VIEW", briefing.id, storyId);
     setPage(pageIndex);
   };
 
@@ -122,61 +164,92 @@ function DailyBriefingSheets({ briefing, loading }: { briefing: Briefing; loadin
       const url = `${window.location.origin}/briefing/#news-${story.id}`;
       if (navigator.share) await navigator.share({ title: story.title, text: story.oneLineSummary || story.summary, url });
       else await navigator.clipboard.writeText(url);
-      if (briefing.productionReady) void trackReaderEvent("SHARE", briefing.id, story.id);
+      if (reportingEnabled) void trackReaderEvent("SHARE", briefing.id, story.id);
     } catch { /* A dismissed share sheet is not an error. */ }
   };
 
   return <section className="brief-sheet-section" aria-label="오늘의 아침결 카드 브리핑">
     <div className="brief-sheet-intro">
-      <div className="reader-date"><span>{briefing.productionReady ? "오늘의 실제 브리핑" : "미리보기 브리핑"}</span><strong>{briefing.dateLabel}</strong></div>
-      <h1>정확하게 확인하고,<br />핵심만 넘겨보세요.</h1>
-      <p>{loading ? "정확한 뉴스 브리핑을 불러오고 있습니다." : briefing.lead}</p>
+      <div className="reader-date"><span>{reportingEnabled ? "오늘의 실제 브리핑" : briefing.productionReady ? "최근 검증 브리핑" : "미리보기 브리핑"}</span><strong>{briefing.dateLabel}</strong></div>
+      <h1>어제 핵심 뉴스 {briefing.stories.length}건,<br /><em>먼저 30초로 훑어보세요.</em></h1>
+      <p>{loading ? "정확한 뉴스 브리핑을 불러오고 있습니다." : "첫 장에서 오늘의 흐름을 잡고, 옆으로 넘기며 사실·영향·다음 확인 포인트를 읽을 수 있습니다."}</p>
       <div className="reader-stats">
         <span><strong>{briefing.stories.length}</strong> 중요 뉴스</span>
         <span><strong>{briefing.verifiedCount}</strong> 근거 확인</span>
         <span><Clock3 size={16} /><strong>{briefing.readMinutes}분</strong> 예상</span>
         <span><FileCheck2 size={16} /><strong>{briefing.lastVerifiedAt}</strong> 자동 점검</span>
       </div>
-      <p className="reader-disclosure"><strong>{briefing.humanReviewed ? "AI 요약 · 운영자 최종 승인" : "AI 요약 · 자동 품질검사"}</strong> · 확인된 사실, 의미, 아직 불확실한 내용을 나누고 원문을 연결합니다.</p>
+      <details className="reader-disclosure"><summary>{briefing.humanReviewed ? "AI 요약 · 운영자 최종 승인" : "AI 요약 · 자동 품질검사"}</summary><p>확인된 사실, 의미, 아직 불확실한 내용을 나누고 각 문장에 근거 원문을 연결합니다.</p></details>
     </div>
 
     <div className="brief-sheet-deck">
       <div className="brief-sheet-track" ref={trackRef} onScroll={(event) => {
         const track = event.currentTarget;
         if (track.clientWidth) {
-          const nextPage = Math.max(0, Math.min(pages.length - 1, Math.round(track.scrollLeft / track.clientWidth)));
-          const story = pages[nextPage]?.[0];
-          if (story && nextPage !== page) markRead(story.id, nextPage);
+          const cards = Array.from(track.querySelectorAll<HTMLElement>("[data-page-index]"));
+          const center = track.scrollLeft + track.clientWidth / 2;
+          const nextPage = cards.reduce((best, card, index) => {
+            const distance = Math.abs(card.offsetLeft + card.clientWidth / 2 - center);
+            const bestCard = cards[best];
+            const bestDistance = bestCard ? Math.abs(bestCard.offsetLeft + bestCard.clientWidth / 2 - center) : Number.POSITIVE_INFINITY;
+            return distance < bestDistance ? index : best;
+          }, 0);
+          const selected = deckPages[nextPage];
+          if (nextPage !== page) {
+            if (selected?.kind === "story") markRead(selected.story.id, nextPage);
+            else setPage(nextPage);
+          }
         }
       }}>
-        {pages.map((stories, pageIndex) => <article className={`brief-sheet ${digestSize}`} key={`sheet-${pageIndex}`}>
+        <article className="brief-sheet brief-sheet-overview" data-page-index={0} aria-label="오늘 뉴스 30초 한눈에 보기">
+          <header>
+            <div><span>ACHIMGYEOL</span><strong>30초 한눈에 보기</strong></div>
+            <div><b>{briefing.dateLabel}</b><small>START</small></div>
+          </header>
+          <div className="brief-sheet-rule"><i /></div>
+          <section className="brief-overview-copy">
+            <span>TODAY&apos;S MAP</span>
+            <h2>오늘 먼저 알아둘 흐름</h2>
+            <p>{briefing.lead}</p>
+          </section>
+          <ol className="brief-overview-list">
+            {orderedStories.slice(0, 5).map((story, index) => <li key={story.id}><button type="button" onClick={() => moveTo(index + 1)}><b>{String(index + 1).padStart(2, "0")}</b><span><small>{story.category}</small><strong>{story.oneLineSummary || story.title}</strong></span><ChevronRight size={16} /></button></li>)}
+          </ol>
+          <footer className="brief-overview-footer"><span>선정 뉴스 {orderedStories.length}건 · 예상 {briefing.readMinutes}분</span><button type="button" onClick={() => moveTo(1)}>첫 뉴스 보기 <ChevronRight size={14} /></button></footer>
+        </article>
+
+        {orderedStories.map((story, storyPageIndex) => {
+          const pageIndex = storyPageIndex + 1;
+          const storyIndex = briefing.stories.findIndex((item) => item.id === story.id) + 1;
+          const evidenceReady = story.evidenceAvailable && Boolean(story.claims?.length);
+          const factLimit = digestSize === "compact" ? 1 : digestSize === "deep" ? 5 : 3;
+          const facts = evidenceReady ? story.claims!.slice(0, factLimit).map((claim) => claim.statement) : summaryPoints(story.summary).slice(0, factLimit);
+          const watchPoint = story.whatToWatch || story.uncertainty;
+          return <article className={`brief-sheet ${digestSize}`} data-page-index={pageIndex} aria-label={`${storyPageIndex + 1}번째 뉴스, ${story.title}`} key={`sheet-${story.id}`}>
           <header>
             <div><span>ACHIMGYEOL</span><strong>어제 뉴스 · 오늘 아침 한 번에</strong></div>
-            <div><b>{briefing.dateLabel}</b><small>{pageIndex + 1} / {pages.length}</small></div>
+            <div><b>{briefing.dateLabel}</b><small>{storyPageIndex + 1} / {orderedStories.length}</small></div>
           </header>
           <div className="brief-sheet-rule"><i /></div>
           <div className="brief-sheet-stories">
-            {stories.map((story) => {
-              const storyIndex = briefing.stories.findIndex((item) => item.id === story.id) + 1;
-              const evidenceReady = story.evidenceAvailable && Boolean(story.claims?.length);
-              const factLimit = digestSize === "compact" ? 1 : digestSize === "deep" ? 5 : 3;
-              const facts = evidenceReady ? story.claims!.slice(0, factLimit).map((claim) => claim.statement) : summaryPoints(story.summary).slice(0, factLimit);
-              return <section className="brief-sheet-story" key={story.id}>
-                <div className="brief-sheet-meta"><b>{String(storyIndex).padStart(2, "0")}</b><span>{story.category}</span>{preferredCategories.includes(story.category) && <i>내 관심</i>}<em className={story.verificationStatus === "VERIFIED" && evidenceReady ? "confirmed" : "checking"}>{readStories.includes(story.id) ? "읽음" : evidenceReady ? (story.verificationStatus === "VERIFIED" ? "근거 연결" : "확인 진행 중") : "원문 제공"}</em></div>
+              <section className="brief-sheet-story">
+                <div className="brief-sheet-meta"><b>{String(storyIndex).padStart(2, "0")}</b><span>{story.category}</span>{storyIndex <= 3 && <i className="priority">먼저 보기</i>}{preferredCategories.includes(story.category) && <i>내 관심</i>}<em className={story.verificationStatus === "VERIFIED" && evidenceReady ? "confirmed" : "checking"}>{readStories.includes(story.id) ? "읽음" : evidenceReady ? (story.verificationStatus === "VERIFIED" ? "근거 연결" : "확인 진행 중") : "원문 제공"}</em></div>
                 <h2><a href={`#news-${story.id}`}>{story.title}</a></h2>
                 <p className="brief-sheet-conclusion"><strong>한 줄 결론</strong>{story.oneLineSummary || facts[0] || story.title}</p>
+                <strong className="brief-sheet-facts-label">확인된 핵심</strong>
                 <ul>{facts.map((fact, factIndex) => <li key={`${story.id}-fact-${factIndex}`}>{fact}</li>)}</ul>
                 <div className="brief-sheet-matter"><strong>왜 중요한가</strong><p>{story.whyItMatters}</p></div>
-                <footer><span>출처 {story.sources.map((source) => source.publisher).join(" · ")}</span><div><button type="button" onClick={() => void shareStory(story)} aria-label="뉴스 공유"><Share2 size={13} /> 공유</button><a href={`#news-${story.id}`} onClick={() => { markRead(story.id, pageIndex); void trackReaderEvent("STORY_DETAIL", briefing.id, story.id); }}>근거 자세히 보기 →</a></div></footer>
-              </section>;
-            })}
+                {watchPoint && <div className="brief-sheet-watch"><strong>{story.whatToWatch ? "다음 확인" : "아직 미정"}</strong><p>{watchPoint}</p></div>}
+                <footer><span>서로 다른 출처 {story.sources.length}개 · {story.sources.slice(0, 2).map((source) => source.publisher).join(" · ")}</span><div><button type="button" onClick={() => void shareStory(story)} aria-label="뉴스 공유"><Share2 size={13} /> 공유</button><a href={`#news-${story.id}`} onClick={() => { markRead(story.id, pageIndex); if (reportingEnabled) void trackReaderEvent("STORY_DETAIL", briefing.id, story.id); }}>근거 자세히 →</a></div></footer>
+              </section>
           </div>
-        </article>)}
+        </article>})}
       </div>
+      <div className="brief-sheet-progress" aria-hidden="true"><i style={{ width: `${((page + 1) / Math.max(deckPages.length, 1)) * 100}%` }} /></div>
       <div className="brief-sheet-controls">
         <button type="button" aria-label="이전 브리핑 카드" onClick={() => moveTo(page - 1)} disabled={page === 0}><ChevronLeft /></button>
-        <div><strong>{page + 1}</strong><span>/ {Math.max(pages.length, 1)}</span><small><Check size={11} /> {readStories.length}건 읽음 · 옆으로 넘겨보세요</small></div>
-        <button type="button" aria-label="다음 브리핑 카드" onClick={() => moveTo(page + 1)} disabled={page >= pages.length - 1}><ChevronRight /></button>
+        <div><strong>{page === 0 ? "한눈에" : page}</strong><span>{page === 0 ? "" : `/ ${orderedStories.length}`}</span><small><Check size={11} /> {readStories.length}건 읽음 · 옆으로 넘겨보세요</small></div>
+        <button type="button" aria-label="다음 브리핑 카드" onClick={() => moveTo(page + 1)} disabled={page >= deckPages.length - 1}><ChevronRight /></button>
       </div>
     </div>
   </section>;
@@ -198,19 +271,20 @@ function NewsArticle({ story, editionId, index, reportingEnabled }: { story: Sto
         <p>{claim.statement}</p>
         {claim.sources.length > 0 && <div className="claim-citations">{claim.sources.map((source) => {
           const sourceNumber = story.sources.findIndex((item) => item.url === source.url) + 1;
-          return <a href={source.url} target="_blank" rel="noreferrer" onClick={() => void trackReaderEvent("SOURCE_OPEN", editionId, story.id)} key={`${claim.statement}-${source.url}`}>[{sourceNumber}] {source.publisher}<ExternalLink size={12} /></a>;
+          return <a href={source.url} target="_blank" rel="noreferrer" onClick={() => { if (reportingEnabled) void trackReaderEvent("SOURCE_OPEN", editionId, story.id); }} key={`${claim.statement}-${source.url}`}>[{sourceNumber}] {source.publisher}<ExternalLink size={12} /></a>;
         })}</div>}
       </li>)}</ol>
       {!evidenceReady && <div className="reader-legacy"><AlertTriangle size={17} /><p>이 뉴스는 이전 생성 형식이라 문장별 근거 번호가 없습니다. 아래 원문을 함께 확인해 주세요.</p></div>}
     </section>
 
     <section className="reader-why"><span>왜 중요한가</span><p>{story.whyItMatters}</p></section>
+    {story.whatToWatch && <section className="reader-watch"><h3><Radar size={17} /> 다음 확인 포인트</h3><p>{story.whatToWatch}</p></section>}
     {story.uncertainty && <section className="reader-uncertainty"><h3><AlertTriangle size={17} /> 아직 확인되지 않은 것</h3><p>{story.uncertainty}</p></section>}
     {Boolean(story.corrections?.length) && <section className="reader-corrections"><h3>정정 이력</h3>{story.corrections!.map((correction) => <p key={correction.correctedAt}><time>{new Date(correction.correctedAt).toLocaleString("ko-KR")}</time>{correction.reason}</p>)}</section>}
 
     <details className="reader-sources">
       <summary><BookOpen size={17} /> 근거 원문 {story.sources.length}개 보기</summary>
-      <div>{story.sources.map((source, sourceIndex) => <a href={source.url} target="_blank" rel="noreferrer" onClick={() => void trackReaderEvent("SOURCE_OPEN", editionId, story.id)} key={`${source.publisher}-${source.url}`}><span><b>[{sourceIndex + 1}]</b>{source.publisher}{source.primarySource && <small>1차 자료</small>}</span><ExternalLink size={14} /></a>)}</div>
+      <div>{story.sources.map((source, sourceIndex) => <a href={source.url} target="_blank" rel="noreferrer" onClick={() => { if (reportingEnabled) void trackReaderEvent("SOURCE_OPEN", editionId, story.id); }} key={`${source.publisher}-${source.url}`}><span><b>[{sourceIndex + 1}]</b>{source.publisher}{source.primarySource && <small>1차 자료</small>}</span><ExternalLink size={14} /></a>)}</div>
     </details>
     {reportingEnabled && <StoryFeedbackPanel storyId={story.id} />}
   </article>;
@@ -252,6 +326,23 @@ function StoryFeedbackPanel({ storyId }: { storyId: number }) {
 function summaryPoints(summary: string) {
   const points = summary.trim().split(/(?<=[.!?])\s+/).filter(Boolean);
   return points.length ? points : [summary];
+}
+
+function safeJsonParse<T>(value: string | null, fallback: T): T {
+  if (!value) return fallback;
+  try { return JSON.parse(value) as T; } catch { return fallback; }
+}
+
+function readCachedBriefing(): Briefing | null {
+  const cached = safeJsonParse<Briefing | null>(window.localStorage.getItem(lastBriefingKey), null);
+  return cached && Array.isArray(cached.stories) && cached.stories.length > 0 && cached.productionReady ? cached : null;
+}
+
+function isTodayInKorea(value?: string) {
+  if (!value) return false;
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
+  const today = `${parts.find((part) => part.type === "year")?.value}-${parts.find((part) => part.type === "month")?.value}-${parts.find((part) => part.type === "day")?.value}`;
+  return value === today;
 }
 
 async function trackReaderEvent(type: string, editionId: number, storyId?: number) {
