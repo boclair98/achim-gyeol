@@ -87,14 +87,17 @@ export function BriefingCardPreview({ card }: { card: BriefingCard }) {
     );
   }
   const verified = card.story.verificationStatus === "VERIFIED";
+  const evidenceReady = card.story.evidenceAvailable && Boolean(card.story.claims?.length);
+  const claims = evidenceReady ? card.story.claims!.slice(0, 2) : summaryPoints(card.story.summary).slice(0, 2).map((statement) => ({ statement, sources: [] }));
   return (
     <article className="delivery-card summary-card">
       <header><strong>{card.brand.name} · AI NEWS SUMMARY</strong><span>{String(card.index).padStart(2, "0")} / {String(card.briefing.stories.length).padStart(2, "0")}</span></header>
-      <div className="summary-kicker"><span>{card.story.category}</span><em>{verified ? "● 교차 검증 완료" : "● 추가 보도 확인 중"}</em></div>
+      <div className="summary-kicker"><span>{card.story.category}</span><em>{evidenceReady ? (verified ? "● 근거 연결 완료" : "● 추가 확인 중") : "● 원문 목록 제공"}</em></div>
       <h3>{card.story.title}</h3>
-      <div className="ai-summary"><strong>핵심 내용</strong><ul>{summaryPoints(card.story.summary).map((point) => <li key={point}>{point}</li>)}</ul></div>
+      <div className="card-conclusion"><strong>한 줄 결론</strong><p>{storyConclusion(card.story)}</p></div>
+      <div className="ai-summary"><strong>확인된 핵심</strong><ul>{claims.map((claim, index) => <li key={`${claim.statement}-${index}`}><span>{claim.statement}</span>{claim.sources.length > 0 && <small> [{claim.sources.map((source) => card.story.sources.findIndex((item) => item.url === source.url) + 1).filter((number) => number > 0).join("·")}]</small>}</li>)}</ul></div>
       <div className="matter-box"><strong>알아야 할 것</strong><p>{card.story.whyItMatters}</p></div>
-      <footer><span>출처 {card.story.sources.map((source) => source.publisher).join(" · ")}</span><span>최종 확인 {card.briefing.lastVerifiedAt}</span></footer>
+      <footer><span>{evidenceReady ? `근거 ${card.story.sources.length}개 연결` : `원문 ${card.story.sources.length}개 제공`}</span><span>최종 확인 {card.briefing.lastVerifiedAt}</span></footer>
     </article>
   );
 }
@@ -102,4 +105,8 @@ export function BriefingCardPreview({ card }: { card: BriefingCard }) {
 function summaryPoints(summary: string) {
   const points = summary.trim().split(/(?<=[.!?])\s+/).filter(Boolean);
   return points.length > 1 ? points.slice(0, 3) : [summary];
+}
+
+function storyConclusion(story: Briefing["stories"][number]) {
+  return story.oneLineSummary?.trim() || summaryPoints(story.summary)[0] || story.title;
 }

@@ -4,6 +4,7 @@ import kr.briefly.domain.BriefingEdition
 import kr.briefly.domain.Category
 import kr.briefly.domain.NewsSource
 import kr.briefly.domain.NewsStory
+import kr.briefly.domain.NewsClaim
 import kr.briefly.integration.AiSummarizer
 import kr.briefly.integration.CollectedArticle
 import kr.briefly.integration.NewsProvider
@@ -170,7 +171,10 @@ class NewsBriefingGenerator(
         val summary = summarizer.summarize(articles)
         val validSourceIds = articles.indices.map { "S${it + 1}" }.toSet()
         val factsChecked = summary.keyFacts.isNotEmpty() && summary.keyFacts.all { fact ->
-            fact.statement.isNotBlank() && fact.sourceIds.filter { it in validSourceIds }.distinct().size >= 2
+            val citedArticles = fact.sourceIds.mapNotNull { sourceId ->
+                sourceId.removePrefix("S").toIntOrNull()?.minus(1)?.let(articles::getOrNull)
+            }
+            fact.statement.isNotBlank() && citedArticles.map { newsSourceFamily(it.originalUrl) }.distinct().size >= 2
         }
         val primarySource = articles.any { isPrimarySource(it.originalUrl) }
         val decision = qualityGate.evaluate(
@@ -187,6 +191,7 @@ class NewsBriefingGenerator(
             category = cluster.category,
             title = summary.title.trim().take(300),
             summary = summary.summary.trim().take(1200),
+            oneLineSummary = summary.oneLineSummary.trim().take(400),
             whyItMatters = summary.whyItMatters.trim().take(700),
             verificationStatus = decision.status,
             qualityScore = decision.score,
@@ -203,6 +208,12 @@ class NewsBriefingGenerator(
                 ),
             )
         }
+        summary.keyFacts.forEachIndexed { index, fact ->
+            val sourceIndexes = fact.sourceIds.mapNotNull { sourceId ->
+                sourceId.removePrefix("S").toIntOrNull()?.minus(1)?.takeIf { it in articles.indices }
+            }.distinct().sorted()
+            story.addClaim(NewsClaim(fact.statement.trim().take(700), sourceIndexes.joinToString(","), index + 1))
+        }
         return story
     }
 
@@ -211,7 +222,15 @@ class NewsBriefingGenerator(
         return host.endsWith(".go.kr") || host == "korea.kr" || host.endsWith(".korea.kr") ||
             host == "opendart.fss.or.kr" || host.endsWith(".bok.or.kr") || host.endsWith(".kosis.kr")
     }
+
 }
+
+internal fun newsSourceFamily(url: String): String = runCatching {
+    val host = URI(url).host?.lowercase()?.removePrefix("www.") ?: return@runCatching url
+    val labels = host.split('.')
+    val koreanSecondLevelSuffix = labels.takeLast(2).joinToString(".") in setOf("co.kr", "or.kr", "go.kr", "ac.kr", "ne.kr")
+    labels.takeLast(if (koreanSecondLevelSuffix) 3 else 2).joinToString(".")
+}.getOrDefault(url)
 
 @Component
 @ConditionalOnProperty(name = ["app.pipeline.enabled"], havingValue = "true")

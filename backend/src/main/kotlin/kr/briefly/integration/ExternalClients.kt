@@ -24,6 +24,7 @@ data class AiFact(val statement: String, val sourceIds: List<String>)
 
 data class AiSummary(
     val title: String,
+    val oneLineSummary: String,
     val summary: String,
     val whyItMatters: String,
     val keyFacts: List<AiFact>,
@@ -126,6 +127,7 @@ class OpenAiSummarizer(
                         당신은 한국어 아침 뉴스 브리핑의 팩트 에디터입니다.
                         제공된 기사 제목과 설명에 공통으로 명시된 사실만 사용하세요. 한 출처에만 있는 주장, 추측, 선정적 표현은 제외하세요.
                         title은 한눈에 사건을 이해할 수 있는 중립적인 자체 제목으로 작성하세요.
+                        oneLineSummary는 기사에 공통으로 확인된 가장 중요한 결론 하나만 70자 이내의 완결된 문장으로 작성하세요.
                         summary는 '무슨 일이 있었는지 → 핵심 수치·대상·시점 → 현재 확정된 상태' 순서로 정확히 3문장을 작성하고, 문장마다 하나의 핵심 사실만 담으세요.
                         whyItMatters는 독자가 오늘 알아야 할 영향, 적용 시점, 확인하거나 행동할 사항을 1~2문장으로 구체적으로 작성하세요. 실질적인 행동 사항이 없으면 억지로 만들지 마세요.
                         keyFacts의 각 사실에는 그 사실을 직접 뒷받침하는 sourceIds를 두 개 이상 넣으세요. 출처가 충돌하면 sourcesConflict=true로 하고 uncertainty에 충돌 내용을 적으세요.
@@ -156,6 +158,7 @@ class OpenAiSummarizer(
         }
         return AiSummary(
             title = json.path("title").asText(),
+            oneLineSummary = json.path("oneLineSummary").asText(),
             summary = json.path("summary").asText(),
             whyItMatters = json.path("whyItMatters").asText(),
             keyFacts = facts,
@@ -195,6 +198,7 @@ class OpenAiSummarizer(
         "additionalProperties" to false,
         "properties" to mapOf(
             "title" to mapOf("type" to "string"),
+            "oneLineSummary" to mapOf("type" to "string", "description" to "공통으로 확인된 가장 중요한 결론 한 문장, 70자 이내"),
             "summary" to mapOf("type" to "string", "description" to "무슨 일, 핵심 수치·대상·시점, 현재 상태를 담은 정확히 3문장"),
             "whyItMatters" to mapOf("type" to "string", "description" to "독자가 알아야 할 영향·적용 시점·행동 사항 1~2문장"),
             "keyFacts" to mapOf(
@@ -218,6 +222,6 @@ class OpenAiSummarizer(
             "uncertainty" to mapOf("type" to "string"),
             "sourcesConflict" to mapOf("type" to "boolean"),
         ),
-        "required" to listOf("title", "summary", "whyItMatters", "keyFacts", "uncertainty", "sourcesConflict"),
+        "required" to listOf("title", "oneLineSummary", "summary", "whyItMatters", "keyFacts", "uncertainty", "sourcesConflict"),
     )
 }

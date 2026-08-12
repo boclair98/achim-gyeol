@@ -31,6 +31,7 @@ class NewsStory(
     @Enumerated(EnumType.STRING) @Column(nullable = false) var category: Category,
     @Column(nullable = false, length = 300) var title: String,
     @Column(nullable = false, length = 1200) var summary: String,
+    @Column(length = 400) var oneLineSummary: String? = null,
     @Column(nullable = false, length = 700) var whyItMatters: String,
     @Enumerated(EnumType.STRING) @Column(nullable = false) var verificationStatus: VerificationStatus,
     @Column(nullable = false) var qualityScore: Int,
@@ -42,7 +43,23 @@ class NewsStory(
     lateinit var edition: BriefingEdition
     @OneToMany(mappedBy = "story", cascade = [CascadeType.ALL], orphanRemoval = true)
     var sources: MutableList<NewsSource> = mutableListOf()
+    @OneToMany(mappedBy = "story", cascade = [CascadeType.ALL], orphanRemoval = true)
+    @OrderBy("displayOrder ASC")
+    var claims: MutableList<NewsClaim> = mutableListOf()
     fun addSource(source: NewsSource) { sources += source; source.story = this }
+    fun addClaim(claim: NewsClaim) { claims += claim; claim.story = this }
+}
+
+@Entity
+@Table(name = "news_claims")
+class NewsClaim(
+    @Column(nullable = false, length = 700) var statement: String,
+    @Column(nullable = false, length = 120) var sourceIndexes: String,
+    @Column(nullable = false) var displayOrder: Int,
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) var id: Long? = null,
+) {
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "story_id", nullable = false)
+    lateinit var story: NewsStory
 }
 
 @Entity

@@ -23,9 +23,19 @@ class DemoDataConfig {
     }
 
     private fun story(category: Category, title: String, summary: String, why: String, order: Int, publisher1: String, url1: String, publisher2: String, url2: String): NewsStory {
-        val story = NewsStory(category, title, summary, why, VerificationStatus.VERIFIED, 80, order)
+        val story = NewsStory(
+            category = category,
+            title = title,
+            summary = summary,
+            oneLineSummary = summary,
+            whyItMatters = why,
+            verificationStatus = VerificationStatus.VERIFIED,
+            qualityScore = 80,
+            displayOrder = order,
+        )
         story.addSource(NewsSource(publisher1, url1, OffsetDateTime.now().minusHours(2), true))
         story.addSource(NewsSource(publisher2, url2, OffsetDateTime.now().minusHours(1)))
+        story.addClaim(NewsClaim(summary, "0,1", 1))
         return story
     }
 }

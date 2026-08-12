@@ -170,6 +170,34 @@ class WebPushService(
 
     fun activeSubscriptionCount(): Int = repository.findAllByActiveTrue().size
 
+    @Transactional
+    fun sendOperatorTestToActive(expectedActiveSubscriptions: Int): PushDeliverySummary {
+        requireConfigured()
+        val subscriptions = repository.findAllByActiveTrue()
+        require(subscriptions.size == expectedActiveSubscriptions) {
+            "등록 기기 수가 예상과 다릅니다. 예상 ${expectedActiveSubscriptions}대, 현재 ${subscriptions.size}대"
+        }
+        var delivered = 0
+        var failed = 0
+        subscriptions.forEach { subscription ->
+            val result = send(
+                subscription,
+                title = "[운영자 테스트] 아침결 신뢰 브리핑",
+                body = "한 줄 결론·확인된 핵심·근거 출처가 연결된 새 뉴스 카드를 확인해 보세요.",
+                test = true,
+            )
+            if (result.delivered) delivered += 1 else failed += 1
+        }
+        return PushDeliverySummary(
+            status = if (failed == 0) "TEST_COMPLETED" else "TEST_PARTIAL_FAILURE",
+            activeSubscriptions = subscriptions.size,
+            dueSubscriptions = subscriptions.size,
+            delivered = delivered,
+            failed = failed,
+            message = "운영자 테스트 알림을 발송했습니다. 정기 브리핑 발송 기록에는 반영하지 않았습니다.",
+        )
+    }
+
     private fun send(subscription: PushSubscription, title: String, body: String, test: Boolean): PushResult = try {
         val payload = mapper.writeValueAsString(mapOf(
             "title" to title,

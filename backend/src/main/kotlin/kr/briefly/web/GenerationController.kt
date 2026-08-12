@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestHeader
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.bind.annotation.ResponseStatus
@@ -21,6 +22,7 @@ import java.time.ZoneId
 
 data class MorningRunResult(val generationStarted: Boolean, val generationJob: GenerationJobSnapshot, val delivery: PushDeliverySummary?)
 data class MorningStatusResponse(val date: LocalDate?, val productionReady: Boolean, val stories: Int, val activeSubscriptions: Int, val generationJob: GenerationJobSnapshot)
+data class OperatorTestRequest(val expectedActiveSubscriptions: Int)
 
 @RestController
 @RequestMapping("/api/admin/briefings")
@@ -43,6 +45,15 @@ class GenerationController(
     fun dispatch(@RequestHeader("X-Briefing-Admin-Token", required = false) suppliedToken: String?): PushDeliverySummary {
         authorize(suppliedToken)
         return webPushService.deliverDueBriefings()
+    }
+
+    @PostMapping("/test-push")
+    fun testPush(
+        @RequestHeader("X-Briefing-Admin-Token", required = false) suppliedToken: String?,
+        @RequestBody request: OperatorTestRequest,
+    ): PushDeliverySummary {
+        authorize(suppliedToken)
+        return webPushService.sendOperatorTestToActive(request.expectedActiveSubscriptions)
     }
 
     @PostMapping("/run")

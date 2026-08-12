@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { BellRing, BookOpen, CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, Settings2 } from "lucide-react";
+import { AlertTriangle, BellRing, BookOpen, CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, FileCheck2, Settings2 } from "lucide-react";
 import { BriefingCardPreview } from "@/components/DeliveryDeck";
 import { demoBriefing, type Briefing } from "@/lib/briefing";
 import { buildBriefingCards } from "@/lib/briefing-card";
@@ -68,10 +68,26 @@ export function BriefingDelivery() {
         <span className={briefing.productionReady ? "live" : "preview"}>{briefing.productionReady ? "● 실제 전날 뉴스 종합" : "● 사용법 확인용 예시"}</span>
         <h2>{briefing.dateLabel}</h2>
         <dl><div><dt>핵심 뉴스</dt><dd>{briefing.stories.length}건</dd></div><div><dt>교차 확인</dt><dd>{briefing.verifiedCount}건</dd></div><div><dt>예상 시간</dt><dd>약 {briefing.readMinutes}분</dd></div></dl>
-        {currentStory ? <div className="delivered-sources"><strong><BookOpen size={15} /> 이 카드의 원문</strong>{currentStory.sources.map((source) => <a href={source.url} target="_blank" rel="noreferrer" key={`${source.publisher}-${source.url}`}>{source.publisher}<ExternalLink size={13} /></a>)}</div> : <div className="delivered-tip"><CheckCircle2 size={18} /><p>좌우 버튼으로 카드를 넘기세요. 뉴스 카드에서는 원문 출처를 바로 열 수 있습니다.</p></div>}
+        {currentStory ? <StoryEvidence story={currentStory} /> : <div className="delivered-tip"><CheckCircle2 size={18} /><p>좌우 버튼으로 카드를 넘기세요. 뉴스 카드에서는 요약 문장과 그 문장을 뒷받침하는 원문을 함께 확인할 수 있습니다.</p></div>}
         {!subscribed && <Link className="delivered-register-link" href="/#delivery-deck"><BellRing size={16} /> 이 기기에 알림 등록</Link>}
         <Link className="delivered-home-link" href="/">전체 기사와 설정 보기</Link>
       </aside>
     </section>
   </main>;
+}
+
+function StoryEvidence({ story }: { story: Briefing["stories"][number] }) {
+  const evidenceReady = story.evidenceAvailable && Boolean(story.claims?.length);
+  return <div className="delivered-evidence">
+    <strong className="evidence-title"><FileCheck2 size={15} /> 문장별 근거</strong>
+    {evidenceReady ? <ol className="evidence-claims">{story.claims!.map((claim, claimIndex) => <li key={`${claim.statement}-${claimIndex}`}>
+      <p>{claim.statement}</p>
+      <div>{claim.sources.map((source) => {
+        const sourceNumber = story.sources.findIndex((item) => item.url === source.url) + 1;
+        return <a href={source.url} target="_blank" rel="noreferrer" key={`${claim.statement}-${source.url}`}>[{sourceNumber}] {source.publisher}<ExternalLink size={11} /></a>;
+      })}</div>
+    </li>)}</ol> : <div className="legacy-evidence"><AlertTriangle size={16} /><p>이 브리핑은 이전 형식으로 생성돼 문장별 근거 연결이 없습니다. 아래 원문 목록을 직접 확인해 주세요.</p></div>}
+    {story.uncertainty && <div className="uncertainty-box"><strong><AlertTriangle size={14} /> 아직 확인되지 않은 것</strong><p>{story.uncertainty}</p></div>}
+    <div className="delivered-sources"><strong><BookOpen size={15} /> 원문과 1차 자료</strong>{story.sources.map((source, index) => <a href={source.url} target="_blank" rel="noreferrer" key={`${source.publisher}-${source.url}`}><span>[{index + 1}] {source.publisher}{source.primarySource ? <small>1차 자료</small> : null}</span><ExternalLink size={13} /></a>)}</div>
+  </div>;
 }

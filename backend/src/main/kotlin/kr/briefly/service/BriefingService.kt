@@ -9,8 +9,9 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
-data class SourceResponse(val publisher: String, val url: String, val publishedAt: String)
-data class StoryResponse(val id: Long, val category: String, val title: String, val summary: String, val whyItMatters: String, val verificationStatus: VerificationStatus, val qualityScore: Int, val uncertainty: String?, val sources: List<SourceResponse>)
+data class SourceResponse(val publisher: String, val url: String, val publishedAt: String, val primarySource: Boolean)
+data class ClaimResponse(val statement: String, val sources: List<SourceResponse>)
+data class StoryResponse(val id: Long, val category: String, val title: String, val oneLineSummary: String, val summary: String, val whyItMatters: String, val verificationStatus: VerificationStatus, val qualityScore: Int, val uncertainty: String?, val evidenceAvailable: Boolean, val claims: List<ClaimResponse>, val sources: List<SourceResponse>)
 data class BriefingResponse(val id: Long, val briefingDate: LocalDate, val productionReady: Boolean, val dateLabel: String, val lead: String, val readMinutes: Int, val verifiedCount: Int, val lastVerifiedAt: String, val stories: List<StoryResponse>)
 
 @Service
@@ -40,9 +41,22 @@ class BriefingService(
             readMinutes = readMinutes,
             verifiedCount = stories.count { it.verificationStatus == VerificationStatus.VERIFIED },
             lastVerifiedAt = lastVerifiedAt.atZoneSameInstant(zone).format(DateTimeFormatter.ofPattern("a h:mm")),
-            stories = stories.map { story -> StoryResponse(requireNotNull(story.id), categoryLabel(story.category), story.title, story.summary, story.whyItMatters, story.verificationStatus, story.qualityScore, story.uncertainty, story.sources.map { SourceResponse(it.publisher, it.url, it.publishedAt.toString()) }) },
+            stories = stories.map { story ->
+                val sources = story.sources.map { SourceResponse(it.publisher, it.url, it.publishedAt.toString(), it.primarySource) }
+                val claims = story.claims.map { claim ->
+                    ClaimResponse(claim.statement, claim.sourceIndexes.split(',').mapNotNull(String::toIntOrNull).distinct().mapNotNull(sources::getOrNull))
+                }
+                StoryResponse(
+                    requireNotNull(story.id), categoryLabel(story.category), story.title,
+                    story.oneLineSummary?.takeIf(String::isNotBlank) ?: firstSentence(story.summary),
+                    story.summary, story.whyItMatters, story.verificationStatus, story.qualityScore,
+                    story.uncertainty, claims.isNotEmpty(), claims, sources,
+                )
+            },
         )
     }
+
+    private fun firstSentence(summary: String): String = summary.split(Regex("(?<=[.!?])\\s+")).firstOrNull()?.trim().orEmpty().ifBlank { summary.take(120) }
 
     private fun categoryLabel(category: Category) = when (category) { Category.POLICY -> "정책"; Category.ECONOMY -> "경제"; Category.SOCIETY -> "사회"; Category.TECH -> "테크" }
 }

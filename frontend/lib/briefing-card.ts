@@ -89,16 +89,21 @@ function drawStory(ctx: CanvasRenderingContext2D, card: Extract<BriefingCard, { 
   roundRect(ctx, 68, 142, 144, 58, 29);
   ctx.fill();
   text(ctx, card.story.category, 104, 156, 27, 900, "#ffffff");
+  const evidenceReady = card.story.evidenceAvailable && Boolean(card.story.claims?.length);
   const verified = card.story.verificationStatus === "VERIFIED";
-  text(ctx, verified ? "● 교차 검증 완료" : "● 추가 보도 확인 중", 242, 158, 25, 800, verified ? "#147a56" : "#9a6517");
+  text(ctx, evidenceReady ? (verified ? "● 근거 연결 완료" : "● 추가 확인 중") : "● 원문 목록 제공", 242, 158, 25, 800, verified && evidenceReady ? "#147a56" : "#9a6517");
 
   const titleBottom = drawParagraph(ctx, card.story.title, 68, 246, 944, 70, 86, 4, "#101722", 900);
   ctx.fillStyle = accent;
   ctx.fillRect(68, titleBottom + 34, 118, 9);
 
-  const summaryLabelY = titleBottom + 86;
-  text(ctx, "핵심 내용", 68, summaryLabelY, 28, 900, accent);
-  const summaryBottom = drawBulletList(ctx, summaryPoints(card.story.summary), 68, summaryLabelY + 56, 944, 34, 49, "#3f4854", 680);
+  const conclusionY = titleBottom + 82;
+  text(ctx, "한 줄 결론", 68, conclusionY, 26, 900, accent);
+  const conclusionBottom = drawParagraph(ctx, storyConclusion(card.story), 68, conclusionY + 48, 944, 33, 48, 2, "#101722", 800);
+  const summaryLabelY = conclusionBottom + 32;
+  text(ctx, "확인된 핵심", 68, summaryLabelY, 28, 900, accent);
+  const claims = evidenceReady ? card.story.claims!.map((claim) => claim.statement) : summaryPoints(card.story.summary);
+  const summaryBottom = drawBulletList(ctx, claims.slice(0, 2), 68, summaryLabelY + 56, 944, 31, 45, "#3f4854", 680);
 
   const boxY = Math.max(summaryBottom + 52, 850);
   ctx.fillStyle = "#ffffff";
@@ -112,7 +117,7 @@ function drawStory(ctx: CanvasRenderingContext2D, card: Extract<BriefingCard, { 
   drawParagraph(ctx, card.story.whyItMatters, 108, boxY + 88, 860, 34, 50, 3, "#101722", 700);
 
   const sourceNames = card.story.sources.map((source) => source.publisher).join(" · ");
-  text(ctx, `출처  ${sourceNames}`, 68, 1220, 25, 700, "#68707a");
+  text(ctx, `${evidenceReady ? "근거" : "원문"}  ${sourceNames}`, 68, 1220, 25, 700, "#68707a");
   text(ctx, `최종 확인 ${card.briefing.lastVerifiedAt}`, 760, 1220, 25, 700, "#68707a");
   text(ctx, "중요한 판단 전에는 원문을 확인하세요.", 68, 1270, 23, 600, "#8a9199");
 }
@@ -187,6 +192,10 @@ function drawBulletList(
 function summaryPoints(summary: string) {
   const points = summary.trim().split(/(?<=[.!?])\s+/).filter(Boolean);
   return points.length > 1 ? points.slice(0, 3) : [summary];
+}
+
+function storyConclusion(story: Story) {
+  return story.oneLineSummary?.trim() || summaryPoints(story.summary)[0] || story.title;
 }
 
 function wrapLines(ctx: CanvasRenderingContext2D, value: string, maxWidth: number, maxLines: number) {

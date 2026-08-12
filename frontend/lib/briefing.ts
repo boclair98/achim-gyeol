@@ -1,15 +1,20 @@
-export type Source = { publisher: string; url: string; publishedAt: string };
+export type Source = { publisher: string; url: string; publishedAt: string; primarySource?: boolean };
+export type EvidenceClaim = { statement: string; sources: Source[] };
 export type Story = {
   id: number;
   category: "정책" | "경제" | "사회" | "테크";
   title: string;
+  oneLineSummary?: string;
   summary: string;
   whyItMatters: string;
-  verificationStatus: "VERIFIED" | "DEVELOPING" | "CONFLICTING";
+  verificationStatus: "VERIFIED" | "DEVELOPING" | "CONFLICTING" | "SINGLE_SOURCE";
   qualityScore: number;
   riskLevel: "LOW" | "MEDIUM" | "HIGH";
   checkedClaims: number;
   totalClaims: number;
+  uncertainty?: string | null;
+  evidenceAvailable?: boolean;
+  claims?: EvidenceClaim[];
   sources: Source[];
 };
 export type Briefing = { id: number; briefingDate?: string; productionReady?: boolean; dateLabel: string; lead: string; readMinutes: number; verifiedCount: number; lastVerifiedAt: string; stories: Story[] };

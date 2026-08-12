@@ -162,14 +162,17 @@ export function BriefingApp() {
 
 function StoryRow({ story, index, onNotice }: { story: Story; index: number; onNotice: (message: string) => void }) {
   const verified = story.verificationStatus === "VERIFIED";
+  const evidenceReady = story.evidenceAvailable && Boolean(story.claims?.length);
   return (
     <article className="story-row">
       <div className="story-index">{String(index).padStart(2, "0")}</div>
       <div className="story-body">
-        <div className="story-kicker"><span className="category">{story.category}</span><span className={verified ? "verified" : "verified developing"}><CheckCircle2 size={13} />{verified ? "교차 확인" : "추가 보도 확인 중"}</span></div>
+        <div className="story-kicker"><span className="category">{story.category}</span><span className={verified && evidenceReady ? "verified" : "verified developing"}><CheckCircle2 size={13} />{evidenceReady ? (verified ? "근거 연결" : "추가 확인 중") : "원문 제공"}</span></div>
         <h3>{story.title}</h3>
-        <div className="story-summary"><strong>핵심 내용</strong><p className="summary">{story.summary}</p></div>
+        <div className="story-conclusion"><strong>한 줄 결론</strong><p>{story.oneLineSummary || firstSentence(story.summary)}</p></div>
+        <div className="story-summary"><strong>확인된 핵심</strong>{evidenceReady ? <ul>{story.claims!.slice(0, 3).map((claim, claimIndex) => <li key={`${claim.statement}-${claimIndex}`}>{claim.statement} <small>[{claim.sources.map((source) => story.sources.findIndex((item) => item.url === source.url) + 1).filter((number) => number > 0).join("·")}]</small></li>)}</ul> : <p className="summary">{story.summary}</p>}</div>
         <div className="why"><strong>알아야 할 것</strong><span>{story.whyItMatters}</span></div>
+        {story.uncertainty && <div className="story-uncertainty"><strong>아직 확인되지 않은 것</strong><span>{story.uncertainty}</span></div>}
         <div className="source-row">
           <span>출처 {story.sources.map((source) => source.publisher).join(" · ")}</span>
           <div className="story-actions">
@@ -180,6 +183,10 @@ function StoryRow({ story, index, onNotice }: { story: Story; index: number; onN
       </div>
     </article>
   );
+}
+
+function firstSentence(summary: string) {
+  return summary.trim().split(/(?<=[.!?])\s+/)[0] || summary;
 }
 
 function LoadingRows() {

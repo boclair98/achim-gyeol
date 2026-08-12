@@ -25,4 +25,22 @@ class QualityGateTest {
         assertThat(result.publishable).isFalse()
         assertThat(result.status).isEqualTo(VerificationStatus.DEVELOPING)
     }
+
+    @Test fun `출처가 충돌하면 복수 출처여도 발행하지 않는다`() {
+        val result = gate.evaluate(3, hasPrimarySource = true, factsChecked = true, sourcesConflict = true)
+        assertThat(result.publishable).isFalse()
+        assertThat(result.status).isEqualTo(VerificationStatus.CONFLICTING)
+    }
+
+    @Test fun `같은 한국 언론사의 하위 도메인은 하나의 출처 계열이다`() {
+        assertThat(newsSourceFamily("https://news.kbs.co.kr/news/view.do?id=1"))
+            .isEqualTo("kbs.co.kr")
+        assertThat(newsSourceFamily("https://sports.kbs.co.kr/article/2"))
+            .isEqualTo("kbs.co.kr")
+    }
+
+    @Test fun `서로 다른 한국 언론사는 다른 출처 계열이다`() {
+        assertThat(newsSourceFamily("https://news.kbs.co.kr/news/view.do?id=1"))
+            .isNotEqualTo(newsSourceFamily("https://imnews.imbc.com/news/2026/article/2"))
+    }
 }
