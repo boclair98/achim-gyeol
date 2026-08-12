@@ -175,11 +175,11 @@ class WebPushService(
                 due += 1
                 val lead = briefing.stories.firstOrNull()
                 val body = lead?.let {
-                    "한 줄 결론: ${it.oneLineSummary.take(72)}"
+                    "${it.category} 1순위 · ${it.oneLineSummary.take(82)}"
                 } ?: "어제 핵심 뉴스 ${briefing.stories.size}건 · 약 ${briefing.readMinutes}분"
                 attempt.attempts += 1
                 attempt.lastAttemptAt = OffsetDateTime.now()
-                val result = send(subscription, "아침결 · 오늘 꼭 알아야 할 뉴스 ${briefing.stories.size}건", body, false)
+                val result = send(subscription, "아침결 · 어제 핵심 ${briefing.stories.size}건 · 약 ${briefing.readMinutes}분", body, false)
                 if (result.delivered) {
                     delivered += 1
                     attempt.state = DeliveryState.DELIVERED

@@ -147,8 +147,15 @@ class NewsBriefingGenerator(
     @Value("\${app.pipeline.max-stories-per-category:3}") private var maxStoriesPerCategory: Int = 3
     @Value("\${app.pipeline.max-stories:15}") private var maxStories: Int = 15
     @Value("\${app.pipeline.require-human-approval:false}") private var requireHumanApproval: Boolean = false
+    @Synchronized
     @Transactional
     fun generate(briefingDate: LocalDate = LocalDate.now(ZoneId.of("Asia/Seoul"))): GenerationResult {
+        editionRepository.findByBriefingDate(briefingDate)
+            ?.takeIf { it.pipelineGenerated == true && it.stories.isNotEmpty() }
+            ?.let { existing ->
+                log.info("Morning briefing generation skipped because the edition already exists: date={}, stories={}", briefingDate, existing.stories.size)
+                return GenerationResult(briefingDate, briefingDate.minusDays(1), 0, 0, existing.stories.size)
+            }
         check(newsProviders.isNotEmpty()) { "뉴스 공급원 API가 설정되지 않았습니다" }
         val summarizer = aiSummarizer ?: error("OpenAI API 키가 설정되지 않았습니다")
         val coverageDate = briefingDate.minusDays(1)
@@ -243,6 +250,7 @@ class NewsBriefingGenerator(
             summary = summary.summary.trim().take(1200),
             oneLineSummary = summary.oneLineSummary.trim().take(400),
             whyItMatters = summary.whyItMatters.trim().take(700),
+            whatToWatch = summary.whatToWatch.trim().take(500).ifBlank { null },
             verificationStatus = decision.status,
             qualityScore = decision.score,
             displayOrder = 0,

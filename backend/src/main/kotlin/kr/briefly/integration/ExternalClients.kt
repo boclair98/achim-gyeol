@@ -27,6 +27,7 @@ data class AiSummary(
     val oneLineSummary: String,
     val summary: String,
     val whyItMatters: String,
+    val whatToWatch: String,
     val keyFacts: List<AiFact>,
     val uncertainty: String?,
     val sourcesConflict: Boolean,
@@ -91,9 +92,31 @@ class NaverNewsClient(
 
     private fun cleanText(value: String): String = HtmlUtils.htmlUnescape(value.replace(Regex("<[^>]+>"), "")).trim()
 
-    private fun publisherFrom(url: String): String = runCatching {
-        URI(url).host?.removePrefix("www.")?.takeIf(String::isNotBlank)
-    }.getOrNull() ?: "원문 출처"
+    private fun publisherFrom(url: String): String {
+        val host = runCatching { URI(url).host?.lowercase()?.removePrefix("www.") }.getOrNull()
+            ?: return "원문 출처"
+        val knownPublishers = linkedMapOf(
+            "yna.co.kr" to "연합뉴스",
+            "kbs.co.kr" to "KBS",
+            "imbc.com" to "MBC",
+            "sbs.co.kr" to "SBS",
+            "ytn.co.kr" to "YTN",
+            "jtbc.co.kr" to "JTBC",
+            "chosun.com" to "조선일보",
+            "joongang.co.kr" to "중앙일보",
+            "donga.com" to "동아일보",
+            "hani.co.kr" to "한겨레",
+            "khan.co.kr" to "경향신문",
+            "hankookilbo.com" to "한국일보",
+            "mk.co.kr" to "매일경제",
+            "hankyung.com" to "한국경제",
+            "sedaily.com" to "서울경제",
+            "etnews.com" to "전자신문",
+            "zdnet.co.kr" to "지디넷코리아",
+            "newsis.com" to "뉴시스",
+        )
+        return knownPublishers.entries.firstOrNull { (domain) -> host == domain || host.endsWith(".$domain") }?.value ?: host
+    }
 }
 
 @Component
@@ -135,6 +158,7 @@ class OpenAiSummarizer(
                         oneLineSummary는 기사에 공통으로 확인된 가장 중요한 결론 하나만 70자 이내의 완결된 문장으로 작성하세요.
                         summary는 '무슨 일이 있었는지 → 확인된 핵심 수치·대상·시점 → 현재 확정된 상태' 순서로 2~4문장을 작성하고, 문장마다 하나의 핵심 사실만 담으세요.
                         whyItMatters는 독자가 오늘 알아야 할 영향, 적용 시점, 확인하거나 행동할 사항을 1~2문장으로 구체적으로 작성하세요. 실질적인 행동 사항이 없으면 억지로 만들지 마세요.
+                        whatToWatch는 이 사건에서 다음으로 확인할 결정·발표·시점이 있을 때만 1문장으로 작성하세요. 후속 확인 포인트가 없으면 빈 문자열로 두고 전망을 만들어내지 마세요.
                         keyFacts에는 독자가 원문을 읽지 않아도 사건의 확정된 골격을 이해할 수 있도록 중요한 사실을 빠뜨리지 말고 2~5개 담으세요. 각 사실에는 그 사실을 직접 뒷받침하는 sourceIds를 두 개 이상 넣으세요.
                         출처가 충돌하거나 발표 전·검토 중·추산 상태이면 sourcesConflict 또는 uncertainty에 구체적으로 적고 확정형으로 쓰지 마세요.
                         근거가 부족하면 사실을 만들어내지 말고 uncertainty에 명시하세요.
@@ -170,6 +194,7 @@ class OpenAiSummarizer(
             oneLineSummary = json.path("oneLineSummary").asText(),
             summary = json.path("summary").asText(),
             whyItMatters = json.path("whyItMatters").asText(),
+            whatToWatch = json.path("whatToWatch").asText(),
             keyFacts = facts,
             uncertainty = json.path("uncertainty").asText().takeIf(String::isNotBlank),
             sourcesConflict = json.path("sourcesConflict").asBoolean(false),
@@ -213,6 +238,7 @@ class OpenAiSummarizer(
             "oneLineSummary" to mapOf("type" to "string", "description" to "공통으로 확인된 가장 중요한 결론 한 문장, 70자 이내"),
             "summary" to mapOf("type" to "string", "description" to "무슨 일, 확인된 핵심 수치·대상·시점, 현재 상태를 담은 2~4문장"),
             "whyItMatters" to mapOf("type" to "string", "description" to "독자가 알아야 할 영향·적용 시점·행동 사항 1~2문장"),
+            "whatToWatch" to mapOf("type" to "string", "description" to "다음으로 확인할 결정·발표·시점 1문장, 없으면 빈 문자열"),
             "keyFacts" to mapOf(
                 "type" to "array",
                 "minItems" to 2,
@@ -237,6 +263,6 @@ class OpenAiSummarizer(
             "recommendedForMorningBriefing" to mapOf("type" to "boolean"),
             "importanceReason" to mapOf("type" to "string"),
         ),
-        "required" to listOf("title", "oneLineSummary", "summary", "whyItMatters", "keyFacts", "uncertainty", "sourcesConflict", "importanceScore", "recommendedForMorningBriefing", "importanceReason"),
+        "required" to listOf("title", "oneLineSummary", "summary", "whyItMatters", "whatToWatch", "keyFacts", "uncertainty", "sourcesConflict", "importanceScore", "recommendedForMorningBriefing", "importanceReason"),
     )
 }
