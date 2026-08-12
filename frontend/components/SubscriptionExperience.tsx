@@ -41,6 +41,7 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
     queueMicrotask(() => {
       if (storedDays) setSelectedDays(storedDays);
       setDeviceLabel(detectedDeviceLabel);
+      if (new URLSearchParams(window.location.search).get("ios-guide") === "1") setOpen(true);
     });
 
     const show = () => setOpen(true);

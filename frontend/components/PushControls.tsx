@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { BellOff, BellRing, CheckCircle2, Send } from "lucide-react";
+import { AppWindow, BellOff, BellRing, CheckCircle2, ChevronRight, Send, Share2, SquarePlus } from "lucide-react";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 const serverSubscriptionKey = "achim-gyeol-server-subscription";
@@ -13,14 +13,14 @@ type PushResponse = { delivered: boolean; message: string };
 export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscriptionChange }: Props) {
   const [supported, setSupported] = useState(true);
   const [iosInstallRequired, setIosInstallRequired] = useState(false);
-  const [showIosGuide, setShowIosGuide] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
   const [working, setWorking] = useState(false);
 
   useEffect(() => {
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     const standalone = window.matchMedia("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
-    if (ios && !standalone) {
+    const guidePreview = new URLSearchParams(window.location.search).get("ios-guide") === "1";
+    if ((ios && !standalone) || guidePreview) {
       queueMicrotask(() => { setIosInstallRequired(true); setSupported(false); });
       return;
     }
@@ -103,15 +103,7 @@ export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscript
     finally { setWorking(false); }
   };
 
-  if (iosInstallRequired) return <div className="push-controls ios-push-controls">
-    <button className="primary-button" onClick={() => setShowIosGuide(true)}><BellRing size={16} /> 이 기기에 알림 등록</button>
-    {showIosGuide && <div className="ios-install-guide" role="status">
-      <strong>아이폰은 홈 화면 설치가 먼저 필요해요</strong>
-      <ol><li>Safari 하단의 <b>공유</b> 버튼 누르기</li><li><b>홈 화면에 추가</b> 선택하기</li><li>홈 화면의 <b>아침결</b> 아이콘으로 다시 열기</li></ol>
-      <p>카드 화면의 ‘이 기기에 알림 등록’을 누르면 실제 등록 화면으로 이어집니다.</p>
-    </div>}
-    <p className="push-help">버튼을 없앤 것이 아니라 iOS의 설치 절차를 먼저 안내합니다. 설치 후에는 다른 기기와 동일하게 등록할 수 있습니다.</p>
-  </div>;
+  if (iosInstallRequired) return <div className="push-controls ios-push-controls"><IosInstallGuide /></div>;
   if (!supported) return <div className="push-controls unsupported-push-controls">
     <button className="primary-button" onClick={() => onNotice("Safari 또는 최신 Chrome·Edge에서 열어 주세요. 아이폰은 Safari의 ‘홈 화면에 추가’ 후 등록할 수 있습니다.")}><BellRing size={16} /> 이 기기에 알림 등록</button>
     <p className="push-help">현재 브라우저가 Web Push를 지원하지 않습니다. 지원 브라우저에서 열면 이 버튼으로 바로 등록됩니다.</p>
@@ -123,6 +115,53 @@ export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscript
     {subscribed && <button className="text-button" onClick={unsubscribe} disabled={working}><BellOff size={15} /> 알림 해지</button>}
     <p className="push-help">회원가입 없이 바로 등록됩니다. 처음 한 번 브라우저 알림만 허용하면 되고, 테스트 발송은 이 기기에만 전송됩니다.</p>
   </div>;
+}
+
+function IosInstallGuide() {
+  return <section className="ios-install-guide" aria-labelledby="ios-guide-title">
+    <div className="ios-guide-heading">
+      <span className="ios-guide-badge">iPhone · 처음 한 번만</span>
+      <h3 id="ios-guide-title">아이폰 알림은 이렇게 켜세요</h3>
+      <p>앱스토어 설치 없이, Safari에서 아래 순서대로 하면 됩니다.</p>
+    </div>
+
+    <div className="ios-guide-steps">
+      <article className="ios-guide-step">
+        <span className="ios-guide-number">1</span>
+        <div className="ios-visual safari-visual" aria-hidden="true">
+          <div className="mini-browser-title">morningnews.coders.kr</div>
+          <div className="mini-news-card"><i>아침결</i><b>어제 뉴스,<br />오늘 아침 한 번에</b></div>
+          <div className="safari-toolbar"><span>‹</span><span>›</span><strong><Share2 size={20} /></strong><span>▢</span><span>☰</span></div>
+        </div>
+        <div><strong>Safari의 공유 버튼</strong><p>화면 아래 <Share2 size={14} /> 모양을 눌러요.</p></div>
+      </article>
+
+      <ChevronRight className="ios-guide-arrow" aria-hidden="true" />
+
+      <article className="ios-guide-step">
+        <span className="ios-guide-number">2</span>
+        <div className="ios-visual share-sheet-visual" aria-hidden="true">
+          <div className="share-sheet-handle" />
+          <div className="share-sheet-row"><span><SquarePlus size={22} /></span><b>홈 화면에 추가</b><i>›</i></div>
+          <div className="share-sheet-row muted"><span>☆</span><b>즐겨찾기에 추가</b><i>›</i></div>
+        </div>
+        <div><strong>‘홈 화면에 추가’</strong><p>공유 메뉴를 올려 이 항목을 눌러요.</p></div>
+      </article>
+
+      <ChevronRight className="ios-guide-arrow" aria-hidden="true" />
+
+      <article className="ios-guide-step">
+        <span className="ios-guide-number">3</span>
+        <div className="ios-visual home-visual" aria-hidden="true">
+          <div className="home-app"><span><AppWindow size={24} /></span><b>아침결</b></div>
+          <div className="notification-preview"><BellRing size={15} /><div><b>아침결 알림</b><span>오늘 알아야 할 뉴스가 도착했어요</span></div></div>
+        </div>
+        <div><strong>아침결 아이콘으로 열기</strong><p><b>이 기기에 알림 등록</b> → <b>허용</b>을 눌러요.</p></div>
+      </article>
+    </div>
+
+    <p className="ios-guide-finish"><CheckCircle2 size={16} /> 여기까지 하면 선택한 요일 오전 7시 30분에 브리핑이 와요.</p>
+  </section>;
 }
 
 function urlBase64ToUint8Array(value: string) {
