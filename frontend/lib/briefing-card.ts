@@ -97,8 +97,8 @@ function drawStory(ctx: CanvasRenderingContext2D, card: Extract<BriefingCard, { 
   ctx.fillRect(68, titleBottom + 34, 118, 9);
 
   const summaryLabelY = titleBottom + 86;
-  text(ctx, "AI 3줄 요약", 68, summaryLabelY, 28, 900, accent);
-  const summaryBottom = drawParagraph(ctx, card.story.summary, 68, summaryLabelY + 54, 944, 39, 58, 5, "#3f4854", 650);
+  text(ctx, "핵심 내용", 68, summaryLabelY, 28, 900, accent);
+  const summaryBottom = drawBulletList(ctx, summaryPoints(card.story.summary), 68, summaryLabelY + 56, 944, 34, 49, "#3f4854", 680);
 
   const boxY = Math.max(summaryBottom + 52, 850);
   ctx.fillStyle = "#ffffff";
@@ -108,7 +108,7 @@ function drawStory(ctx: CanvasRenderingContext2D, card: Extract<BriefingCard, { 
   ctx.lineWidth = 3;
   roundRect(ctx, 68, boxY, 944, 245, 34);
   ctx.stroke();
-  text(ctx, "왜 중요한가", 108, boxY + 38, 27, 900, accent);
+  text(ctx, "알아야 할 것", 108, boxY + 38, 27, 900, accent);
   drawParagraph(ctx, card.story.whyItMatters, 108, boxY + 88, 860, 34, 50, 3, "#101722", 700);
 
   const sourceNames = card.story.sources.map((source) => source.publisher).join(" · ");
@@ -163,6 +163,30 @@ function drawParagraph(
   const lines = wrapLines(ctx, value, maxWidth, maxLines);
   lines.forEach((line, index) => ctx.fillText(line, x, y + index * lineHeight));
   return y + lines.length * lineHeight;
+}
+
+function drawBulletList(
+  ctx: CanvasRenderingContext2D,
+  points: string[],
+  x: number,
+  y: number,
+  maxWidth: number,
+  size: number,
+  lineHeight: number,
+  color: string,
+  weight: number,
+) {
+  let cursor = y;
+  points.slice(0, 3).forEach((point) => {
+    text(ctx, "•", x, cursor + 2, size, 900, "#1558e9");
+    cursor = drawParagraph(ctx, point, x + 34, cursor, maxWidth - 34, size, lineHeight, 2, color, weight) + 10;
+  });
+  return cursor;
+}
+
+function summaryPoints(summary: string) {
+  const points = summary.trim().split(/(?<=[.!?])\s+/).filter(Boolean);
+  return points.length > 1 ? points.slice(0, 3) : [summary];
 }
 
 function wrapLines(ctx: CanvasRenderingContext2D, value: string, maxWidth: number, maxLines: number) {

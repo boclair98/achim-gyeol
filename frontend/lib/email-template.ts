@@ -21,6 +21,7 @@ export function createEmailHtml(briefing: Briefing, serviceUrl: string, brand: B
   const storyCards = briefing.stories.map((story, index) => {
     const verified = story.verificationStatus === "VERIFIED";
     const sources = story.sources.map((source) => `<a href="${escapeHtml(source.url)}" style="color:#1558e9;text-decoration:none;font-weight:700">${escapeHtml(source.publisher)}</a>`).join(" · ");
+    const summaryItems = summaryPoints(story.summary).map((point) => `<li style="margin:0 0 7px">${escapeHtml(point)}</li>`).join("");
     return `
       <tr><td style="padding:0 18px 16px">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:2px solid #101722;border-radius:22px;background:#fffdf7;box-shadow:6px 6px 0 #101722">
@@ -31,8 +32,8 @@ export function createEmailHtml(briefing: Briefing, serviceUrl: string, brand: B
             </tr></table>
           </td></tr>
           <tr><td style="padding:8px 26px 0;color:#101722;font-size:25px;line-height:1.35;font-weight:900;letter-spacing:-1px">${String(index + 1).padStart(2, "0")}. ${escapeHtml(story.title)}</td></tr>
-          <tr><td style="padding:18px 26px 0"><div style="border-top:4px solid #1558e9;padding-top:14px"><b style="color:#1558e9;font-size:12px">AI 3줄 요약</b><p style="margin:8px 0 0;color:#46505b;font-size:15px;line-height:1.75">${escapeHtml(story.summary)}</p></div></td></tr>
-          <tr><td style="padding:18px 26px 0"><div style="border-radius:15px;background:#eef1f4;padding:16px 18px"><b style="color:#1558e9;font-size:12px">왜 중요한가</b><p style="margin:7px 0 0;color:#101722;font-size:14px;line-height:1.7">${escapeHtml(story.whyItMatters)}</p></div></td></tr>
+          <tr><td style="padding:18px 26px 0"><div style="border-top:4px solid #1558e9;padding-top:14px"><b style="color:#1558e9;font-size:12px">핵심 내용</b><ul style="margin:9px 0 0;padding-left:20px;color:#46505b;font-size:15px;line-height:1.65">${summaryItems}</ul></div></td></tr>
+          <tr><td style="padding:18px 26px 0"><div style="border-radius:15px;background:#eef1f4;padding:16px 18px"><b style="color:#1558e9;font-size:12px">알아야 할 것</b><p style="margin:7px 0 0;color:#101722;font-size:14px;line-height:1.7">${escapeHtml(story.whyItMatters)}</p></div></td></tr>
           <tr><td style="padding:17px 26px 25px;color:#68707a;font-size:11px">출처 ${sources} · 최종 확인 ${escapeHtml(briefing.lastVerifiedAt)}</td></tr>
         </table>
       </td></tr>`;
@@ -63,6 +64,11 @@ export function createEmailHtml(briefing: Briefing, serviceUrl: string, brand: B
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character] ?? character);
+}
+
+function summaryPoints(summary: string) {
+  const points = summary.trim().split(/(?<=[.!?])\s+/).filter(Boolean);
+  return points.length > 1 ? points.slice(0, 3) : [summary];
 }
 
 function toBase64(value: string) {

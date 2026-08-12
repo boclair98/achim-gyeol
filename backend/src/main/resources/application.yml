@@ -41,5 +41,5 @@ app:
   pipeline:
     enabled: ${NEWS_PIPELINE_ENABLED:false}
     generate-on-startup: ${NEWS_GENERATE_ON_STARTUP:false}
-    cron: ${NEWS_GENERATION_CRON:0 0 8 * * *}
+    cron: ${NEWS_GENERATION_CRON:0 0 6 * * *}
     admin-token: ${BRIEFING_ADMIN_TOKEN:}

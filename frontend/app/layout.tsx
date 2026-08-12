@@ -13,7 +13,7 @@ const socialImageUrl = new URL("og-v2.png", `${siteUrl.replace(/\/$/, "")}/`).to
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: "아침결 — 어제 뉴스를 매일 아침 한 번에",
-  description: "전날 주요 뉴스를 교차 확인하고 AI로 짧게 요약해 원하는 시간에 PWA 알림으로 전하는 무료 뉴스 브리핑.",
+  description: "전날 주요 뉴스를 교차 확인하고 AI로 짧게 요약해 매일 오전 7시 30분 PWA 알림으로 전하는 무료 뉴스 브리핑.",
   manifest: `${basePath}/manifest.webmanifest`,
   applicationName: "아침결",
   appleWebApp: { capable: true, title: "아침결", statusBarStyle: "default" },

@@ -47,7 +47,10 @@ data class PushDeliverySummary(
 )
 
 internal fun deliveryWeekdayIndex(dayOfWeek: DayOfWeek): Int = dayOfWeek.value - 1
-internal fun deliveryIsDue(current: LocalTime, scheduled: LocalTime): Boolean = !current.isBefore(scheduled)
+internal val fixedDeliveryTime: LocalTime = LocalTime.of(7, 30)
+internal val lastDeliveryTime: LocalTime = LocalTime.of(8, 0)
+internal fun deliveryIsDue(current: LocalTime, scheduled: LocalTime = fixedDeliveryTime): Boolean =
+    !current.isBefore(scheduled) && !current.isAfter(lastDeliveryTime)
 
 @Service
 class WebPushService(
@@ -88,9 +91,11 @@ class WebPushService(
         subscription.endpoint = registration.endpoint
         subscription.p256dh = registration.keys.p256dh
         subscription.auth = registration.keys.auth
-        subscription.timezone = registration.timezone
-        subscription.deliveryHour = registration.deliveryHour
-        subscription.deliveryMinute = registration.deliveryMinute
+        // 아침결은 모든 독자에게 같은 한국 시간 기준 브리핑을 보냅니다.
+        // 예전 프런트엔드가 임의 시간을 보내도 서버에서 07:30으로 정규화합니다.
+        subscription.timezone = "Asia/Seoul"
+        subscription.deliveryHour = fixedDeliveryTime.hour
+        subscription.deliveryMinute = fixedDeliveryTime.minute
         subscription.weekdays = registration.weekdays.sorted().joinToString(",")
         subscription.userAgent = registration.userAgent?.take(500)
         subscription.active = true
@@ -117,8 +122,8 @@ class WebPushService(
         val count = briefing?.stories?.size ?: 0
         return send(
             subscription,
-            title = "아침결 · 테스트 뉴스가 도착했어요",
-            body = if (count > 0) "오늘의 핵심 뉴스 ${count}건을 카드로 확인해 보세요." else "웹푸시 연결이 정상적으로 완료됐어요.",
+            title = "[운영자 테스트] 아침결 알림",
+            body = if (count > 0) "연결 확인 완료 · 뉴스 카드 ${count}건을 열어볼 수 있어요." else "웹푸시 연결이 정상적으로 완료됐어요.",
             test = true,
         )
     }
@@ -150,10 +155,14 @@ class WebPushService(
             val weekday = deliveryWeekdayIndex(now.dayOfWeek)
             val scheduledDays = subscription.weekdays.split(',').mapNotNull(String::toIntOrNull).toSet()
             val alreadySentToday = subscription.lastSentAt?.atZoneSameInstant(zone)?.toLocalDate() == now.toLocalDate()
-            val scheduledTime = LocalTime.of(subscription.deliveryHour, subscription.deliveryMinute)
+            val scheduledTime = fixedDeliveryTime
             if (deliveryIsDue(now.toLocalTime(), scheduledTime) && weekday in scheduledDays && !alreadySentToday) {
                 due += 1
-                if (send(subscription, "아침결 · 어제 뉴스 종합이 도착했어요", "어제 핵심 뉴스 ${briefing.stories.size}건 · 약 ${briefing.readMinutes}분", false).delivered) delivered += 1 else failed += 1
+                val lead = briefing.stories.firstOrNull()
+                val body = lead?.let {
+                    "핵심: ${it.title.take(38)} · 알아둘 것: ${it.whyItMatters.take(48)}"
+                } ?: "어제 핵심 뉴스 ${briefing.stories.size}건 · 약 ${briefing.readMinutes}분"
+                if (send(subscription, "아침결 · 오늘 알아야 할 뉴스 ${briefing.stories.size}건", body, false).delivered) delivered += 1 else failed += 1
             }
         }
         return PushDeliverySummary("COMPLETED", subscriptions.size, due, delivered, failed, "오늘 브리핑 발송 검사를 완료했습니다.")
@@ -201,24 +210,21 @@ class WebPushService(
 }
 
 @Component
-class DefaultDeliveryTimeMigration(
-    private val repository: PushSubscriptionRepository,
-    @Value("\${app.push.legacy-default-cutoff:2026-08-12T00:30:00Z}") private val legacyDefaultCutoff: String,
-) : ApplicationRunner {
+class DefaultDeliveryTimeMigration(private val repository: PushSubscriptionRepository) : ApplicationRunner {
     private val logger = LoggerFactory.getLogger(javaClass)
 
     @Transactional
     override fun run(args: ApplicationArguments) {
-        val cutoff = OffsetDateTime.parse(legacyDefaultCutoff)
         val migrated = repository.findAllByActiveTrue().filter {
-            it.createdAt.isBefore(cutoff) && it.deliveryMinute == 0 && it.deliveryHour in setOf(7, 8)
+            it.timezone != "Asia/Seoul" || it.deliveryHour != fixedDeliveryTime.hour || it.deliveryMinute != fixedDeliveryTime.minute
         }
         migrated.forEach {
-            it.deliveryHour = 8
-            it.deliveryMinute = 30
+            it.timezone = "Asia/Seoul"
+            it.deliveryHour = fixedDeliveryTime.hour
+            it.deliveryMinute = fixedDeliveryTime.minute
             it.updatedAt = OffsetDateTime.now()
         }
         if (migrated.isNotEmpty()) repository.saveAll(migrated)
-        logger.info("Migrated {} legacy 07:00/08:00 push subscription(s) to 08:30", migrated.size)
+        logger.info("Migrated {} push subscription(s) to the fixed 07:30 Asia/Seoul delivery", migrated.size)
     }
 }

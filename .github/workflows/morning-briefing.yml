@@ -2,9 +2,10 @@ name: Morning briefing operations
 
 on:
   schedule:
-    # GitHub Actions cron uses UTC. These are 08:00 and 08:30 Asia/Seoul.
-    - cron: "0 23 * * *"
-    - cron: "30 23 * * *"
+    # GitHub Actions cron uses UTC. These are 06:00 and 06:45 Asia/Seoul.
+    # The second job keeps the free service warm and dispatches at 07:30.
+    - cron: "0 21 * * *"
+    - cron: "45 21 * * *"
   workflow_dispatch:
     inputs:
       operation:
@@ -27,7 +28,7 @@ concurrency:
 jobs:
   operate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 70
     steps:
       - name: Choose operation
         id: operation
@@ -39,12 +40,27 @@ jobs:
         run: |
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
             operation="$REQUESTED_OPERATION"
-          elif [[ "$SCHEDULE" == "0 23 * * *" ]]; then
+          elif [[ "$SCHEDULE" == "0 21 * * *" ]]; then
             operation="generate"
           else
             operation="run"
           fi
           echo "operation=$operation" >> "$GITHUB_OUTPUT"
+
+      - name: Keep service warm until 07:30 KST
+        if: github.event_name == 'schedule' && github.event.schedule == '45 21 * * *'
+        shell: bash
+        run: |
+          target="$(TZ=Asia/Seoul date -d "$(TZ=Asia/Seoul date +%F) 07:30:00" +%s)"
+          while true; do
+            now="$(date +%s)"
+            remaining=$((target - now))
+            if (( remaining <= 0 )); then break; fi
+            curl --silent --show-error --max-time 30 \
+              --retry 3 --retry-all-errors \
+              "https://morningnews.coders.kr/actuator/health" >/dev/null || true
+            if (( remaining > 60 )); then sleep 60; else sleep "$remaining"; fi
+          done
 
       - name: Wake service and run morning operation
         shell: bash

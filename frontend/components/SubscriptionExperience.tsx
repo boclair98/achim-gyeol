@@ -13,7 +13,7 @@ export function SubscriptionTrigger({ className, children }: { className?: strin
 
 export function SubscriptionExperience({ onNotice }: { onNotice: (message: string) => void }) {
   const [open, setOpen] = useState(false);
-  const [deliveryTime, setDeliveryTime] = useState("08:30");
+  const deliveryTime = "07:30";
   const [selectedDays, setSelectedDays] = useState([0, 1, 2, 3, 4]);
   const [subscribed, setSubscribed] = useState(false);
   const [deviceLabel, setDeviceLabel] = useState("이 브라우저에서 바로 등록할 수 있어요");
@@ -21,13 +21,11 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
 
   useEffect(() => {
     const stored = window.localStorage.getItem("achim-gyeol-delivery");
-    let storedTime: string | undefined;
     let storedDays: number[] | undefined;
     try {
       const setting = stored ? JSON.parse(stored) as { time?: string; days?: number[] } : {};
-      storedTime = setting.time === "07:00" || setting.time === "08:00" ? "08:30" : setting.time;
       storedDays = setting.days;
-      if (setting.time === "07:00" || setting.time === "08:00") window.localStorage.setItem("achim-gyeol-delivery", JSON.stringify({ ...setting, time: "08:30" }));
+      if (stored && setting.time !== deliveryTime) window.localStorage.setItem("achim-gyeol-delivery", JSON.stringify({ ...setting, time: deliveryTime }));
     } catch {
       window.localStorage.removeItem("achim-gyeol-delivery");
     }
@@ -41,7 +39,6 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
           ? "Safari 또는 최신 Chrome·Edge에서 열어주세요"
           : "이 브라우저에서 바로 등록할 수 있어요";
     queueMicrotask(() => {
-      if (storedTime) setDeliveryTime(storedTime);
       if (storedDays) setSelectedDays(storedDays);
       setDeviceLabel(detectedDeviceLabel);
     });
@@ -86,13 +83,13 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
         <div className="device-readiness"><Smartphone size={19} /><div><strong>현재 기기 확인</strong><span>{deviceLabel}</span></div></div>
 
         <div className="modal-setting-grid">
-          <label className="modal-time-field"><span><Clock3 size={15} /> 도착 시각</span><input type="time" value={deliveryTime} onChange={(event) => setDeliveryTime(event.target.value)} /></label>
+          <div className="modal-time-field"><span><Clock3 size={15} /> 고정 도착 시각</span><div className="fixed-delivery-time"><strong>오전 7:30</strong><small>전날 뉴스는 오전 6시부터 종합해요</small></div></div>
           <div className="modal-day-field"><span><CalendarDays size={15} /> 받을 요일</span><div className="weekday-list">{weekdays.map((day, index) => <button type="button" key={day} className={selectedDays.includes(index) ? "active" : ""} onClick={() => toggleDay(index)}>{day}</button>)}</div></div>
         </div>
 
         <div className="modal-arrival-preview">
           <div className="push-app-icon"><BellRing size={18} /></div>
-          <div><strong>아침결 · 어제 뉴스가 도착했어요</strong><span>선택한 요일 {deliveryTime} 이후 · 핵심 뉴스와 출처 카드</span></div>
+          <div><strong>아침결 · 오늘 알아야 할 뉴스가 도착했어요</strong><span>선택한 요일 오전 7:30 · 핵심 내용과 알아야 할 것</span></div>
         </div>
 
         <PushControls deliveryTime={deliveryTime} selectedDays={selectedDays} onNotice={(message) => { onNotice(message); }} onSubscriptionChange={setSubscribed} />

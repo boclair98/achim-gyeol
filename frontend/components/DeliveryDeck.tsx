@@ -22,7 +22,7 @@ export function DeliveryDeck({ briefing }: Props) {
     <section className="delivery-studio subscription-studio" id="delivery-deck">
       <div className="landing-section-heading delivery-heading-clean">
         <span>FREE SUBSCRIPTION</span>
-        <h2>받을 시간을 정하면 끝이에요</h2>
+        <h2>받을 요일만 정하면 끝이에요</h2>
         <p>회원가입도, 앱스토어 설치도 필요 없습니다. 이 기기의 브라우저 알림만 한 번 허용해 주세요.</p>
       </div>
 
@@ -49,10 +49,10 @@ export function DeliveryDeck({ briefing }: Props) {
             <div className="subscription-bell"><BellRing /></div>
             <div><span>30초 무료 등록</span><h3>내일부터 받아보세요</h3></div>
           </div>
-          <p className="subscription-description">버튼을 누르면 시간과 요일을 고르는 작은 창이 열립니다. 다른 페이지로 이동하거나 회원가입할 필요가 없습니다.</p>
-          <div className="quick-arrival-card"><span>기본 도착 시간</span><strong>평일 오전 8:30</strong><small>등록 창에서 자유롭게 변경</small></div>
+          <p className="subscription-description">버튼을 누르면 받을 요일을 고르는 작은 창이 열립니다. 다른 페이지로 이동하거나 회원가입할 필요가 없습니다.</p>
+          <div className="quick-arrival-card"><span>정규 도착 시간</span><strong>오전 7:30</strong><small>전날 뉴스를 오전 6시부터 종합</small></div>
           <div className="simple-onboarding">
-            <span><b>1</b> 시간과 요일 선택</span>
+            <span><b>1</b> 받을 요일 선택</span>
             <i />
             <span><b>2</b> 알림 등록</span>
             <i />
@@ -92,9 +92,14 @@ export function BriefingCardPreview({ card }: { card: BriefingCard }) {
       <header><strong>{card.brand.name} · AI NEWS SUMMARY</strong><span>{String(card.index).padStart(2, "0")} / {String(card.briefing.stories.length).padStart(2, "0")}</span></header>
       <div className="summary-kicker"><span>{card.story.category}</span><em>{verified ? "● 교차 검증 완료" : "● 추가 보도 확인 중"}</em></div>
       <h3>{card.story.title}</h3>
-      <div className="ai-summary"><strong>AI 3줄 요약</strong><p>{card.story.summary}</p></div>
-      <div className="matter-box"><strong>왜 중요한가</strong><p>{card.story.whyItMatters}</p></div>
+      <div className="ai-summary"><strong>핵심 내용</strong><ul>{summaryPoints(card.story.summary).map((point) => <li key={point}>{point}</li>)}</ul></div>
+      <div className="matter-box"><strong>알아야 할 것</strong><p>{card.story.whyItMatters}</p></div>
       <footer><span>출처 {card.story.sources.map((source) => source.publisher).join(" · ")}</span><span>최종 확인 {card.briefing.lastVerifiedAt}</span></footer>
     </article>
   );
+}
+
+function summaryPoints(summary: string) {
+  const points = summary.trim().split(/(?<=[.!?])\s+/).filter(Boolean);
+  return points.length > 1 ? points.slice(0, 3) : [summary];
 }

@@ -76,7 +76,7 @@ export function BriefingApp() {
           <div className="hero-orbit hero-orbit-one" aria-hidden="true" />
           <div className="hero-orbit hero-orbit-two" aria-hidden="true" />
           <div className="phone-mockup">
-            <div className="phone-status"><span>8:30</span><span>● ● ●</span></div>
+            <div className="phone-status"><span>7:30</span><span>● ● ●</span></div>
             <div className="push-mockup">
               <div className="push-app-icon"><Newspaper size={19} /></div>
               <div><strong>아침결</strong><span>지금</span><p>어제 핵심 뉴스 {briefing.stories.length}건이 도착했어요</p></div>
@@ -93,7 +93,7 @@ export function BriefingApp() {
       </section>
 
       <section className="landing-proof" aria-label="서비스 핵심 특징">
-        <div><strong>08:00</strong><span>매일 아침 자동 종합</span></div>
+        <div><strong>07:30</strong><span>매일 아침 정규 도착</span></div>
         <div><strong>2+</strong><span>서로 다른 출처 확인</span></div>
         <div><strong>3줄</strong><span>뉴스별 핵심 요약</span></div>
         <div><strong>0원</strong><span>회원가입 없이 무료</span></div>
@@ -108,7 +108,7 @@ export function BriefingApp() {
         <div className="how-grid">
           <article><div className="how-icon mint"><Clock3 /></div><small>01 · 뉴스 종합</small><h3>전날 뉴스를 모아요</h3><p>전날 00:00~23:59에 보도된 주요 뉴스를 분야별로 수집하고 같은 사건끼리 묶습니다.</p></article>
           <article><div className="how-icon violet"><Sparkles /></div><small>02 · AI 요약</small><h3>핵심과 출처를 정리해요</h3><p>AI가 3줄 요약과 중요성을 작성하고, 서로 다른 출처가 연결됐는지 다시 확인합니다.</p></article>
-          <article><div className="how-icon yellow"><Smartphone /></div><small>03 · 아침 전달</small><h3>원하는 시간에 받아요</h3><p>휴대폰 알림을 누르면 뉴스 카드가 열립니다. 메일이나 별도 앱 설치는 필요하지 않아요.</p></article>
+          <article><div className="how-icon yellow"><Smartphone /></div><small>03 · 아침 전달</small><h3>오전 7시 30분에 받아요</h3><p>휴대폰 알림을 누르면 핵심 내용과 알아야 할 것이 정리된 카드가 열립니다.</p></article>
         </div>
       </section>
 
@@ -143,7 +143,7 @@ export function BriefingApp() {
           <details open><summary>아침결은 무료인가요?</summary><p>네. 현재 회원가입과 결제 없이 무료로 이용할 수 있으며, 도네이트·유료 구독 기능도 사용하지 않습니다.</p></details>
           <details><summary>어떤 뉴스가 오나요?</summary><p>오늘의 속보가 아니라 전날 하루 동안 보도된 정책·경제·사회·테크 분야의 주요 흐름을 다음 날 아침에 종합해 보냅니다.</p></details>
           <details><summary>아이폰에서도 알림을 받을 수 있나요?</summary><p>네. Safari에서 아침결을 홈 화면에 추가한 뒤 홈 화면 아이콘으로 열고 ‘이 기기에 알림 등록’을 누르면 됩니다.</p></details>
-          <details><summary>API 키를 직접 입력해야 하나요?</summary><p>아니요. 뉴스와 AI API는 운영자가 서버에 설정합니다. 사용자는 받을 시간과 요일만 선택하면 됩니다.</p></details>
+          <details><summary>API 키를 직접 입력해야 하나요?</summary><p>아니요. 뉴스와 AI API는 운영자가 서버에 설정합니다. 사용자는 받을 요일만 선택하면 됩니다.</p></details>
         </div>
       </section>
 
@@ -168,8 +168,8 @@ function StoryRow({ story, index, onNotice }: { story: Story; index: number; onN
       <div className="story-body">
         <div className="story-kicker"><span className="category">{story.category}</span><span className={verified ? "verified" : "verified developing"}><CheckCircle2 size={13} />{verified ? "교차 확인" : "추가 보도 확인 중"}</span></div>
         <h3>{story.title}</h3>
-        <p className="summary">{story.summary}</p>
-        <div className="why"><strong>왜 중요한가</strong><span>{story.whyItMatters}</span></div>
+        <div className="story-summary"><strong>핵심 내용</strong><p className="summary">{story.summary}</p></div>
+        <div className="why"><strong>알아야 할 것</strong><span>{story.whyItMatters}</span></div>
         <div className="source-row">
           <span>출처 {story.sources.map((source) => source.publisher).join(" · ")}</span>
           <div className="story-actions">
