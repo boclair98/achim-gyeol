@@ -37,7 +37,7 @@ data class AiSummary(
 )
 
 interface NewsProvider {
-    fun search(query: String, display: Int = 100): List<CollectedArticle>
+    fun search(query: String, display: Int = 100, start: Int = 1): List<CollectedArticle>
 }
 
 interface AiSummarizer {
@@ -57,12 +57,13 @@ class NaverNewsClient(
     private val mapper = jacksonObjectMapper()
     private val client = RestClient.builder().baseUrl(baseUrl).build()
 
-    override fun search(query: String, display: Int): List<CollectedArticle> {
+    override fun search(query: String, display: Int, start: Int): List<CollectedArticle> {
         val responseBody = client.get()
             .uri {
                 it.path("/search/v1/news")
                     .queryParam("query", query)
                     .queryParam("display", display.coerceIn(1, 100))
+                    .queryParam("start", start.coerceIn(1, 1000))
                     .queryParam("sort", "date")
                     .build()
             }
@@ -162,9 +163,10 @@ class OpenAiSummarizer(
                         keyFacts에는 독자가 원문을 읽지 않아도 사건의 확정된 골격을 이해할 수 있도록 중요한 사실을 빠뜨리지 말고 2~5개 담으세요. 각 사실에는 그 사실을 직접 뒷받침하는 sourceIds를 두 개 이상 넣으세요.
                         출처가 충돌하거나 발표 전·검토 중·추산 상태이면 sourcesConflict 또는 uncertainty에 구체적으로 적고 확정형으로 쓰지 마세요.
                         근거가 부족하면 사실을 만들어내지 말고 uncertainty에 명시하세요.
-                        이 사건이 전날 뉴스를 놓친 일반 독자의 아침 브리핑에 꼭 필요한지도 편집자처럼 판단하세요. 단순 행사 안내, 홍보성 보도자료, 반복 인용, 지역 단신, 경기 프리뷰는 원칙적으로 제외하세요.
+                        이 사건이 전날 뉴스를 놓친 일반 독자의 아침 브리핑에 필요한지도 편집자처럼 판단하세요. 단순 행사 안내, 홍보성 보도자료, 반복 인용, 지역 단신, 경기 프리뷰는 원칙적으로 제외하세요.
                         importanceScore는 0~100으로 매기세요. 국민 생활·돈·안전·권리, 큰 정책 변화, 국제 정세, 산업 구조, 대중적 문화·스포츠 결과에 미치는 영향과 파급 범위를 평가하세요. 기사 수가 많다는 이유만으로 점수를 높이지 마세요.
-                        recommendedForMorningBriefing은 중요도 70점 이상이고 오늘 아침 독자가 알아야 할 새로운 사실이 있을 때만 true로 두세요. importanceReason에는 선정 또는 제외 이유를 한 문장으로 쓰세요.
+                        75점 이상은 분야를 넘어 먼저 알아야 할 핵심, 60~74점은 해당 분야의 흐름을 이해하기 위해 알아둘 중요 뉴스, 60점 미만은 일반 아침 브리핑에서 제외할 단신으로 판단하세요.
+                        recommendedForMorningBriefing은 중요도 60점 이상이고 오늘 아침 독자가 알아야 할 새로운 사실이 있을 때만 true로 두세요. 중요하지 않은 내용을 분량을 채우기 위해 포함하지 마세요. importanceReason에는 선정 또는 제외 이유를 한 문장으로 쓰세요.
                     """.trimIndent(),
                 ),
                 mapOf("role" to "user", "content" to evidence),

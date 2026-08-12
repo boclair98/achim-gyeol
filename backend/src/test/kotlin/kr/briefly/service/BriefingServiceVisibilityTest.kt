@@ -18,7 +18,7 @@ class BriefingServiceVisibilityTest {
     private val storyRepository = mock(NewsStoryRepository::class.java)
     private val feedbackRepository = mock(StoryFeedbackRepository::class.java)
     private val correctionRepository = mock(StoryCorrectionRepository::class.java)
-    private val service = BriefingService(editionRepository, storyRepository, feedbackRepository, correctionRepository)
+    private val service = BriefingService(editionRepository, storyRepository, feedbackRepository, correctionRepository, BriefingCoveragePolicy(1, 1))
 
     @Test
     fun `검수 중인 최신판 대신 가장 최근 발행본을 공개한다`() {
@@ -44,6 +44,25 @@ class BriefingServiceVisibilityTest {
             .hasMessageContaining("발행된 브리핑")
     }
 
+    @Test
+    fun `발행 상태여도 두 건 한 분야면 정규 발송 준비로 표시하지 않는다`() {
+        val date = LocalDate.of(2026, 8, 13)
+        val thinEdition = edition(date, EditorialState.AUTO_APPROVED, 13)
+        thinEdition.addStory(story(Category.TECH, 131))
+        `when`(editionRepository.findTop30ByOrderByBriefingDateDesc()).thenReturn(listOf(thinEdition))
+        `when`(correctionRepository.findAllByStoryIdOrderByCreatedAtDesc(130L)).thenReturn(emptyList())
+        `when`(correctionRepository.findAllByStoryIdOrderByCreatedAtDesc(131L)).thenReturn(emptyList())
+        val strictService = BriefingService(
+            editionRepository, storyRepository, feedbackRepository, correctionRepository,
+            BriefingCoveragePolicy(minimumStories = 8, minimumCategories = 5),
+        )
+
+        val result = strictService.latest()
+
+        assertThat(result.stories).hasSize(2)
+        assertThat(result.productionReady).isFalse()
+    }
+
     private fun edition(date: LocalDate, state: EditorialState, id: Long): BriefingEdition {
         val edition = BriefingEdition(
             briefingDate = date,
@@ -52,8 +71,13 @@ class BriefingServiceVisibilityTest {
             editorialState = state,
             id = id,
         )
+        edition.addStory(story(Category.SOCIETY, id * 10))
+        return edition
+    }
+
+    private fun story(category: Category, id: Long): NewsStory {
         val story = NewsStory(
-            category = Category.SOCIETY,
+            category = category,
             title = "검증된 뉴스",
             summary = "서로 다른 출처에서 확인한 사실입니다.",
             oneLineSummary = "확인된 한 줄 결론입니다.",
@@ -61,12 +85,11 @@ class BriefingServiceVisibilityTest {
             verificationStatus = VerificationStatus.VERIFIED,
             qualityScore = 90,
             displayOrder = 1,
-            id = id * 10,
+            id = id,
         )
         story.addSource(NewsSource("출처 A", "https://a.example/news", OffsetDateTime.now()))
         story.addSource(NewsSource("출처 B", "https://b.example/news", OffsetDateTime.now()))
         story.addClaim(NewsClaim("두 출처에서 확인한 핵심입니다.", "0,1", 1))
-        edition.addStory(story)
-        return edition
+        return story
     }
 }

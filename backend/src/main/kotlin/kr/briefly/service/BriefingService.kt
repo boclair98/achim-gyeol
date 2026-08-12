@@ -18,6 +18,7 @@ data class CorrectionResponse(val correctedAt: String, val reason: String)
 data class StoryResponse(val id: Long, val category: String, val title: String, val oneLineSummary: String, val summary: String, val whyItMatters: String, val whatToWatch: String?, val verificationStatus: VerificationStatus, val qualityScore: Int, val uncertainty: String?, val evidenceAvailable: Boolean, val claims: List<ClaimResponse>, val sources: List<SourceResponse>, val corrections: List<CorrectionResponse> = emptyList())
 data class BriefingResponse(val id: Long, val briefingDate: LocalDate, val productionReady: Boolean, val editorialState: EditorialState, val humanReviewed: Boolean, val dateLabel: String, val lead: String, val readMinutes: Int, val verifiedCount: Int, val lastVerifiedAt: String, val stories: List<StoryResponse>)
 data class ArchiveEditionResponse(val id: Long, val briefingDate: LocalDate, val dateLabel: String, val lead: String, val readMinutes: Int, val verifiedCount: Int, val storyCount: Int, val categories: List<String>, val headlines: List<String>)
+data class BriefingBuildStatus(val briefingDate: LocalDate, val coverageReady: Boolean, val productionReady: Boolean, val stories: Int, val categories: Int, val minimumStories: Int, val minimumCategories: Int, val blockReasons: List<String>)
 
 @Service
 class BriefingService(
@@ -25,6 +26,7 @@ class BriefingService(
     private val storyRepository: NewsStoryRepository,
     private val feedbackRepository: StoryFeedbackRepository,
     private val correctionRepository: StoryCorrectionRepository,
+    private val coveragePolicy: BriefingCoveragePolicy,
 ) {
     @Transactional(readOnly = true)
     fun latest(): BriefingResponse {
@@ -52,6 +54,26 @@ class BriefingService(
             headlines = edition.stories.take(5).map(NewsStory::title),
         ) }
 
+    @Transactional(readOnly = true)
+    fun buildStatus(date: LocalDate): BriefingBuildStatus? = editionRepository.findByBriefingDate(date)?.let { edition ->
+        val coverage = coveragePolicy.evaluate(edition.stories)
+        val publishableState = (edition.editorialState ?: EditorialState.AUTO_APPROVED) in
+            setOf(EditorialState.AUTO_APPROVED, EditorialState.APPROVED, EditorialState.PUBLISHED)
+        BriefingBuildStatus(
+            briefingDate = edition.briefingDate,
+            coverageReady = coverage.ready,
+            productionReady = edition.pipelineGenerated == true && coverage.ready && publishableState,
+            stories = coverage.storyCount,
+            categories = coverage.categoryCount,
+            minimumStories = coverage.minimumStories,
+            minimumCategories = coverage.minimumCategories,
+            blockReasons = buildList {
+                addAll(coverage.reasons)
+                if (!publishableState) add("발행 상태: ${edition.editorialState ?: EditorialState.AUTO_APPROVED}")
+            },
+        )
+    }
+
     @Transactional
     fun feedback(storyId: Long, userId: String, type: FeedbackType, detail: String?) {
         if (!storyRepository.existsById(storyId)) error("해당 뉴스를 찾을 수 없습니다")
@@ -61,10 +83,11 @@ class BriefingService(
 
     private fun BriefingEdition.toResponse(): BriefingResponse {
         val zone = ZoneId.of("Asia/Seoul")
+        val coverageReady = coveragePolicy.evaluate(stories).ready
         return BriefingResponse(
             id = requireNotNull(id),
             briefingDate = briefingDate,
-            productionReady = pipelineGenerated == true && (editorialState ?: EditorialState.AUTO_APPROVED) in setOf(EditorialState.AUTO_APPROVED, EditorialState.APPROVED, EditorialState.PUBLISHED),
+            productionReady = pipelineGenerated == true && coverageReady && (editorialState ?: EditorialState.AUTO_APPROVED) in setOf(EditorialState.AUTO_APPROVED, EditorialState.APPROVED, EditorialState.PUBLISHED),
             editorialState = editorialState ?: EditorialState.AUTO_APPROVED,
             humanReviewed = (editorialState ?: EditorialState.AUTO_APPROVED) in setOf(EditorialState.APPROVED, EditorialState.PUBLISHED),
             dateLabel = briefingDate.format(DateTimeFormatter.ofPattern("M월 d일 EEEE", Locale.KOREAN)),

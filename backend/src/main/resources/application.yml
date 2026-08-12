@@ -42,8 +42,12 @@ app:
     enabled: ${NEWS_PIPELINE_ENABLED:false}
     generate-on-startup: ${NEWS_GENERATE_ON_STARTUP:false}
     cron: ${NEWS_GENERATION_CRON:0 0 6 * * *}
-    max-candidates-per-category: ${NEWS_MAX_CANDIDATES_PER_CATEGORY:4}
+    max-candidates-per-category: ${NEWS_MAX_CANDIDATES_PER_CATEGORY:6}
+    search-max-pages: ${NEWS_SEARCH_MAX_PAGES:3}
     max-stories-per-category: ${NEWS_MAX_STORIES_PER_CATEGORY:3}
     max-stories: ${NEWS_MAX_STORIES:15}
+    minimum-importance-score: ${NEWS_MINIMUM_IMPORTANCE_SCORE:60}
+    minimum-delivery-stories: ${NEWS_MINIMUM_DELIVERY_STORIES:8}
+    minimum-delivery-categories: ${NEWS_MINIMUM_DELIVERY_CATEGORIES:5}
     admin-token: ${BRIEFING_ADMIN_TOKEN:}
     require-human-approval: ${REQUIRE_HUMAN_APPROVAL:false}

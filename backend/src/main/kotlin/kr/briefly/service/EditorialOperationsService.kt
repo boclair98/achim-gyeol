@@ -64,6 +64,7 @@ class EditorialOperationsService(
     private val eventRepository: ReaderEventRepository,
     private val deliveryRepository: PushDeliveryAttemptRepository,
     private val pushRepository: PushSubscriptionRepository,
+    private val coveragePolicy: BriefingCoveragePolicy,
 ) {
     @Transactional(readOnly = true)
     fun queue(): EditorialQueue {
@@ -114,6 +115,8 @@ class EditorialOperationsService(
     fun approveEdition(editionId: Long, actor: String): EditorialQueue {
         val edition = editionRepository.findById(editionId).orElseThrow { IllegalStateException("브리핑을 찾을 수 없습니다") }
         require(edition.stories.isNotEmpty()) { "승인할 뉴스가 없습니다" }
+        val coverage = coveragePolicy.evaluate(edition.stories)
+        require(coverage.ready) { "발행 최소 기준을 충족하지 못했습니다: ${coverage.reasons.joinToString()}" }
         require(edition.stories.none { (it.editorialState ?: EditorialState.AUTO_APPROVED) in setOf(EditorialState.HELD, EditorialState.REVIEW) }) { "검토 또는 보류 중인 뉴스가 있습니다" }
         require(edition.stories.all { it.verificationStatus == VerificationStatus.VERIFIED && it.claims.isNotEmpty() }) { "근거 검증을 통과하지 못한 뉴스가 있습니다" }
         edition.editorialState = EditorialState.APPROVED
