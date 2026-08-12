@@ -1,17 +1,17 @@
 import type { Metadata } from "next";
-import { EditorialStudio } from "@/components/EditorialStudio";
+import { OperationsConsole } from "@/components/OperationsConsole";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 
 export const metadata: Metadata = {
-  title: "편집 스튜디오 시제품 | 아침결",
-  description: "실제 운영과 연결되지 않은 편집 승인·브랜딩 워크플로 UI 시제품",
+  title: "운영 스튜디오 | 아침결",
+  description: "뉴스 검수, 승인, 발송과 익명 지표를 관리하는 아침결 운영자 화면",
 };
 
 export default function StudioPage() {
   return (
     <main className="enterprise-shell">
       <SiteHeader context="EDITORIAL WORKSPACE" />
-      <EditorialStudio />
+      <OperationsConsole />
       <SiteFooter />
     </main>
   );

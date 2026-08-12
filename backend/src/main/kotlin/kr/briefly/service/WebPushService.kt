@@ -3,6 +3,10 @@ package kr.briefly.service
 import kr.briefly.domain.PushSubscription
 import kr.briefly.repository.PushSubscriptionRepository
 import kr.briefly.repository.StoryFeedbackRepository
+import kr.briefly.repository.PushDeliveryAttemptRepository
+import kr.briefly.repository.ReaderEventRepository
+import kr.briefly.domain.PushDeliveryAttempt
+import kr.briefly.domain.DeliveryState
 import nl.martijndwars.webpush.Notification
 import nl.martijndwars.webpush.PushService
 import nl.martijndwars.webpush.Urgency
@@ -58,6 +62,7 @@ class WebPushService(
     private val repository: PushSubscriptionRepository,
     private val briefingService: BriefingService,
     private val metricsService: SubscriptionMetricsService,
+    private val deliveryAttemptRepository: PushDeliveryAttemptRepository,
     @Value("\${app.push.enabled:false}") private val enabled: Boolean,
     @Value("\${app.push.public-key:}") private val publicKey: String,
     @Value("\${app.push.private-key:}") private val privateKey: String,
@@ -139,6 +144,7 @@ class WebPushService(
     }
 
     @Transactional
+    @Synchronized
     fun deliverDueBriefings(): PushDeliverySummary {
         if (!isConfigured()) return PushDeliverySummary("PUSH_DISABLED", 0, 0, 0, 0, "웹 푸시가 설정되지 않았습니다.")
         val briefing = runCatching { briefingService.latest() }.getOrElse {
@@ -158,21 +164,64 @@ class WebPushService(
             val now = OffsetDateTime.now(zone)
             val weekday = deliveryWeekdayIndex(now.dayOfWeek)
             val scheduledDays = subscription.weekdays.split(',').mapNotNull(String::toIntOrNull).toSet()
-            val alreadySentToday = subscription.lastSentAt?.atZoneSameInstant(zone)?.toLocalDate() == now.toLocalDate()
+            val editionId = briefing.id
+            val subscriptionId = requireNotNull(subscription.id)
+            val attempt = deliveryAttemptRepository.findByEditionIdAndSubscriptionId(editionId, subscriptionId)
+                ?: PushDeliveryAttempt(editionId = editionId, subscriptionId = subscriptionId)
+            val alreadySentToday = attempt.state == DeliveryState.DELIVERED || subscription.lastSentAt?.atZoneSameInstant(zone)?.toLocalDate() == now.toLocalDate()
             val scheduledTime = fixedDeliveryTime
-            if (deliveryIsDue(now.toLocalTime(), scheduledTime) && weekday in scheduledDays && !alreadySentToday) {
+            val retryable = attempt.state in setOf(DeliveryState.PENDING, DeliveryState.FAILED) && attempt.attempts < 3
+            if (deliveryIsDue(now.toLocalTime(), scheduledTime) && weekday in scheduledDays && !alreadySentToday && retryable) {
                 due += 1
                 val lead = briefing.stories.firstOrNull()
                 val body = lead?.let {
                     "한 줄 결론: ${it.oneLineSummary.take(72)}"
                 } ?: "어제 핵심 뉴스 ${briefing.stories.size}건 · 약 ${briefing.readMinutes}분"
-                if (send(subscription, "아침결 · 오늘 꼭 알아야 할 뉴스 ${briefing.stories.size}건", body, false).delivered) delivered += 1 else failed += 1
+                attempt.attempts += 1
+                attempt.lastAttemptAt = OffsetDateTime.now()
+                val result = send(subscription, "아침결 · 오늘 꼭 알아야 할 뉴스 ${briefing.stories.size}건", body, false)
+                if (result.delivered) {
+                    delivered += 1
+                    attempt.state = DeliveryState.DELIVERED
+                    attempt.deliveredAt = OffsetDateTime.now()
+                    attempt.error = null
+                } else {
+                    failed += 1
+                    attempt.state = if (subscription.active) DeliveryState.FAILED else DeliveryState.EXPIRED
+                    attempt.error = subscription.lastError?.take(600) ?: result.message.take(600)
+                }
+                deliveryAttemptRepository.save(attempt)
             }
         }
         return PushDeliverySummary("COMPLETED", subscriptions.size, due, delivered, failed, "오늘 브리핑 발송 검사를 완료했습니다.")
     }
 
     fun activeSubscriptionCount(): Int = repository.countByActiveTrue().toInt()
+
+    @Transactional
+    @Synchronized
+    fun retryFailedDeliveries(editionId: Long): PushDeliverySummary {
+        requireConfigured()
+        val briefing = briefingService.latest()
+        require(briefing.id == editionId) { "최신 브리핑의 실패 발송만 재시도할 수 있습니다" }
+        val attempts = deliveryAttemptRepository.findAllByEditionIdAndState(editionId, DeliveryState.FAILED)
+        var delivered = 0
+        var failed = 0
+        attempts.forEach { attempt ->
+            val subscription = repository.findById(attempt.subscriptionId).orElse(null)
+            if (subscription == null || !subscription.active || attempt.attempts >= 5) return@forEach
+            attempt.attempts += 1
+            attempt.lastAttemptAt = OffsetDateTime.now()
+            val result = send(subscription, "[재전송] 아침결 · 오늘 뉴스 ${briefing.stories.size}건", "실패했던 오늘 브리핑을 다시 보내드립니다.", false)
+            if (result.delivered) {
+                delivered += 1; attempt.state = DeliveryState.DELIVERED; attempt.deliveredAt = OffsetDateTime.now(); attempt.error = null
+            } else {
+                failed += 1; attempt.error = subscription.lastError ?: result.message
+            }
+            deliveryAttemptRepository.save(attempt)
+        }
+        return PushDeliverySummary("RETRY_COMPLETED", repository.countByActiveTrue().toInt(), attempts.size, delivered, failed, "실패한 발송만 안전하게 재시도했습니다.")
+    }
 
     @Transactional
     fun sendOperatorTestToActive(expectedActiveSubscriptions: Int): PushDeliverySummary {
@@ -250,6 +299,7 @@ class WebPushService(
 class PersonalDataRetentionCleanup(
     private val pushRepository: PushSubscriptionRepository,
     private val feedbackRepository: StoryFeedbackRepository,
+    private val readerEventRepository: ReaderEventRepository,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
 
@@ -259,10 +309,12 @@ class PersonalDataRetentionCleanup(
         val now = OffsetDateTime.now(ZoneId.of("Asia/Seoul"))
         val inactiveSubscriptions = pushRepository.findAllByActiveFalseAndUpdatedAtBefore(now.minusDays(30))
         val expiredFeedback = feedbackRepository.findAllByCreatedAtBefore(now.minusDays(90))
+        val expiredReaderEvents = readerEventRepository.findAllByCreatedAtBefore(now.minusDays(90))
         if (inactiveSubscriptions.isNotEmpty()) pushRepository.deleteAllInBatch(inactiveSubscriptions)
         if (expiredFeedback.isNotEmpty()) feedbackRepository.deleteAllInBatch(expiredFeedback)
-        if (inactiveSubscriptions.isNotEmpty() || expiredFeedback.isNotEmpty()) {
-            logger.info("Deleted {} inactive push subscription(s) and {} expired feedback record(s)", inactiveSubscriptions.size, expiredFeedback.size)
+        if (expiredReaderEvents.isNotEmpty()) readerEventRepository.deleteAllInBatch(expiredReaderEvents)
+        if (inactiveSubscriptions.isNotEmpty() || expiredFeedback.isNotEmpty() || expiredReaderEvents.isNotEmpty()) {
+            logger.info("Deleted {} inactive push subscription(s), {} expired feedback record(s), and {} reader event(s)", inactiveSubscriptions.size, expiredFeedback.size, expiredReaderEvents.size)
         }
     }
 }

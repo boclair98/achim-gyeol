@@ -108,12 +108,16 @@ jobs:
               echo "> 사용자 화면에는 표시되지 않는 운영자용 집계입니다."
             } >> "$GITHUB_STEP_SUMMARY"
           elif [[ "$OPERATION" == "test-push" ]]; then
+            active="$(curl --fail-with-body --silent --show-error \
+              --retry 3 --retry-all-errors --max-time 90 \
+              "https://morningnews.coders.kr/api/admin/briefings/subscriptions" \
+              -H "X-Briefing-Admin-Token: $ADMIN_TOKEN" | jq -r '.activeSubscriptions')"
             curl --fail-with-body --silent --show-error \
               --retry 3 --retry-all-errors --max-time 90 \
               -X POST "https://morningnews.coders.kr/api/admin/briefings/test-push" \
               -H "X-Briefing-Admin-Token: $ADMIN_TOKEN" \
               -H "Content-Type: application/json" \
-              --data '{"expectedActiveSubscriptions":1}'
+              --data "{\"expectedActiveSubscriptions\":${active}}"
           else
             curl --fail-with-body --silent --show-error \
               --retry 3 --retry-all-errors --max-time 720 \

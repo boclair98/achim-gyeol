@@ -7,6 +7,9 @@ import java.time.OffsetDateTime
 enum class Category { POLICY, ECONOMY, SOCIETY, INTERNATIONAL, TECH, LIFE, CULTURE, SPORTS, ESPORTS }
 enum class VerificationStatus { VERIFIED, DEVELOPING, CONFLICTING, SINGLE_SOURCE }
 enum class FeedbackType { INCORRECT, BIASED, UNCLEAR, HELPFUL }
+enum class EditorialState { AUTO_APPROVED, REVIEW, APPROVED, HELD, PUBLISHED }
+enum class DeliveryState { PENDING, DELIVERED, FAILED, EXPIRED }
+enum class ReaderEventType { BRIEFING_OPEN, CARD_VIEW, STORY_DETAIL, SOURCE_OPEN, SHARE, COMPLETE }
 
 @Entity
 @Table(name = "briefing_editions")
@@ -17,6 +20,9 @@ class BriefingEdition(
     @Column(nullable = false) var publishedAt: OffsetDateTime = OffsetDateTime.now(),
     @Column(nullable = false) var lastVerifiedAt: OffsetDateTime = OffsetDateTime.now(),
     @Column var pipelineGenerated: Boolean? = false,
+    @Enumerated(EnumType.STRING) @Column var editorialState: EditorialState? = EditorialState.AUTO_APPROVED,
+    @Column var approvedAt: OffsetDateTime? = null,
+    @Column(length = 80) var approvedBy: String? = null,
     @OneToMany(mappedBy = "edition", cascade = [CascadeType.ALL], orphanRemoval = true)
     @OrderBy("displayOrder ASC")
     var stories: MutableList<NewsStory> = mutableListOf(),
@@ -37,6 +43,7 @@ class NewsStory(
     @Column(nullable = false) var qualityScore: Int,
     @Column(nullable = false) var displayOrder: Int,
     @Column(length = 600) var uncertainty: String? = null,
+    @Enumerated(EnumType.STRING) @Column var editorialState: EditorialState? = EditorialState.AUTO_APPROVED,
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) var id: Long? = null,
 ) {
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "edition_id", nullable = false)
@@ -113,5 +120,70 @@ class SubscriptionMetricSnapshot(
     @Column(nullable = false) var activeSubscriptions: Int,
     @Column(nullable = false, length = 64) var reason: String,
     @Column(nullable = false) var capturedAt: OffsetDateTime = OffsetDateTime.now(),
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) var id: Long? = null,
+)
+
+@Entity
+@Table(name = "editorial_audit_logs", indexes = [Index(name = "idx_audit_created_at", columnList = "createdAt")])
+class EditorialAuditLog(
+    @Column(nullable = false, length = 64) var action: String,
+    @Column(length = 64) var targetType: String? = null,
+    @Column var targetId: Long? = null,
+    @Column(nullable = false, length = 80) var actor: String,
+    @Column(length = 1000) var detail: String? = null,
+    @Column(nullable = false) var createdAt: OffsetDateTime = OffsetDateTime.now(),
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) var id: Long? = null,
+)
+
+@Entity
+@Table(name = "story_corrections", indexes = [Index(name = "idx_correction_story", columnList = "storyId")])
+class StoryCorrection(
+    @Column(nullable = false) var storyId: Long,
+    @Column(nullable = false, length = 800) var beforeText: String,
+    @Column(nullable = false, length = 800) var afterText: String,
+    @Column(nullable = false, length = 500) var reason: String,
+    @Column(nullable = false, length = 80) var correctedBy: String,
+    @Column(nullable = false) var createdAt: OffsetDateTime = OffsetDateTime.now(),
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) var id: Long? = null,
+)
+
+@Entity
+@Table(
+    name = "push_delivery_attempts",
+    uniqueConstraints = [UniqueConstraint(name = "uq_delivery_edition_subscription", columnNames = ["edition_id", "subscription_id"])],
+    indexes = [Index(name = "idx_delivery_created_at", columnList = "createdAt")],
+)
+class PushDeliveryAttempt(
+    @Column(name = "edition_id", nullable = false) var editionId: Long,
+    @Column(name = "subscription_id", nullable = false) var subscriptionId: Long,
+    @Enumerated(EnumType.STRING) @Column(nullable = false) var state: DeliveryState = DeliveryState.PENDING,
+    @Column(nullable = false) var attempts: Int = 0,
+    @Column var lastAttemptAt: OffsetDateTime? = null,
+    @Column var deliveredAt: OffsetDateTime? = null,
+    @Column(length = 600) var error: String? = null,
+    @Column(nullable = false) var createdAt: OffsetDateTime = OffsetDateTime.now(),
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) var id: Long? = null,
+)
+
+@Entity
+@Table(name = "reader_preferences", indexes = [Index(name = "idx_reader_owner", columnList = "ownerId", unique = true)])
+class ReaderPreference(
+    @Column(nullable = false, length = 80) var ownerId: String,
+    @Column(nullable = false, length = 300) var categories: String = "정책,경제,사회,국제,테크,생활,문화,스포츠,e스포츠",
+    @Column(nullable = false, length = 16) var digestSize: String = "standard",
+    @Column(nullable = false, length = 32) var weekdays: String = "0,1,2,3,4",
+    @Column(nullable = false) var consent: Boolean = true,
+    @Column(nullable = false) var updatedAt: OffsetDateTime = OffsetDateTime.now(),
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) var id: Long? = null,
+)
+
+@Entity
+@Table(name = "reader_events", indexes = [Index(name = "idx_reader_event_created", columnList = "createdAt"), Index(name = "idx_reader_event_edition", columnList = "editionId")])
+class ReaderEvent(
+    @Enumerated(EnumType.STRING) @Column(nullable = false) var type: ReaderEventType,
+    @Column(nullable = false) var editionId: Long,
+    @Column var storyId: Long? = null,
+    @Column(nullable = false, length = 64) var actorHash: String,
+    @Column(nullable = false) var createdAt: OffsetDateTime = OffsetDateTime.now(),
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) var id: Long? = null,
 )

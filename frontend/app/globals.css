@@ -275,6 +275,19 @@ button:disabled { cursor: wait; opacity: .55; }
 /* The push opens a news reader, not a scaled-down social card deck. */
 .news-reader-shell { min-height: 100vh; background: #f3f4f1; color: var(--ink); }
 .news-reader-topbar { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 68px; border-bottom: 1px solid #dfe2de; background: rgba(255,255,255,.94); padding: 0 max(22px, calc((100vw - 1180px) / 2)); backdrop-filter: blur(14px); }
+.reader-top-actions,.reader-top-actions > div { display: flex; align-items: center; gap: 6px; }
+.reader-top-actions > div { border: 1px solid #d8ddda; border-radius: 999px; background: white; padding: 3px; }
+.reader-top-actions button { display: grid; width: 27px; height: 27px; place-items: center; border: 0; border-radius: 50%; background: transparent; color: #6b746f; cursor: pointer; font-weight: 850; }
+.reader-top-actions button:first-child { font-size: 9px; }
+.reader-top-actions button:nth-child(2) { font-size: 12px; }
+.reader-top-actions button:last-child { font-size: 15px; }
+.reader-top-actions button.active { background: #16372e; color: white; }
+.font-small .brief-sheet-story { font-size: .9em; }
+.font-large .brief-sheet-story h2 { font-size: clamp(28px, 3vw, 38px); }
+.font-large .brief-sheet-conclusion { font-size: 16px; }
+.font-large .brief-sheet-story ul { font-size: 14px; }
+.font-large .brief-sheet-matter p { font-size: 13px; }
+.font-large .reader-article li > p,.font-large .reader-why p { font-size: 19px; }
 .brief-sheet-section { display: grid; grid-template-columns: minmax(280px, .78fr) minmax(520px, 1.22fr); gap: clamp(36px, 6vw, 88px); max-width: 1280px; margin: 0 auto; padding: 58px 32px 72px; }
 .brief-sheet-intro { align-self: center; }
 .brief-sheet-intro h1 { margin: 23px 0 0; font-size: clamp(47px, 5.6vw, 74px); line-height: 1.02; letter-spacing: -.07em; font-weight: 950; word-break: keep-all; }
@@ -299,6 +312,7 @@ button:disabled { cursor: wait; opacity: .55; }
 .brief-sheet-meta { display: flex; align-items: center; gap: 8px; }
 .brief-sheet-meta > b { color: #17212a; font-size: 23px; font-weight: 950; }
 .brief-sheet-meta > span { border-radius: 999px; background: #dff4e9; padding: 5px 9px; color: #116d51; font-size: 9px; font-weight: 900; }
+.brief-sheet-meta > i { border-radius: 999px; background: #16372e; padding: 5px 8px; color: #d3ef6c; font-size: 8px; font-style: normal; font-weight: 900; }
 .brief-sheet-meta > em { margin-left: auto; font-size: 9px; font-style: normal; font-weight: 850; }
 .brief-sheet-meta > em.confirmed { color: #147a56; }
 .brief-sheet-meta > em.checking { color: #93600e; }
@@ -308,12 +322,16 @@ button:disabled { cursor: wait; opacity: .55; }
 .brief-sheet-conclusion strong { margin-right: 8px; border-bottom: 4px solid #c9f36d; font-size: 10px; font-weight: 950; }
 .brief-sheet-story ul { display: grid; gap: 5px; margin: 12px 0 0; padding-left: 19px; color: #4a535a; font-size: 12px; line-height: 1.58; }
 .brief-sheet-story li::marker { color: #18a872; }
+.brief-sheet.compact .brief-sheet-matter { display: none; }
+.brief-sheet.deep .brief-sheet-story ul { gap: 8px; font-size: 13px; }
 .brief-sheet-matter { display: grid; grid-template-columns: 75px 1fr; gap: 10px; margin-top: 13px; border-radius: 11px; background: #edf6f1; padding: 11px 13px; }
 .brief-sheet-matter strong { color: #126d52; font-size: 10px; }
 .brief-sheet-matter p { margin: 0; color: #35423d; font-size: 11px; line-height: 1.58; }
 .brief-sheet-story footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 12px; color: #767a75; font-size: 9px; }
 .brief-sheet-story footer span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .brief-sheet-story footer a { flex: 0 0 auto; color: #116d51; font-weight: 900; text-decoration: none; }
+.brief-sheet-story footer > div { display: flex; align-items: center; gap: 10px; }
+.brief-sheet-story footer button { display: inline-flex; align-items: center; gap: 4px; border: 0; background: transparent; padding: 0; color: #59635e; cursor: pointer; font: inherit; font-weight: 850; }
 .brief-sheet-controls { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 12px; margin-top: 18px; }
 .brief-sheet-controls button { display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid #d7dad6; border-radius: 50%; background: white; color: var(--ink); cursor: pointer; }
 .brief-sheet-controls button:disabled { cursor: default; opacity: .35; }
@@ -321,6 +339,7 @@ button:disabled { cursor: wait; opacity: .55; }
 .brief-sheet-controls strong { color: #116d51; font-size: 18px; }
 .brief-sheet-controls span { color: #7a817d; font-size: 11px; }
 .brief-sheet-controls small { margin-left: 8px; color: #7a817d; font-size: 10px; }
+.brief-sheet-controls small { display: inline-flex; align-items: center; gap: 4px; }
 .news-reader-hero { max-width: 1180px; margin: 0 auto; padding: 68px 0 54px; }
 .reader-date { display: flex; align-items: center; gap: 12px; color: var(--blue); font-size: 12px; font-weight: 900; }
 .reader-date span { border-radius: 999px; background: #e9efff; padding: 7px 11px; }
@@ -371,6 +390,10 @@ button:disabled { cursor: wait; opacity: .55; }
 .reader-why p { margin: 8px 0 0; font-size: 16px; line-height: 1.72; }
 .reader-uncertainty { margin-top: 15px; border: 1px solid #e7c880; border-radius: 15px; background: #fff8e8; padding: 18px 20px; color: #654710; }
 .reader-uncertainty p { margin: 9px 0 0; font-size: 14px; line-height: 1.7; }
+.reader-corrections { margin-top: 15px; border: 1px solid #b9d9ca; border-radius: 15px; background: #edf8f2; padding: 18px 20px; }
+.reader-corrections h3 { margin: 0; color: #126d52; font-size: 14px; }
+.reader-corrections p { display: grid; grid-template-columns: 150px 1fr; gap: 12px; margin: 10px 0 0; color: #35423d; font-size: 12px; line-height: 1.6; }
+.reader-corrections time { color: #718077; font-size: 10px; }
 .reader-sources { margin-top: 25px; border-top: 1px solid #dfe2de; padding-top: 18px; }
 .reader-sources summary { display: flex; align-items: center; gap: 7px; color: var(--blue); cursor: pointer; font-size: 13px; font-weight: 900; list-style: none; }
 .reader-sources > div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
@@ -405,6 +428,7 @@ button:disabled { cursor: wait; opacity: .55; }
 
 @media (max-width: 850px) {
   .news-reader-topbar { min-height: 61px; padding: 0 17px; }
+  .reader-top-actions .delivered-settings { font-size: 0; }
   .brief-sheet-section { display: block; padding: 31px 0 43px; }
   .brief-sheet-intro { padding: 0 20px; }
   .brief-sheet-intro h1 { margin-top: 17px; font-size: clamp(39px, 11.5vw, 54px); }

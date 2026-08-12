@@ -32,6 +32,21 @@ class QualityGateTest {
         assertThat(result.status).isEqualTo(VerificationStatus.CONFLICTING)
     }
 
+    @Test fun `오래된 근거나 홍보성 문구는 자동 발행하지 않는다`() {
+        val stale = gate.evaluate(3, true, true, false, verifiedClaims = 3, staleEvidence = true)
+        val promotional = gate.evaluate(3, true, true, false, verifiedClaims = 3, promotionalLanguage = true)
+        assertThat(stale.publishable).isFalse()
+        assertThat(stale.reasons).contains("브리핑 대상일과 맞지 않는 근거")
+        assertThat(promotional.publishable).isFalse()
+        assertThat(promotional.reasons).contains("홍보성 표현 감지")
+    }
+
+    @Test fun `핵심 주장 두 개 미만이면 자동 발행하지 않는다`() {
+        val result = gate.evaluate(3, true, true, false, verifiedClaims = 1)
+        assertThat(result.publishable).isFalse()
+        assertThat(result.reasons).contains("검증된 핵심 사실 부족")
+    }
+
     @Test fun `같은 한국 언론사의 하위 도메인은 하나의 출처 계열이다`() {
         assertThat(newsSourceFamily("https://news.kbs.co.kr/news/view.do?id=1"))
             .isEqualTo("kbs.co.kr")

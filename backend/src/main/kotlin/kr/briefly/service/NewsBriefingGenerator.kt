@@ -5,12 +5,12 @@ import kr.briefly.domain.Category
 import kr.briefly.domain.NewsSource
 import kr.briefly.domain.NewsStory
 import kr.briefly.domain.NewsClaim
+import kr.briefly.domain.EditorialState
 import kr.briefly.integration.AiSummarizer
 import kr.briefly.integration.CollectedArticle
 import kr.briefly.integration.NewsProvider
 import kr.briefly.repository.BriefingEditionRepository
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.ObjectProvider
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.ApplicationRunner
@@ -124,8 +124,8 @@ class ArticleClusterer {
 
 @Service
 class NewsBriefingGenerator(
-    private val newsProvider: ObjectProvider<NewsProvider>,
-    private val aiSummarizer: ObjectProvider<AiSummarizer>,
+    private val newsProviders: List<NewsProvider>,
+    private val aiSummarizer: AiSummarizer?,
     private val clusterer: ArticleClusterer,
     private val qualityGate: QualityGate,
     private val editionRepository: BriefingEditionRepository,
@@ -146,14 +146,15 @@ class NewsBriefingGenerator(
     @Value("\${app.pipeline.max-candidates-per-category:4}") private var maxCandidatesPerCategory: Int = 4
     @Value("\${app.pipeline.max-stories-per-category:3}") private var maxStoriesPerCategory: Int = 3
     @Value("\${app.pipeline.max-stories:15}") private var maxStories: Int = 15
+    @Value("\${app.pipeline.require-human-approval:false}") private var requireHumanApproval: Boolean = false
     @Transactional
     fun generate(briefingDate: LocalDate = LocalDate.now(ZoneId.of("Asia/Seoul"))): GenerationResult {
-        val provider = newsProvider.ifAvailable ?: error("NAVER API HUB 키가 설정되지 않았습니다")
-        val summarizer = aiSummarizer.ifAvailable ?: error("OpenAI API 키가 설정되지 않았습니다")
+        check(newsProviders.isNotEmpty()) { "뉴스 공급원 API가 설정되지 않았습니다" }
+        val summarizer = aiSummarizer ?: error("OpenAI API 키가 설정되지 않았습니다")
         val coverageDate = briefingDate.minusDays(1)
         var collectedCount = 0
         val clusters = deduplicateClusters(queries.flatMap { (category, categoryQueries) ->
-            val articles = categoryQueries.flatMap { query -> provider.search(query, 100) }
+            val articles = categoryQueries.flatMap { query -> newsProviders.flatMap { provider -> runCatching { provider.search(query, 100) }.onFailure { log.warn("News provider failed: {}", it.message) }.getOrDefault(emptyList()) } }
                 .filter { it.publishedAt.atZoneSameInstant(zone).toLocalDate() == coverageDate }
                 .distinctBy { it.originalUrl }
             collectedCount += articles.size
@@ -193,9 +194,13 @@ class NewsBriefingGenerator(
         edition.readMinutes = max(3, ceil(stories.size * 1.25).toInt())
         edition.lastVerifiedAt = OffsetDateTime.now(zone)
         edition.pipelineGenerated = true
+        edition.editorialState = if (requireHumanApproval) EditorialState.REVIEW else EditorialState.AUTO_APPROVED
+        edition.approvedAt = if (requireHumanApproval) null else OffsetDateTime.now(zone)
+        edition.approvedBy = if (requireHumanApproval) null else "QUALITY_GATE"
         edition.stories.clear()
         stories.forEachIndexed { index, story ->
             story.displayOrder = index + 1
+            story.editorialState = if (requireHumanApproval) EditorialState.REVIEW else EditorialState.AUTO_APPROVED
             edition.addStory(story)
         }
         editionRepository.save(edition)
@@ -223,9 +228,13 @@ class NewsBriefingGenerator(
             hasPrimarySource = primarySource,
             factsChecked = factsChecked,
             sourcesConflict = summary.sourcesConflict,
+            verifiedClaims = summary.keyFacts.size,
+            allClaimsMultiSource = factsChecked,
+            staleEvidence = articles.any { it.publishedAt.atZoneSameInstant(zone).toLocalDate() != articles.first().publishedAt.atZoneSameInstant(zone).toLocalDate() },
+            promotionalLanguage = listOf("단독 특가", "파격 혜택", "구매하기", "이벤트 참여").any { summary.summary.contains(it, ignoreCase = true) },
         )
         check(decision.publishable) {
-            "품질 게이트 탈락 sources=$independentSourceCount, factsChecked=$factsChecked, conflict=${summary.sourcesConflict}"
+            "품질 게이트 탈락 sources=$independentSourceCount, factsChecked=$factsChecked, conflict=${summary.sourcesConflict}, reasons=${decision.reasons.joinToString()}"
         }
 
         val story = NewsStory(

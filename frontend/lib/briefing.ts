@@ -18,8 +18,9 @@ export type Story = {
   evidenceAvailable?: boolean;
   claims?: EvidenceClaim[];
   sources: Source[];
+  corrections?: Array<{ correctedAt: string; reason: string }>;
 };
-export type Briefing = { id: number; briefingDate?: string; productionReady?: boolean; dateLabel: string; lead: string; readMinutes: number; verifiedCount: number; lastVerifiedAt: string; stories: Story[] };
+export type Briefing = { id: number; briefingDate?: string; productionReady?: boolean; editorialState?: "AUTO_APPROVED" | "REVIEW" | "APPROVED" | "HELD" | "PUBLISHED"; humanReviewed?: boolean; dateLabel: string; lead: string; readMinutes: number; verifiedCount: number; lastVerifiedAt: string; stories: Story[] };
 
 export const demoBriefing: Briefing = {
   id: 1,

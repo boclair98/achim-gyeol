@@ -16,6 +16,7 @@ data class FeedbackRequest(val type: FeedbackType, @field:Size(max = 600) val de
 @RequestMapping("/api")
 class BriefingController(private val briefingService: BriefingService) {
     @GetMapping("/briefings/today") fun today(): BriefingResponse = briefingService.latest()
+    @GetMapping("/briefings") fun archive() = briefingService.archive()
     @GetMapping("/briefings/{date}") fun byDate(@PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) date: LocalDate) = briefingService.byDate(date)
 
     @PostMapping("/stories/{storyId}/feedback")

@@ -46,3 +46,4 @@ app:
     max-stories-per-category: ${NEWS_MAX_STORIES_PER_CATEGORY:3}
     max-stories: ${NEWS_MAX_STORIES:15}
     admin-token: ${BRIEFING_ADMIN_TOKEN:}
+    require-human-approval: ${REQUIRE_HUMAN_APPROVAL:false}
