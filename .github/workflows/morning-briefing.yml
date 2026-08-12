@@ -18,6 +18,7 @@ on:
           - dispatch
           - run
           - test-push
+          - status
 
 permissions:
   contents: read
@@ -70,7 +71,24 @@ jobs:
           OPERATION: ${{ steps.operation.outputs.operation }}
         run: |
           test -n "$ADMIN_TOKEN"
-          if [[ "$OPERATION" == "test-push" ]]; then
+          if [[ "$OPERATION" == "status" ]]; then
+            status="$(curl --fail-with-body --silent --show-error \
+              --retry 3 --retry-all-errors --max-time 90 \
+              "https://morningnews.coders.kr/api/admin/briefings/subscriptions" \
+              -H "X-Briefing-Admin-Token: $ADMIN_TOKEN")"
+            active="$(jq -r '.activeSubscriptions' <<< "$status")"
+            changed_at="$(jq -r '.lastChangedAt // "기록 없음"' <<< "$status")"
+            reason="$(jq -r '.lastChangeReason // "기록 없음"' <<< "$status")"
+            {
+              echo "### 활성 알림 기기 현황"
+              echo ""
+              echo "- 활성 기기: **${active}대**"
+              echo "- 마지막 수 변경: ${changed_at}"
+              echo "- 변경 사유: ${reason}"
+              echo ""
+              echo "> 사용자 화면에는 표시되지 않는 운영자용 집계입니다."
+            } >> "$GITHUB_STEP_SUMMARY"
+          elif [[ "$OPERATION" == "test-push" ]]; then
             curl --fail-with-body --silent --show-error \
               --retry 3 --retry-all-errors --max-time 90 \
               -X POST "https://morningnews.coders.kr/api/admin/briefings/test-push" \

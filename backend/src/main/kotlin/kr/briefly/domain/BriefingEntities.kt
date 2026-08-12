@@ -106,3 +106,12 @@ class PushSubscription(
     @Column(length = 600) var lastError: String? = null,
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) var id: Long? = null,
 )
+
+@Entity
+@Table(name = "subscription_metric_snapshots")
+class SubscriptionMetricSnapshot(
+    @Column(nullable = false) var activeSubscriptions: Int,
+    @Column(nullable = false, length = 64) var reason: String,
+    @Column(nullable = false) var capturedAt: OffsetDateTime = OffsetDateTime.now(),
+    @Id @GeneratedValue(strategy = GenerationType.IDENTITY) var id: Long? = null,
+)

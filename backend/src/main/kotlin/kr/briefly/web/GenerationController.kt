@@ -4,6 +4,8 @@ import kr.briefly.service.GenerationJobSnapshot
 import kr.briefly.service.BriefingService
 import kr.briefly.service.MorningGenerationJob
 import kr.briefly.service.PushDeliverySummary
+import kr.briefly.service.ActiveSubscriptionStatus
+import kr.briefly.service.SubscriptionMetricsService
 import kr.briefly.service.WebPushService
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpStatus
@@ -30,6 +32,7 @@ class GenerationController(
     private val generationJob: MorningGenerationJob,
     private val briefingService: BriefingService,
     private val webPushService: WebPushService,
+    private val subscriptionMetricsService: SubscriptionMetricsService,
     @Value("\${app.pipeline.admin-token:}") private val adminToken: String,
 ) {
     @PostMapping("/generate")
@@ -73,6 +76,12 @@ class GenerationController(
         authorize(suppliedToken)
         val current = runCatching { briefingService.latest() }.getOrNull()
         return MorningStatusResponse(current?.briefingDate, current?.productionReady == true, current?.stories?.size ?: 0, webPushService.activeSubscriptionCount(), generationJob.status())
+    }
+
+    @GetMapping("/subscriptions")
+    fun subscriptions(@RequestHeader("X-Briefing-Admin-Token", required = false) suppliedToken: String?): ActiveSubscriptionStatus {
+        authorize(suppliedToken)
+        return subscriptionMetricsService.current()
     }
 
     private fun authorize(suppliedToken: String?) {

@@ -56,6 +56,7 @@ internal fun deliveryIsDue(current: LocalTime, scheduled: LocalTime = fixedDeliv
 class WebPushService(
     private val repository: PushSubscriptionRepository,
     private val briefingService: BriefingService,
+    private val metricsService: SubscriptionMetricsService,
     @Value("\${app.push.enabled:false}") private val enabled: Boolean,
     @Value("\${app.push.public-key:}") private val publicKey: String,
     @Value("\${app.push.private-key:}") private val privateKey: String,
@@ -101,15 +102,18 @@ class WebPushService(
         subscription.active = true
         subscription.updatedAt = OffsetDateTime.now()
         subscription.lastError = null
-        return repository.save(subscription)
+        val saved = repository.saveAndFlush(subscription)
+        metricsService.recordIfChanged("SUBSCRIPTION_REGISTERED")
+        return saved
     }
 
     @Transactional
     fun unsubscribe(ownerId: String, endpoint: String) {
-        repository.findByEndpointHash(endpointHash(endpoint))?.takeIf { it.ownerId == ownerId }?.let {
+        repository.findByEndpointHash(endpointHash(endpoint))?.takeIf { it.ownerId == ownerId && it.active }?.let {
             it.active = false
             it.updatedAt = OffsetDateTime.now()
-            repository.save(it)
+            repository.saveAndFlush(it)
+            metricsService.recordIfChanged("SUBSCRIPTION_UNSUBSCRIBED")
         }
     }
 
@@ -168,7 +172,7 @@ class WebPushService(
         return PushDeliverySummary("COMPLETED", subscriptions.size, due, delivered, failed, "오늘 브리핑 발송 검사를 완료했습니다.")
     }
 
-    fun activeSubscriptionCount(): Int = repository.findAllByActiveTrue().size
+    fun activeSubscriptionCount(): Int = repository.countByActiveTrue().toInt()
 
     @Transactional
     fun sendOperatorTestToActive(expectedActiveSubscriptions: Int): PushDeliverySummary {
@@ -216,9 +220,11 @@ class WebPushService(
             repository.save(subscription)
             PushResult(true, "푸시 알림을 발송했습니다.")
         } else {
-            if (status == 404 || status == 410) subscription.active = false
+            val endpointExpired = subscription.active && (status == 404 || status == 410)
+            if (endpointExpired) subscription.active = false
             subscription.lastError = "Push provider returned HTTP $status"
-            repository.save(subscription)
+            repository.saveAndFlush(subscription)
+            if (endpointExpired) metricsService.recordIfChanged("PUSH_ENDPOINT_EXPIRED")
             PushResult(false, "푸시 제공자가 발송을 거절했습니다. (HTTP $status)")
         }
     } catch (exception: Exception) {

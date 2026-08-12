@@ -361,6 +361,19 @@ X-Briefing-Admin-Token: <BRIEFING_ADMIN_TOKEN>
 | `POST` | `/api/admin/briefings/dispatch` | 시간이 된 구독자에게 발송 |
 | `POST` | `/api/admin/briefings/run` | 생성 누락 복구 후 발송 |
 | `GET` | `/api/admin/briefings/status` | 생성 상태·기사 수·활성 기기 수 확인 |
+| `GET` | `/api/admin/briefings/subscriptions` | 활성 기기 수와 마지막 증감 시각 확인 |
+
+### 운영자가 활성 기기 수를 확인하는 방법
+
+활성 기기 수는 일반 사용자 화면에 표시하지 않습니다. 저장소 관리자만 다음 순서로 확인합니다.
+
+1. GitHub 저장소의 `Actions` 탭으로 이동합니다.
+2. `Morning briefing operations` 워크플로를 선택합니다.
+3. `Run workflow`를 누릅니다.
+4. `operation`에서 `status`를 선택해 실행합니다.
+5. 완료된 작업의 `Summary`에서 `활성 기기` 숫자를 확인합니다.
+
+이 숫자는 회원 수나 설치 시도 횟수가 아니라, 현재 서버에서 발송 가능한 **고유 활성 푸시 endpoint 수**입니다. 같은 사람이 휴대전화와 PC를 각각 등록하면 2대로 집계되고, 같은 기기에서 다시 등록하면 중복 증가하지 않습니다.
 
 PowerShell 예시:
 
@@ -446,7 +459,10 @@ docker compose build
 - 웹푸시 endpoint와 암호화 키
 - 오전 7시 30분 고정 시각·선택한 요일·한국 시간대
 - 마지막 발송 시각과 오류 상태
+- 활성 기기 수·수 변경 시각·변경 사유만 담은 집계 이력 (`subscription_metric_snapshots`)
 - 뉴스 피드백
+
+집계 이력에는 endpoint, 익명 기기 ID, 브라우저 정보 등 개별 기기를 식별할 수 있는 값이 들어가지 않습니다. 등록·해지·푸시 endpoint 만료로 활성 수가 실제로 바뀔 때만 새 행을 저장합니다. 이 집계는 사용자 화면이나 공개 API에 노출하지 않습니다.
 
 브라우저 `localStorage`:
 
