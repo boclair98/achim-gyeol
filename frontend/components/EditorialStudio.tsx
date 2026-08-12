@@ -78,7 +78,7 @@ export function EditorialStudio() {
 
   const saveBrand = () => {
     window.localStorage.setItem("achim-gyeol-brand", JSON.stringify(brand));
-    setNotice("브랜드 프리셋을 저장했습니다. 독자 카드와 이메일 템플릿에 사용할 준비가 됐습니다.");
+    setNotice("브랜드 시안을 이 브라우저에만 저장했습니다. 실제 독자 발송에는 적용되지 않습니다.");
   };
 
   const approveBriefing = () => {
@@ -87,7 +87,7 @@ export function EditorialStudio() {
       return;
     }
     setPublishState("SCHEDULED");
-    setNotice("편집 승인 완료 · 오전 7시 30분 실제 푸시 발행 대기열에 등록했습니다.");
+    setNotice("승인 흐름 시연을 완료했습니다. 실제 푸시 발행 대기열에는 등록되지 않습니다.");
   };
 
   const exportConfig = () => {
@@ -105,15 +105,15 @@ export function EditorialStudio() {
     <>
       <section className="studio-hero">
         <div>
-          <span className="studio-kicker"><i /> LIVE WORKSPACE · DEMO TENANT</span>
-          <h1>기사 수집부터 승인·정정·발송까지,<br /><em>한 데스크에서 끝냅니다.</em></h1>
-          <p>뉴스 조직의 편집 책임은 유지하고 반복 작업만 자동화합니다. 모든 AI 초안은 근거, 위험도, 승인자와 함께 기록됩니다.</p>
+          <span className="studio-kicker"><i /> PRODUCT CONCEPT · NOT CONNECTED</span>
+          <h1>편집 승인·정정·발송을 위한<br /><em>화면 시제품입니다.</em></h1>
+          <p>이 화면의 인물, 수치, 정정 기록과 승인은 모두 가상 데이터입니다. 현재 운영 브리핑은 별도 자동 파이프라인에서 생성되며 이 화면의 승인 버튼과 연결되지 않습니다.</p>
         </div>
         <aside className="edition-health">
           <div><span>오늘 브리핑</span><strong>{publishState === "SCHEDULED" ? "발행 예약" : "검토 중"}</strong></div>
           <div className="health-score"><Gauge /><b>{readyCount}/{demoBriefing.stories.length}</b><span>발행 준비 기사</span></div>
           <div className="health-track"><i style={{ width: `${(readyCount / demoBriefing.stories.length) * 100}%` }} /></div>
-          <small>최종 승인자와 변경 내역은 감사 로그에 자동 기록됩니다.</small>
+          <small>샘플 상태이며 실제 발행·감사 로그에 반영되지 않습니다.</small>
         </aside>
       </section>
 
@@ -160,7 +160,7 @@ function DeskPanel({ statuses, updateStatus, readyCount, canPublish, approveBrie
     setReviewingStory(null);
   };
   return <div className="studio-panel">
-    <PanelHeader eyebrow="EDITORIAL DESK" title="오늘의 발행 대기열" description="AI 초안을 근거와 위험도 기준으로 검토합니다." action={<button className="studio-primary" onClick={approveBriefing}><Send size={15} />{publishState === "SCHEDULED" ? "오전 7시 30분 예약됨" : canPublish ? "최종 발행 승인" : `${readyCount}/4 검토 완료`}</button>} />
+    <PanelHeader eyebrow="EDITORIAL DESK · DEMO" title="가상 발행 대기열" description="향후 사람의 검토·승인 기능을 연결하기 위한 UI 시제품입니다." action={<button className="studio-primary" onClick={approveBriefing}><Send size={15} />{publishState === "SCHEDULED" ? "시연 승인 완료" : canPublish ? "승인 흐름 시연" : `${readyCount}/4 시연 완료`}</button>} />
     <div className="pipeline-strip">
       {[{ label: "수집", value: "126", sub: "원문" }, { label: "중복 병합", value: "37", sub: "클러스터" }, { label: "요약 초안", value: "4", sub: "기사" }, { label: "교차 검증", value: "3", sub: "완료" }, { label: "편집 승인", value: String(readyCount), sub: "준비" }].map((item, index) => <div key={item.label} className={index === 4 ? "active" : ""}><span>{item.label}</span><strong>{item.value}</strong><small>{item.sub}</small></div>)}
     </div>
@@ -179,7 +179,7 @@ function DeskPanel({ statuses, updateStatus, readyCount, canPublish, approveBrie
         </article>)}
       </div>
       <aside className="desk-aside">
-        <div className="decision-card"><span>자동 발행 방지</span><ShieldCheck /><strong>사람의 최종 승인이 필요합니다</strong><p>중간 위험 이상, 출처 충돌, 미확인 숫자가 있으면 발행 버튼이 잠깁니다.</p></div>
+        <div className="decision-card"><span>정식 출시에 필요한 기능</span><ShieldCheck /><strong>사람의 최종 승인은 아직 미연결입니다</strong><p>현재 운영 파이프라인에는 이 승인 화면이 연결되지 않습니다. 언론사 협업 전 서버 승인 상태와 권한·감사 로그 구현이 필요합니다.</p></div>
         <div className="checklist-card"><strong>오늘의 체크리스트</strong>{["AI 사용 표시", "원문 링크", "복수 출처", "정정 연락처", "수신 거부 경로"].map((item) => <span key={item}><CheckCircle2 size={14} />{item}</span>)}</div>
       </aside>
     </div>
@@ -212,14 +212,14 @@ function BrandPanel({ brand, setBrand, saveBrand }: { brand: BriefingBrand; setB
         <label><span>책임 편집자</span><input value={brand.editorName} onChange={(event) => setBrand({ ...brand, editorName: event.target.value })} /></label>
         <label><span>정정 문의</span><input type="email" value={brand.contactEmail} onChange={(event) => setBrand({ ...brand, contactEmail: event.target.value })} /></label>
       </div>
-      <div className="brand-preview-wrap"><span>LIVE CARD PREVIEW</span><article className="brand-card-preview" style={{ "--tenant-accent": brand.accent } as CSSProperties}><header><strong>{brand.name}</strong><span>{brand.descriptor}</span></header><div><small>POLICY · VERIFIED</small><h3>오늘 알아야 할 정책 변화,<br />세 줄로 먼저 읽으세요.</h3><p>핵심 사실과 일상에 미치는 영향만 간결하게 전달합니다.</p></div><footer><span>{brand.editorName}</span><span>AI 초안 · 편집 검토 완료</span></footer></article><p>로고 파일 업로드와 전용 도메인은 저장소 연결 단계에서 활성화됩니다.</p></div>
+      <div className="brand-preview-wrap"><span>DEMO CARD PREVIEW</span><article className="brand-card-preview" style={{ "--tenant-accent": brand.accent } as CSSProperties}><header><strong>{brand.name}</strong><span>{brand.descriptor}</span></header><div><small>POLICY · SAMPLE</small><h3>오늘 알아야 할 정책 변화,<br />세 줄로 먼저 읽으세요.</h3><p>핵심 사실과 일상에 미치는 영향만 간결하게 전달합니다.</p></div><footer><span>{brand.editorName}</span><span>시연용 카드 · 실제 발행 아님</span></footer></article><p>이 설정은 브라우저에만 저장되며 운영 서비스와 연결되지 않습니다.</p></div>
     </div>
   </div>;
 }
 
 function DeliveryPanel() {
   return <div className="studio-panel">
-    <PanelHeader eyebrow="DELIVERY ORCHESTRATION" title="채널별 발송 계획" description="콘텐츠는 한 번 승인하고 채널 규격에 맞게 자동 변환합니다." action={<button className="studio-secondary"><Settings2 size={15} />기본 규칙 편집</button>} />
+    <PanelHeader eyebrow="DELIVERY ORCHESTRATION · DEMO" title="채널별 발송 구상" description="Web Push 외 채널과 아래 수치는 연결되지 않은 제품 시안입니다." action={<button className="studio-secondary"><Settings2 size={15} />시연 규칙</button>} />
     <div className="delivery-overview"><div><Clock3 /><span>다음 발행</span><strong>내일 오전 7:30</strong><small>Asia/Seoul · 평일</small></div><div><Users /><span>예상 수신자</span><strong>12,480명</strong><small>동의 상태 정상</small></div><div><Inbox /><span>콘텐츠</span><strong>카드 6장</strong><small>요약 4 · 표지 1 · 정리 1</small></div></div>
     <div className="channel-grid">
       <ChannelCard icon={BellRing} name="Web Push" format="도착 알림 + 카드 보관함" status="설정 준비" detail="VAPID/FCM 키 연결 대기" />
@@ -234,7 +234,7 @@ function DeliveryPanel() {
 function AnalyticsPanel() {
   const funnel = [{ label: "발송", value: 100 }, { label: "도달", value: 99.1 }, { label: "열람", value: analytics.openRate }, { label: "완독", value: analytics.completionRate }, { label: "원문 클릭", value: analytics.clickRate }];
   return <div className="studio-panel">
-    <PanelHeader eyebrow="AUDIENCE INTELLIGENCE" title="브리핑 성과" description="허영 지표보다 신뢰, 완독, 원문 확인 행동을 우선합니다." action={<button className="studio-secondary"><Download size={15} />주간 리포트</button>} />
+    <PanelHeader eyebrow="AUDIENCE INTELLIGENCE · SAMPLE" title="가상 브리핑 성과" description="아래 수치는 실제 사용자 분석이 아닌 대시보드 디자인 샘플입니다." action={<button className="studio-secondary"><Download size={15} />샘플 리포트</button>} />
     <div className="metric-grid"><Metric label="수신자" value={analytics.recipients.toLocaleString()} change="+4.8%" icon={Users} /><Metric label="도달률" value="99.1%" change="안정" icon={CheckCircle2} /><Metric label="열람률" value={`${analytics.openRate}%`} change="+6.2%p" icon={Eye} /><Metric label="원문 클릭" value={`${analytics.clickRate}%`} change="+2.1%p" icon={BookOpenCheck} /><Metric label="수신 거부" value={`${analytics.unsubscribeRate}%`} change="정상" icon={Inbox} /></div>
     <div className="analytics-grid"><div className="funnel-card"><span>오늘의 독자 흐름</span>{funnel.map((item) => <div key={item.label}><label><b>{item.label}</b><strong>{item.value}%</strong></label><i><em style={{ width: `${item.value}%` }} /></i></div>)}</div><div className="story-performance"><span>기사별 원문 이동</span>{demoBriefing.stories.map((story, index) => <div key={story.id}><b>0{index + 1}</b><p>{story.title}</p><strong>{[28.4, 24.1, 18.7, 15.9][index]}%</strong></div>)}</div></div>
   </div>;
@@ -264,7 +264,7 @@ function TeamPanel() {
 
 function GovernancePanel({ exportConfig }: { exportConfig: () => void }) {
   return <div className="studio-panel">
-    <PanelHeader eyebrow="TRUST & GOVERNANCE" title="책임 운영 기록" description="무엇을, 누가, 왜 바꿨는지 공개 가능한 형태로 남깁니다." action={<button className="studio-secondary" onClick={exportConfig}><Download size={15} />운영 설정 내보내기</button>} />
+    <PanelHeader eyebrow="TRUST & GOVERNANCE · SAMPLE" title="책임 운영 화면 시안" description="아래 정정·감사 기록은 실제 운영 이력이 아닌 예시입니다." action={<button className="studio-secondary" onClick={exportConfig}><Download size={15} />시연 설정 내보내기</button>} />
     <div className="governance-grid">
       <div className="governance-card"><header><History /><div><strong>정정 이력</strong><span>독자에게 공개되는 변경 기록</span></div></header>{corrections.map((item) => <article key={item.date}><time>{item.date}</time><strong>{item.story}</strong><p>{item.change}</p><small>{item.reason} · {item.status}</small></article>)}</div>
       <div className="governance-card"><header><Fingerprint /><div><strong>감사 로그</strong><span>편집·자동화 작업 추적</span></div></header>{auditTrail.map((item) => <article className="audit-item" key={`${item.time}-${item.action}`}><time>{item.time}</time><div><strong>{item.action}</strong><p>{item.target}</p><small>{item.actor}</small></div></article>)}</div>
@@ -276,11 +276,12 @@ function GovernancePanel({ exportConfig }: { exportConfig: () => void }) {
 
 function LaunchReadiness() {
   const checks = [
-    { label: "독자 화면·보관함", state: "완료", ready: true }, { label: "편집 승인·감사 로그", state: "완료", ready: true },
-    { label: "화이트라벨 카드·메일", state: "완료", ready: true }, { label: "개인정보·정정 정책", state: "검토 초안", ready: true },
-    { label: "뉴스 공급 계약", state: "고객사 결정", ready: false }, { label: "AI·발송 API 키", state: "연결 대기", ready: false },
+    { label: "PWA 독자 화면·웹푸시", state: "공개 베타 운영", ready: true }, { label: "AI 생성·자동 품질검사", state: "운영 연결", ready: true },
+    { label: "기사별 오류 신고", state: "운영 연결", ready: true }, { label: "사람의 편집 승인·감사 로그", state: "서버 구현 필요", ready: false },
+    { label: "뉴스 사용권·공급 계약", state: "계약 필요", ready: false }, { label: "운영자·법적 문의 정보", state: "확정 필요", ready: false },
+    { label: "복수 수집 제공자", state: "추가 API 필요", ready: false }, { label: "장애·비용 모니터링", state: "보강 필요", ready: false },
   ];
-  return <section className="launch-readiness"><header><div><span>GO-LIVE READINESS</span><h3>파일럿 출시 준비도</h3></div><strong>4/6</strong></header><div>{checks.map((item) => <article key={item.label}><i className={item.ready ? "ready" : "blocked"}>{item.ready ? <Check size={13} /> : <Clock3 size={13} />}</i><span><strong>{item.label}</strong><small>{item.state}</small></span></article>)}</div><footer><ShieldCheck size={15} /> 제품 구현은 완료 상태이며, 외부 계약과 키 연결 두 단계만 남았습니다.</footer></section>;
+  return <section className="launch-readiness"><header><div><span>GO-LIVE READINESS</span><h3>정식 서비스 준비도</h3></div><strong>3/8</strong></header><div>{checks.map((item) => <article key={item.label}><i className={item.ready ? "ready" : "blocked"}>{item.ready ? <Check size={13} /> : <Clock3 size={13} />}</i><span><strong>{item.label}</strong><small>{item.state}</small></span></article>)}</div><footer><ShieldCheck size={15} /> 현재는 공개 베타에 적합하며 언론사 협업 전에는 미완료 항목을 실제로 연결해야 합니다.</footer></section>;
 }
 
 function PanelHeader({ eyebrow, title, description, action }: { eyebrow: string; title: string; description: string; action: ReactNode }) {

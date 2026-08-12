@@ -2,6 +2,7 @@ package kr.briefly.service
 
 import kr.briefly.domain.PushSubscription
 import kr.briefly.repository.PushSubscriptionRepository
+import kr.briefly.repository.StoryFeedbackRepository
 import nl.martijndwars.webpush.Notification
 import nl.martijndwars.webpush.PushService
 import nl.martijndwars.webpush.Urgency
@@ -110,9 +111,8 @@ class WebPushService(
     @Transactional
     fun unsubscribe(ownerId: String, endpoint: String) {
         repository.findByEndpointHash(endpointHash(endpoint))?.takeIf { it.ownerId == ownerId && it.active }?.let {
-            it.active = false
-            it.updatedAt = OffsetDateTime.now()
-            repository.saveAndFlush(it)
+            repository.delete(it)
+            repository.flush()
             metricsService.recordIfChanged("SUBSCRIPTION_UNSUBSCRIBED")
         }
     }
@@ -221,7 +221,10 @@ class WebPushService(
             PushResult(true, "푸시 알림을 발송했습니다.")
         } else {
             val endpointExpired = subscription.active && (status == 404 || status == 410)
-            if (endpointExpired) subscription.active = false
+            if (endpointExpired) {
+                subscription.active = false
+                subscription.updatedAt = OffsetDateTime.now()
+            }
             subscription.lastError = "Push provider returned HTTP $status"
             repository.saveAndFlush(subscription)
             if (endpointExpired) metricsService.recordIfChanged("PUSH_ENDPOINT_EXPIRED")
@@ -240,6 +243,27 @@ class WebPushService(
     companion object {
         fun endpointHash(endpoint: String): String = MessageDigest.getInstance("SHA-256")
             .digest(endpoint.toByteArray(StandardCharsets.UTF_8)).joinToString("") { "%02x".format(it) }
+    }
+}
+
+@Component
+class PersonalDataRetentionCleanup(
+    private val pushRepository: PushSubscriptionRepository,
+    private val feedbackRepository: StoryFeedbackRepository,
+) {
+    private val logger = LoggerFactory.getLogger(javaClass)
+
+    @Scheduled(cron = "0 30 3 * * *", zone = "Asia/Seoul")
+    @Transactional
+    fun deleteExpiredRecords() {
+        val now = OffsetDateTime.now(ZoneId.of("Asia/Seoul"))
+        val inactiveSubscriptions = pushRepository.findAllByActiveFalseAndUpdatedAtBefore(now.minusDays(30))
+        val expiredFeedback = feedbackRepository.findAllByCreatedAtBefore(now.minusDays(90))
+        if (inactiveSubscriptions.isNotEmpty()) pushRepository.deleteAllInBatch(inactiveSubscriptions)
+        if (expiredFeedback.isNotEmpty()) feedbackRepository.deleteAllInBatch(expiredFeedback)
+        if (inactiveSubscriptions.isNotEmpty() || expiredFeedback.isNotEmpty()) {
+            logger.info("Deleted {} inactive push subscription(s) and {} expired feedback record(s)", inactiveSubscriptions.size, expiredFeedback.size)
+        }
     }
 }
 

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { BellOff, BellRing, CheckCircle2, Send } from "lucide-react";
+import { deviceHeaders } from "@/lib/device";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 const serverSubscriptionKey = "achim-gyeol-server-subscription";
@@ -80,7 +81,8 @@ export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscript
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.getSubscription();
       if (subscription) {
-        await fetch(`${apiBase}/api/push/subscriptions`, { method: "DELETE", headers: deviceHeaders(), body: JSON.stringify({ endpoint: subscription.endpoint }) });
+        const response = await fetch(`${apiBase}/api/push/subscriptions`, { method: "DELETE", headers: deviceHeaders(), body: JSON.stringify({ endpoint: subscription.endpoint }) });
+        if (!response.ok) throw new Error(await errorMessage(response, "서버의 알림 등록정보를 삭제하지 못했습니다."));
         await subscription.unsubscribe();
       }
       window.localStorage.removeItem(serverSubscriptionKey);
@@ -152,13 +154,4 @@ function urlBase64ToUint8Array(value: string) {
 async function errorMessage(response: Response, fallback: string) {
   const body = await response.json().catch(() => null) as { message?: string } | null;
   return body?.message || fallback;
-}
-
-function deviceHeaders(): Record<string, string> {
-  let deviceId = window.localStorage.getItem("achim-gyeol-device-id");
-  if (!deviceId) {
-    deviceId = window.crypto.randomUUID();
-    window.localStorage.setItem("achim-gyeol-device-id", deviceId);
-  }
-  return { "Content-Type": "application/json", "X-Achim-Device": deviceId };
 }

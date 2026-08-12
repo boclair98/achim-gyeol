@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, BellRing, BookOpen, CheckCircle2, Clock3, ExternalLink, FileCheck2, Settings2 } from "lucide-react";
+import { AlertTriangle, BellRing, BookOpen, CheckCircle2, Clock3, ExternalLink, FileCheck2, Flag, Settings2 } from "lucide-react";
 import { briefingCategoryOrder, demoBriefing, type Briefing, type Story } from "@/lib/briefing";
+import { deviceHeaders } from "@/lib/device";
 import { defaultBrand, type BriefingBrand } from "@/lib/product";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
@@ -52,7 +53,9 @@ export function BriefingDelivery() {
         <span><strong>{briefing.stories.length}</strong> 중요 뉴스</span>
         <span><strong>{briefing.verifiedCount}</strong> 근거 확인</span>
         <span><Clock3 size={16} /><strong>{briefing.readMinutes}분</strong> 예상</span>
+        <span><FileCheck2 size={16} /><strong>{briefing.lastVerifiedAt}</strong> 자동 점검</span>
       </div>
+      <p className="reader-disclosure"><strong>작성: 아침결 자동 브리핑 시스템</strong> · AI가 요약하고 출처 독립성·주장별 근거·충돌 여부를 자동 검사합니다. 현재 모든 브리핑을 사람이 발행 전 검토하지는 않습니다.</p>
     </section>
 
     <nav className="news-category-nav" aria-label="뉴스 분야">
@@ -62,7 +65,7 @@ export function BriefingDelivery() {
     <div className="news-reader-layout">
       <section className="news-feed" aria-live="polite">
         <header className="news-feed-heading"><div><span>NEWS BRIEF</span><h2>{category === "전체" ? "품질 기준을 통과한 중요 뉴스" : `${category} 분야 중요 뉴스`}</h2></div><p>확인된 사실과 아직 확인되지 않은 내용을 구분했습니다.</p></header>
-        {stories.map((story) => <NewsArticle key={story.id} story={story} index={briefing.stories.findIndex((item) => item.id === story.id) + 1} />)}
+        {stories.map((story) => <NewsArticle key={story.id} story={story} index={briefing.stories.findIndex((item) => item.id === story.id) + 1} reportingEnabled={briefing.productionReady === true} />)}
         {!loading && stories.length === 0 && <div className="reader-empty">이 분야에서 품질 기준을 통과한 중요 뉴스가 없습니다.</div>}
       </section>
 
@@ -71,20 +74,20 @@ export function BriefingDelivery() {
           <span>오늘의 뉴스</span>
           <ol>{briefing.stories.map((story, index) => <li key={story.id}><a href={`#news-${story.id}`}><b>{String(index + 1).padStart(2, "0")}</b><span>{story.title}</span></a></li>)}</ol>
         </div>
-        <div className="reader-trust-note"><FileCheck2 size={20} /><div><strong>어떻게 확인했나요?</strong><p>같은 사건을 보도한 독립 출처를 묶고, 각 핵심 문장에 근거 원문을 연결합니다.</p><Link href="/trust">품질 기준 보기</Link></div></div>
+        <div className="reader-trust-note"><FileCheck2 size={20} /><div><strong>어떻게 확인했나요?</strong><p>같은 사건을 보도한 독립 출처를 묶고, 각 핵심 문장에 근거 원문을 연결합니다. 사람의 일일 사전 승인이 아닌 자동 품질검사 방식입니다.</p><Link href="/trust">품질 기준 보기</Link></div></div>
         {!subscribed && <Link className="reader-subscribe" href="/#delivery-deck"><BellRing size={17} /> 매일 오전 7:30 받기</Link>}
       </aside>
     </div>
   </main>;
 }
 
-function NewsArticle({ story, index }: { story: Story; index: number }) {
+function NewsArticle({ story, index, reportingEnabled }: { story: Story; index: number; reportingEnabled: boolean }) {
   const evidenceReady = story.evidenceAvailable && Boolean(story.claims?.length);
   const verified = story.verificationStatus === "VERIFIED";
   const confirmedPoints = evidenceReady ? story.claims! : summaryPoints(story.summary).map((statement) => ({ statement, sources: [] }));
 
   return <article className="reader-article" id={`news-${story.id}`}>
-    <div className="reader-article-meta"><b>{String(index).padStart(2, "0")}</b><span>{story.category}</span><em className={verified && evidenceReady ? "confirmed" : "checking"}><CheckCircle2 size={14} /> {evidenceReady ? (verified ? "근거 확인" : "추가 확인 중") : "원문 제공"}</em></div>
+    <div className="reader-article-meta"><b>{String(index).padStart(2, "0")}</b><span>{story.category}</span><em className={verified && evidenceReady ? "confirmed" : "checking"}><CheckCircle2 size={14} /> {evidenceReady ? (verified ? "근거 확인" : "추가 확인 중") : "원문 제공"}</em><small>AI 요약</small></div>
     <h2>{story.title}</h2>
     <section className="reader-conclusion"><span>한 줄 결론</span><p>{story.oneLineSummary || confirmedPoints[0]?.statement || story.title}</p></section>
 
@@ -107,7 +110,41 @@ function NewsArticle({ story, index }: { story: Story; index: number }) {
       <summary><BookOpen size={17} /> 근거 원문 {story.sources.length}개 보기</summary>
       <div>{story.sources.map((source, sourceIndex) => <a href={source.url} target="_blank" rel="noreferrer" key={`${source.publisher}-${source.url}`}><span><b>[{sourceIndex + 1}]</b>{source.publisher}{source.primarySource && <small>1차 자료</small>}</span><ExternalLink size={14} /></a>)}</div>
     </details>
+    {reportingEnabled && <StoryFeedbackPanel storyId={story.id} />}
   </article>;
+}
+
+function StoryFeedbackPanel({ storyId }: { storyId: number }) {
+  const [open, setOpen] = useState(false);
+  const [detail, setDetail] = useState("");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+
+  const submit = async () => {
+    if (!detail.trim()) return;
+    setStatus("sending");
+    try {
+      const response = await fetch(`${apiBase}/api/stories/${storyId}/feedback`, {
+        method: "POST",
+        headers: deviceHeaders(),
+        body: JSON.stringify({ type: "INCORRECT", detail: detail.trim().slice(0, 600) }),
+      });
+      if (!response.ok) throw new Error("feedback unavailable");
+      setStatus("sent");
+    } catch {
+      setStatus("error");
+    }
+  };
+
+  if (status === "sent") return <div className="reader-feedback sent"><CheckCircle2 size={16} /> 신고를 접수했습니다. 확인 후 필요한 경우 정정 이력에 반영합니다.</div>;
+
+  return <section className="reader-feedback">
+    {!open ? <button type="button" onClick={() => setOpen(true)}><Flag size={15} /> 이 요약에 오류가 있나요?</button> : <>
+      <label htmlFor={`feedback-${storyId}`}>문제가 된 문장과 확인 가능한 근거를 알려주세요.</label>
+      <textarea id={`feedback-${storyId}`} value={detail} maxLength={600} onChange={(event) => setDetail(event.target.value)} placeholder="예: 날짜가 원문과 다릅니다. 확인한 출처 주소…" />
+      <div><span>{detail.length}/600</span><button type="button" className="cancel" onClick={() => { setOpen(false); setStatus("idle"); }}>취소</button><button type="button" disabled={!detail.trim() || status === "sending"} onClick={submit}>{status === "sending" ? "보내는 중" : "오류 신고"}</button></div>
+      {status === "error" && <p role="alert">접수하지 못했습니다. 잠시 후 다시 시도해 주세요.</p>}
+    </>}
+  </section>;
 }
 
 function summaryPoints(summary: string) {

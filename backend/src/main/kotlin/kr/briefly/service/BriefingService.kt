@@ -2,6 +2,7 @@ package kr.briefly.service
 
 import kr.briefly.domain.*
 import kr.briefly.repository.BriefingEditionRepository
+import kr.briefly.repository.NewsStoryRepository
 import kr.briefly.repository.StoryFeedbackRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -18,6 +19,7 @@ data class BriefingResponse(val id: Long, val briefingDate: LocalDate, val produ
 @Service
 class BriefingService(
     private val editionRepository: BriefingEditionRepository,
+    private val storyRepository: NewsStoryRepository,
     private val feedbackRepository: StoryFeedbackRepository,
 ) {
     @Transactional(readOnly = true)
@@ -28,6 +30,8 @@ class BriefingService(
 
     @Transactional
     fun feedback(storyId: Long, userId: String, type: FeedbackType, detail: String?) {
+        if (!storyRepository.existsById(storyId)) error("해당 뉴스를 찾을 수 없습니다")
+        if (feedbackRepository.existsByStoryIdAndUserIdAndType(storyId, userId, type)) return
         feedbackRepository.save(StoryFeedback(storyId = storyId, userId = userId, type = type, detail = detail?.take(600)))
     }
 

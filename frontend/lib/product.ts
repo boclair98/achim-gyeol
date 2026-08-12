@@ -12,8 +12,8 @@ export const defaultBrand: BriefingBrand = {
   name: "아침결",
   descriptor: "AI MORNING BRIEF",
   accent: "#d8ff3e",
-  editorName: "모닝 브리핑 데스크",
-  contactEmail: "editor@achim-gyeol.example",
+  editorName: "자동 브리핑 시스템",
+  contactEmail: "",
 };
 
 export const brandPresets: BriefingBrand[] = [

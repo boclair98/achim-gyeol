@@ -284,6 +284,8 @@ button:disabled { cursor: wait; opacity: .55; }
 .reader-stats { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
 .reader-stats span { display: inline-flex; align-items: center; gap: 6px; border: 1px solid #d7dad6; border-radius: 999px; background: white; padding: 10px 14px; color: var(--muted); font-size: 12px; }
 .reader-stats strong { color: var(--ink); font-size: 14px; }
+.reader-disclosure { max-width: 760px !important; margin-top: 18px !important; border-left: 3px solid #97a5b4; padding-left: 14px; color: #66717b !important; font-size: 12px !important; line-height: 1.65 !important; }
+.reader-disclosure strong { color: #38434d; }
 .news-category-nav { position: sticky; top: 68px; z-index: 25; border-block: 1px solid #dfe2de; background: rgba(255,255,255,.96); backdrop-filter: blur(12px); }
 .news-category-nav > div { display: flex; gap: 8px; max-width: 1180px; margin: 0 auto; overflow-x: auto; padding: 12px 0; scrollbar-width: none; }
 .news-category-nav button { flex: 0 0 auto; border: 0; border-radius: 999px; background: transparent; padding: 9px 15px; color: #59636d; cursor: pointer; font-size: 13px; font-weight: 850; }
@@ -303,6 +305,7 @@ button:disabled { cursor: wait; opacity: .55; }
 .reader-article-meta em { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-style: normal; font-weight: 850; }
 .reader-article-meta em.confirmed { color: var(--success); }
 .reader-article-meta em.checking { color: #93600e; }
+.reader-article-meta > small { border-left: 1px solid #dfe2de; padding-left: 9px; color: #78838c; font-size: 10px; font-weight: 800; }
 .reader-article > h2 { margin: 20px 0 0; font-size: clamp(31px, 4vw, 46px); line-height: 1.22; letter-spacing: -.052em; word-break: keep-all; }
 .reader-conclusion { margin-top: 26px; border-left: 5px solid var(--blue); background: #f1f5ff; padding: 17px 20px; }
 .reader-conclusion span, .reader-why span { display: block; color: var(--blue); font-size: 11px; font-weight: 950; }
@@ -329,6 +332,17 @@ button:disabled { cursor: wait; opacity: .55; }
 .reader-sources a span { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .reader-sources a b { color: var(--blue); }
 .reader-sources a small { flex: 0 0 auto; border-radius: 999px; background: #e9f8f1; padding: 3px 6px; color: var(--success); font-size: 8px; }
+.reader-feedback { margin-top: 18px; border-radius: 13px; background: #f5f6f4; padding: 15px; }
+.reader-feedback > button { display: inline-flex; align-items: center; gap: 6px; border: 0; background: transparent; padding: 0; color: #65717a; cursor: pointer; font: inherit; font-size: 12px; font-weight: 850; }
+.reader-feedback label { display: block; color: #36414a; font-size: 12px; font-weight: 850; }
+.reader-feedback textarea { box-sizing: border-box; width: 100%; min-height: 92px; margin-top: 10px; resize: vertical; border: 1px solid #d6dad5; border-radius: 10px; background: white; padding: 11px 12px; color: var(--ink); font: inherit; font-size: 13px; line-height: 1.55; }
+.reader-feedback > div { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 9px; }
+.reader-feedback > div span { margin-right: auto; color: #92999d; font-size: 10px; }
+.reader-feedback > div button { border: 0; border-radius: 8px; background: var(--blue); padding: 8px 11px; color: white; cursor: pointer; font: inherit; font-size: 11px; font-weight: 850; }
+.reader-feedback > div button.cancel { background: #e5e8e5; color: #53606a; }
+.reader-feedback > div button:disabled { cursor: not-allowed; opacity: .5; }
+.reader-feedback > p { margin: 8px 0 0; color: #a23c2a; font-size: 11px; }
+.reader-feedback.sent { display: flex; align-items: center; gap: 7px; color: var(--success); font-size: 12px; font-weight: 800; }
 .news-reader-aside { position: sticky; top: 145px; display: grid; gap: 16px; }
 .reader-toc { border-top: 4px solid var(--ink); background: white; padding: 20px; }
 .reader-toc > span { color: var(--blue); font-size: 10px; font-weight: 950; letter-spacing: .12em; }
