@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, BellRing, BookOpen, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock3, ExternalLink, FileCheck2, Flag, Radar, RefreshCw, Share2, Settings2, WifiOff } from "lucide-react";
-import { briefingCategoryOrder, demoBriefing, type Briefing, type Story } from "@/lib/briefing";
+import { AlertTriangle, BellRing, BookOpen, Check, CheckCircle2, ChevronLeft, ChevronRight, Clock3, ExternalLink, FileCheck2, Flag, Radar, RefreshCw, Share2, Sparkles, Settings2, ThumbsDown, ThumbsUp, WifiOff } from "lucide-react";
+import { briefingCategoryOrder, demoBriefing, type Briefing, type Story, type StoryInterest } from "@/lib/briefing";
 import { deviceHeaders } from "@/lib/device";
 import { defaultBrand, type BriefingBrand } from "@/lib/product";
 
@@ -44,7 +44,7 @@ export function BriefingDelivery() {
     const controller = new AbortController();
     const requestedDate = new URLSearchParams(window.location.search).get("date");
     const briefingPath = requestedDate ? `/api/briefings/${encodeURIComponent(requestedDate)}` : "/api/briefings/today";
-    fetch(`${apiBase}${briefingPath}`, { cache: "no-store", signal: controller.signal })
+    fetch(`${apiBase}${briefingPath}`, { cache: "no-store", headers: deviceHeaders(), signal: controller.signal })
       .then((response) => { if (!response.ok) throw new Error("briefing unavailable"); return response.json(); })
       .then((data: Briefing) => {
         if (!Array.isArray(data.stories) || data.stories.length === 0) throw new Error("empty briefing");
@@ -147,7 +147,11 @@ function DailyBriefingSheets({ briefing, loading, reportingEnabled, onOpenStory 
   const [preferredCategories, setPreferredCategories] = useState<string[]>([]);
   const [digestSize, setDigestSize] = useState<"compact" | "standard" | "deep">("standard");
   const trackRef = useRef<HTMLDivElement>(null);
-  const orderedStories = useMemo(() => [...briefing.stories].sort((a, b) => Number(preferredCategories.includes(b.category)) - Number(preferredCategories.includes(a.category))), [briefing.stories, preferredCategories]);
+  const orderedStories = useMemo(() => {
+    const coreStories = briefing.stories.slice(0, 3);
+    const personalizedStories = briefing.stories.slice(3).sort((a, b) => Number(preferredCategories.includes(b.category)) - Number(preferredCategories.includes(a.category)));
+    return [...coreStories, ...personalizedStories];
+  }, [briefing.stories, preferredCategories]);
   const categoryCount = useMemo(() => new Set(briefing.stories.map((story) => story.category)).size, [briefing.stories]);
   const deckPages = useMemo(() => [{ kind: "overview" as const }, ...orderedStories.map((story) => ({ kind: "story" as const, story }))], [orderedStories]);
 
@@ -242,6 +246,7 @@ function DailyBriefingSheets({ briefing, loading, reportingEnabled, onOpenStory 
             <span>TODAY&apos;S MAP</span>
             <h2>오늘 먼저 알아둘 흐름</h2>
             <p>{briefing.lead}</p>
+            {briefing.personalized && <p className="brief-overview-personalized"><Sparkles size={14} /> 공통 핵심 3건 뒤의 카드 순서에 내 관심사를 반영했어요.</p>}
           </section>
           <ol className="brief-overview-list">
             {orderedStories.slice(0, 5).map((story, index) => <li key={story.id}><button type="button" onClick={() => moveTo(index + 1)}><b>{String(index + 1).padStart(2, "0")}</b><span><small>{story.category}</small><strong>{story.oneLineSummary || story.title}</strong></span><ChevronRight size={16} /></button></li>)}
@@ -264,7 +269,7 @@ function DailyBriefingSheets({ briefing, loading, reportingEnabled, onOpenStory 
           <div className="brief-sheet-rule"><i /></div>
           <div className="brief-sheet-stories">
               <section className="brief-sheet-story">
-                <div className="brief-sheet-meta"><b>{String(storyIndex).padStart(2, "0")}</b><span>{story.category}</span>{storyIndex <= 3 && <i className="priority">먼저 보기</i>}{preferredCategories.includes(story.category) && <i>내 관심</i>}<em className={story.verificationStatus === "VERIFIED" && evidenceReady ? "confirmed" : "checking"}>{readStories.includes(story.id) ? "읽음" : evidenceReady ? (story.verificationStatus === "VERIFIED" ? "근거 연결" : "확인 진행 중") : "원문 제공"}</em></div>
+                <div className="brief-sheet-meta"><b>{String(storyIndex).padStart(2, "0")}</b><span>{story.category}</span>{storyIndex <= 3 && <i className="priority">먼저 보기</i>}{preferredCategories.includes(story.category) && <i>내 관심</i>}{story.viewerInterest === "INTERESTED" && <i>관심 반영</i>}<em className={story.verificationStatus === "VERIFIED" && evidenceReady ? "confirmed" : "checking"}>{readStories.includes(story.id) ? "읽음" : evidenceReady ? (story.verificationStatus === "VERIFIED" ? "근거 연결" : "확인 진행 중") : "원문 제공"}</em></div>
                 <h2><a href={`#news-${story.id}`} onClick={(event) => { event.preventDefault(); openDetail(story, pageIndex); }}>{story.title}</a></h2>
                 <p className="brief-sheet-conclusion"><strong>한 줄 결론</strong>{story.oneLineSummary || facts[0] || story.title}</p>
                 <strong className="brief-sheet-facts-label">확인된 핵심</strong>
@@ -272,6 +277,7 @@ function DailyBriefingSheets({ briefing, loading, reportingEnabled, onOpenStory 
                 <div className="brief-sheet-matter"><strong>왜 중요한가</strong><p>{story.whyItMatters}</p></div>
                 {watchPoint && <div className="brief-sheet-watch"><strong>{story.whatToWatch ? "다음 확인" : "아직 미정"}</strong><p>{watchPoint}</p></div>}
                 <a className="brief-sheet-detail-jump" href={`#news-${story.id}`} onClick={(event) => { event.preventDefault(); openDetail(story, pageIndex); }}><BookOpen size={18} /><span><strong>상세 내용 바로가기</strong><small>아래 본문에서 핵심 근거와 출처까지 확인</small></span><ChevronRight size={18} /></a>
+                {reportingEnabled && <StoryInterestControls key={`${story.id}-${story.viewerInterest ?? "none"}`} story={story} />}
                 <footer><span>서로 다른 출처 {story.sources.length}개 · {story.sources.slice(0, 2).map((source) => source.publisher).join(" · ")}</span><div><button type="button" onClick={() => void shareStory(story)} aria-label="뉴스 공유"><Share2 size={13} /> 공유</button></div></footer>
               </section>
           </div>
@@ -284,6 +290,39 @@ function DailyBriefingSheets({ briefing, loading, reportingEnabled, onOpenStory 
         <button type="button" aria-label="다음 브리핑 카드" onClick={() => moveTo(page + 1)} disabled={page >= deckPages.length - 1}><ChevronRight /></button>
       </div>
     </div>
+  </section>;
+}
+
+function StoryInterestControls({ story }: { story: Story }) {
+  const [selection, setSelection] = useState<StoryInterest | null>(story.viewerInterest ?? null);
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  const save = async (interest: StoryInterest) => {
+    if (selection === interest && status === "saved") return;
+    const previous = selection;
+    setSelection(interest);
+    setStatus("saving");
+    try {
+      const response = await fetch(`${apiBase}/api/stories/${story.id}/interest`, {
+        method: "PUT",
+        headers: deviceHeaders(),
+        body: JSON.stringify({ interest }),
+      });
+      if (!response.ok) throw new Error("interest unavailable");
+      setStatus("saved");
+    } catch {
+      setSelection(previous);
+      setStatus("error");
+    }
+  };
+
+  return <section className={`brief-sheet-interest ${status}`} aria-label="이 뉴스 관심도">
+    <div className="brief-sheet-interest-copy"><Sparkles size={15} /><span><strong>이 주제가 흥미로웠나요?</strong><small>다음 브리핑의 카드 순서에만 반영돼요.</small></span></div>
+    <div className="brief-sheet-interest-actions" role="group" aria-label="뉴스 관심도 선택">
+      <button type="button" aria-pressed={selection === "INTERESTED"} disabled={status === "saving"} onClick={() => void save("INTERESTED")}><ThumbsUp size={14} /> 흥미로웠어요</button>
+      <button type="button" aria-pressed={selection === "NOT_INTERESTED"} disabled={status === "saving"} onClick={() => void save("NOT_INTERESTED")}><ThumbsDown size={14} /> 관심 없어요</button>
+    </div>
+    <p role="status" aria-live="polite">{status === "saving" ? "관심사를 저장하고 있어요." : status === "saved" ? "이 기기의 다음 브리핑 순서에 반영했어요." : status === "error" ? "저장하지 못했어요. 버튼을 다시 눌러 주세요." : "핵심 뉴스는 숨기지 않고 관심 분야만 조금 앞에 보여드려요."}</p>
   </section>;
 }
 

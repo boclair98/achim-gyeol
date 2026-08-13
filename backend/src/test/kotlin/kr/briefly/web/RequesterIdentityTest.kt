@@ -23,4 +23,9 @@ class RequesterIdentityTest {
         assertThatThrownBy { RequesterIdentity.resolve(null, "not-a-device") }
             .isInstanceOf(ResponseStatusException::class.java)
     }
+
+    @Test
+    fun `public briefing remains readable without a device identity`() {
+        assertThat(RequesterIdentity.resolveOrNull(null, null)).isNull()
+    }
 }
