@@ -44,4 +44,24 @@ class WebPushServiceTest {
         assertThat(pushEndpointIsInvalid(429)).isFalse()
         assertThat(pushEndpointIsInvalid(503)).isFalse()
     }
+
+    @Test
+    fun `VAPID public key is derived from the configured private key`() {
+        // P-256 scalar 1 maps to the standard curve generator point.
+        val privateKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE"
+        val expectedPublicKey = "BGsX0fLhLEJH-Lzm5WOkQPJ3A32BLeszoPShOUXYmMKWT-NC4v4af5uO5-tKfA-eFivOM1drMV7Oy7ZAaDe_UfU"
+
+        val resolution = resolveVapidKey("mismatched-public-key", privateKey)
+
+        assertThat(resolution.publicKey).isEqualTo(expectedPublicKey)
+        assertThat(resolution.configuredPublicKeyMatchesPrivateKey).isFalse()
+    }
+
+    @Test
+    fun `matching VAPID pair is recognized without padding`() {
+        val privateKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE"
+        val publicKey = "BGsX0fLhLEJH-Lzm5WOkQPJ3A32BLeszoPShOUXYmMKWT-NC4v4af5uO5-tKfA-eFivOM1drMV7Oy7ZAaDe_UfU"
+
+        assertThat(resolveVapidKey("$publicKey=", privateKey).configuredPublicKeyMatchesPrivateKey).isTrue()
+    }
 }
