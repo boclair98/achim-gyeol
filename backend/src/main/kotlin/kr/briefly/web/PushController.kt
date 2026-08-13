@@ -21,6 +21,7 @@ data class PushSubscriptionRequest(
     @field:Size(min = 1, max = 7) val weekdays: Set<Int> = setOf(0, 1, 2, 3, 4),
 )
 data class PushEndpointRequest(@field:NotBlank @field:Size(max = 3000) val endpoint: String)
+data class PushSubscriptionStatusResponse(val registered: Boolean, val active: Boolean, val needsRenewal: Boolean)
 
 @RestController
 @RequestMapping("/api/push")
@@ -44,6 +45,16 @@ class PushController(private val webPushService: WebPushService) {
             weekdays = request.weekdays,
             userAgent = userAgent,
         )).let { mapOf("subscribed" to true) }
+
+    @PostMapping("/subscriptions/status")
+    fun subscriptionStatus(@Valid @RequestBody request: PushEndpointRequest, @RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("X-Achim-Device", required = false) deviceId: String?) =
+        webPushService.subscriptionStatus(RequesterIdentity.resolve(user, deviceId), request.endpoint).let { subscription ->
+            PushSubscriptionStatusResponse(
+                registered = subscription != null,
+                active = subscription?.active == true,
+                needsRenewal = subscription != null && !subscription.active,
+            )
+        }
 
     @DeleteMapping("/subscriptions")
     @ResponseStatus(HttpStatus.NO_CONTENT)
