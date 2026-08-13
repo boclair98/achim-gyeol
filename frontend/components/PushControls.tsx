@@ -17,6 +17,7 @@ export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscript
   const [iosInstallRequired, setIosInstallRequired] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
   const [working, setWorking] = useState(false);
+  const selectedDaysKey = selectedDays.join(",");
 
   useEffect(() => {
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -28,15 +29,14 @@ export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscript
     }
     const available = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
     if (!available) { queueMicrotask(() => setSupported(false)); return; }
-    navigator.serviceWorker.ready.then((registration) => registration.pushManager.getSubscription())
-      .then((subscription) => {
-        const savedEndpoint = window.localStorage.getItem(serverSubscriptionKey);
-        const active = Boolean(subscription && savedEndpoint === subscription.endpoint);
+    const days = selectedDaysKey ? selectedDaysKey.split(",").map(Number).filter(Number.isInteger) : [];
+    reconcileExistingSubscription(deliveryTime, days)
+      .then((active) => {
         setSubscribed(active);
         onSubscriptionChange?.(active);
       })
       .catch(() => { setSubscribed(false); onSubscriptionChange?.(false); });
-  }, [onSubscriptionChange]);
+  }, [deliveryTime, onSubscriptionChange, selectedDaysKey]);
 
   const subscribe = async () => {
     setWorking(true);
@@ -50,7 +50,12 @@ export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscript
       if (!config.enabled || !config.publicKey) throw new Error("알림 서비스가 잠시 준비 중입니다. 운영자에게 알려주세요.");
 
       const registration = await navigator.serviceWorker.ready;
-      const current = await registration.pushManager.getSubscription();
+      let current = await registration.pushManager.getSubscription();
+      if (current && !subscriptionUsesKey(current, config.publicKey)) {
+        await current.unsubscribe();
+        window.localStorage.removeItem(serverSubscriptionKey);
+        current = null;
+      }
       const subscription = current ?? await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(config.publicKey) });
       const [hour, minute] = deliveryTime.split(":").map(Number);
       const response = await fetch(`${apiBase}/api/push/subscriptions`, {
@@ -149,6 +154,75 @@ function urlBase64ToUint8Array(value: string) {
   const padding = "=".repeat((4 - value.length % 4) % 4);
   const raw = window.atob((value + padding).replace(/-/g, "+").replace(/_/g, "/"));
   return Uint8Array.from([...raw].map((character) => character.charCodeAt(0)));
+}
+
+function subscriptionUsesKey(subscription: PushSubscription, publicKey: string) {
+  const applicationServerKey = subscription.options.applicationServerKey;
+  if (!applicationServerKey) return false;
+  const current = new Uint8Array(applicationServerKey);
+  const expected = urlBase64ToUint8Array(publicKey);
+  return current.length === expected.length && current.every((value, index) => value === expected[index]);
+}
+
+async function reconcileExistingSubscription(deliveryTime: string, selectedDays: number[]) {
+  const registration = await navigator.serviceWorker.ready;
+  let subscription = await registration.pushManager.getSubscription();
+  const savedEndpoint = window.localStorage.getItem(serverSubscriptionKey);
+  if (!subscription || Notification.permission !== "granted") return false;
+
+  const configResponse = await fetch(`${apiBase}/api/push/public-key`, { cache: "no-store" });
+  if (!configResponse.ok) return Boolean(savedEndpoint && savedEndpoint === subscription.endpoint);
+  const config = await configResponse.json() as PushConfig;
+  if (!config.enabled || !config.publicKey) return Boolean(savedEndpoint && savedEndpoint === subscription.endpoint);
+  let needsServerSync = savedEndpoint !== subscription.endpoint;
+
+  if (!subscriptionUsesKey(subscription, config.publicKey)) {
+    // A VAPID key rotation makes the old endpoint permanently unusable. Because
+    // permission is already granted, repair it without asking the reader again.
+    await subscription.unsubscribe();
+    window.localStorage.removeItem(serverSubscriptionKey);
+    subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(config.publicKey),
+    });
+    needsServerSync = true;
+  }
+  if (!needsServerSync) return true;
+
+  const savedDelivery = readSavedDelivery();
+  const effectiveTime = savedDelivery?.time ?? deliveryTime;
+  const effectiveDays = savedDelivery?.days?.length ? savedDelivery.days : selectedDays;
+  if (!effectiveDays.length) return false;
+  const [hour, minute] = effectiveTime.split(":").map(Number);
+  const response = await fetch(`${apiBase}/api/push/subscriptions`, {
+    method: "POST",
+    headers: deviceHeaders(),
+    body: JSON.stringify({
+      endpoint: subscription.endpoint,
+      keys: subscription.toJSON().keys,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Seoul",
+      deliveryHour: hour,
+      deliveryMinute: minute,
+      weekdays: effectiveDays,
+    }),
+  });
+  if (!response.ok) {
+    await subscription.unsubscribe().catch(() => false);
+    return false;
+  }
+  window.localStorage.setItem(serverSubscriptionKey, subscription.endpoint);
+  return true;
+}
+
+function readSavedDelivery() {
+  try {
+    const value = JSON.parse(window.localStorage.getItem("achim-gyeol-delivery") ?? "null") as { time?: unknown; days?: unknown } | null;
+    if (!value || typeof value.time !== "string" || !Array.isArray(value.days)) return null;
+    const days = value.days.filter((day): day is number => Number.isInteger(day) && day >= 0 && day <= 6);
+    return { time: value.time, days };
+  } catch {
+    return null;
+  }
 }
 
 async function errorMessage(response: Response, fallback: string) {
