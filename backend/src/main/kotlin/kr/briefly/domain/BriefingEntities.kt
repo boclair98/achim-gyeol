@@ -6,7 +6,8 @@ import java.time.OffsetDateTime
 
 enum class Category { POLICY, ECONOMY, SOCIETY, INTERNATIONAL, TECH, LIFE, CULTURE, SPORTS, ESPORTS }
 enum class VerificationStatus { VERIFIED, DEVELOPING, CONFLICTING, SINGLE_SOURCE }
-enum class FeedbackType { INCORRECT, BIASED, UNCLEAR, HELPFUL }
+enum class FeedbackType { INCORRECT, BIASED, UNCLEAR, HELPFUL, INTERESTED, NOT_INTERESTED }
+enum class StoryInterest { INTERESTED, NOT_INTERESTED }
 enum class EditorialState { AUTO_APPROVED, REVIEW, APPROVED, HELD, PUBLISHED }
 enum class DeliveryState { PENDING, DELIVERED, FAILED, EXPIRED }
 enum class ReaderEventType { BRIEFING_OPEN, CARD_VIEW, STORY_DETAIL, SOURCE_OPEN, SHARE, COMPLETE }
@@ -84,7 +85,7 @@ class NewsSource(
 }
 
 @Entity
-@Table(name = "story_feedback")
+@Table(name = "story_feedback", indexes = [Index(name = "idx_story_feedback_user_created", columnList = "userId,createdAt"), Index(name = "idx_story_feedback_story_user", columnList = "storyId,userId")])
 class StoryFeedback(
     @Column(nullable = false) var storyId: Long,
     @Column(nullable = false) var userId: String,

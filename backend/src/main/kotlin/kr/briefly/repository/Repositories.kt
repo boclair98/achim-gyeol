@@ -28,6 +28,8 @@ interface NewsStoryRepository : JpaRepository<NewsStory, Long> {
 
 interface StoryFeedbackRepository : JpaRepository<StoryFeedback, Long> {
     fun existsByStoryIdAndUserIdAndType(storyId: Long, userId: String, type: FeedbackType): Boolean
+    fun findAllByUserIdAndTypeInAndCreatedAtAfter(userId: String, types: Collection<FeedbackType>, cutoff: OffsetDateTime): List<StoryFeedback>
+    fun deleteAllByStoryIdAndUserIdAndTypeIn(storyId: Long, userId: String, types: Collection<FeedbackType>)
     fun findAllByCreatedAtBefore(cutoff: OffsetDateTime): List<StoryFeedback>
 }
 

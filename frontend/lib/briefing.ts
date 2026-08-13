@@ -1,5 +1,6 @@
 export type Source = { publisher: string; url: string; publishedAt: string; primarySource?: boolean };
 export type EvidenceClaim = { statement: string; sources: Source[] };
+export type StoryInterest = "INTERESTED" | "NOT_INTERESTED";
 export const briefingCategoryOrder = ["정책", "경제", "사회", "국제", "테크", "생활", "문화", "스포츠", "e스포츠"] as const;
 export type BriefingCategory = (typeof briefingCategoryOrder)[number];
 export type Story = {
@@ -20,8 +21,9 @@ export type Story = {
   claims?: EvidenceClaim[];
   sources: Source[];
   corrections?: Array<{ correctedAt: string; reason: string }>;
+  viewerInterest?: StoryInterest | null;
 };
-export type Briefing = { id: number; briefingDate?: string; productionReady?: boolean; editorialState?: "AUTO_APPROVED" | "REVIEW" | "APPROVED" | "HELD" | "PUBLISHED"; humanReviewed?: boolean; dateLabel: string; lead: string; readMinutes: number; verifiedCount: number; lastVerifiedAt: string; stories: Story[] };
+export type Briefing = { id: number; briefingDate?: string; productionReady?: boolean; editorialState?: "AUTO_APPROVED" | "REVIEW" | "APPROVED" | "HELD" | "PUBLISHED"; humanReviewed?: boolean; dateLabel: string; lead: string; readMinutes: number; verifiedCount: number; lastVerifiedAt: string; stories: Story[]; personalized?: boolean };
 
 export const demoBriefing: Briefing = {
   id: 1,

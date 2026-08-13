@@ -8,6 +8,7 @@ import kr.briefly.repository.StoryCorrectionRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -15,8 +16,8 @@ import java.util.Locale
 data class SourceResponse(val publisher: String, val url: String, val publishedAt: String, val primarySource: Boolean)
 data class ClaimResponse(val statement: String, val sources: List<SourceResponse>)
 data class CorrectionResponse(val correctedAt: String, val reason: String)
-data class StoryResponse(val id: Long, val category: String, val title: String, val oneLineSummary: String, val summary: String, val whyItMatters: String, val whatToWatch: String?, val verificationStatus: VerificationStatus, val qualityScore: Int, val uncertainty: String?, val evidenceAvailable: Boolean, val claims: List<ClaimResponse>, val sources: List<SourceResponse>, val corrections: List<CorrectionResponse> = emptyList())
-data class BriefingResponse(val id: Long, val briefingDate: LocalDate, val productionReady: Boolean, val editorialState: EditorialState, val humanReviewed: Boolean, val dateLabel: String, val lead: String, val readMinutes: Int, val verifiedCount: Int, val lastVerifiedAt: String, val stories: List<StoryResponse>)
+data class StoryResponse(val id: Long, val category: String, val title: String, val oneLineSummary: String, val summary: String, val whyItMatters: String, val whatToWatch: String?, val verificationStatus: VerificationStatus, val qualityScore: Int, val uncertainty: String?, val evidenceAvailable: Boolean, val claims: List<ClaimResponse>, val sources: List<SourceResponse>, val corrections: List<CorrectionResponse> = emptyList(), val viewerInterest: StoryInterest? = null)
+data class BriefingResponse(val id: Long, val briefingDate: LocalDate, val productionReady: Boolean, val editorialState: EditorialState, val humanReviewed: Boolean, val dateLabel: String, val lead: String, val readMinutes: Int, val verifiedCount: Int, val lastVerifiedAt: String, val stories: List<StoryResponse>, val personalized: Boolean = false)
 data class ArchiveEditionResponse(val id: Long, val briefingDate: LocalDate, val dateLabel: String, val lead: String, val readMinutes: Int, val verifiedCount: Int, val storyCount: Int, val categories: List<String>, val headlines: List<String>)
 data class BriefingBuildStatus(val briefingDate: LocalDate, val coverageReady: Boolean, val productionReady: Boolean, val stories: Int, val categories: Int, val minimumStories: Int, val minimumCategories: Int, val blockReasons: List<String>)
 
@@ -29,17 +30,17 @@ class BriefingService(
     private val coveragePolicy: BriefingCoveragePolicy,
 ) {
     @Transactional(readOnly = true)
-    fun latest(): BriefingResponse {
+    fun latest(viewerId: String? = null): BriefingResponse {
         val editions = editionRepository.findTop30ByOrderByBriefingDateDesc()
         val publicEdition = editions.firstOrNull { it.isPubliclyReadable() }
         val demoEdition = editions.firstOrNull { it.pipelineGenerated != true }
-        return (publicEdition ?: demoEdition)?.toResponse() ?: error("발행된 브리핑이 없습니다")
+        return (publicEdition ?: demoEdition)?.toResponse(viewerId) ?: error("발행된 브리핑이 없습니다")
     }
 
     @Transactional(readOnly = true)
-    fun byDate(date: LocalDate): BriefingResponse = editionRepository.findByBriefingDate(date)
+    fun byDate(date: LocalDate, viewerId: String? = null): BriefingResponse = editionRepository.findByBriefingDate(date)
         ?.takeIf { it.isPubliclyReadable() }
-        ?.toResponse()
+        ?.toResponse(viewerId)
         ?: error("해당 날짜의 발행된 브리핑이 없습니다")
 
     @Transactional(readOnly = true)
@@ -84,8 +85,35 @@ class BriefingService(
         feedbackRepository.save(StoryFeedback(storyId = storyId, userId = userId, type = type, detail = detail?.take(600)))
     }
 
-    private fun BriefingEdition.toResponse(): BriefingResponse {
+    @Transactional
+    fun interest(storyId: Long, userId: String, interest: StoryInterest) {
+        if (!storyRepository.existsById(storyId)) error("해당 뉴스를 찾을 수 없습니다")
+        feedbackRepository.deleteAllByStoryIdAndUserIdAndTypeIn(storyId, userId, interestFeedbackTypes)
+        feedbackRepository.save(
+            StoryFeedback(
+                storyId = storyId,
+                userId = userId,
+                type = if (interest == StoryInterest.INTERESTED) FeedbackType.INTERESTED else FeedbackType.NOT_INTERESTED,
+            ),
+        )
+    }
+
+    private fun BriefingEdition.toResponse(viewerId: String?): BriefingResponse {
         val zone = ZoneId.of("Asia/Seoul")
+        val signals = if (viewerId == null) emptyList() else feedbackRepository
+            .findAllByUserIdAndTypeInAndCreatedAtAfter(viewerId, interestFeedbackTypes, OffsetDateTime.now().minusDays(90))
+            .groupBy(StoryFeedback::storyId)
+            .mapValues { (_, values) -> values.maxBy(StoryFeedback::createdAt) }
+        val currentStories = stories.sortedBy(NewsStory::displayOrder)
+        val currentCategories = currentStories.associate { requireNotNull(it.id) to it.category }
+        val missingStoryIds = signals.keys.filterNot(currentCategories::containsKey)
+        val categoryByStory = currentCategories + if (missingStoryIds.isEmpty()) emptyMap() else
+            storyRepository.findAllById(missingStoryIds).associate { requireNotNull(it.id) to it.category }
+        val categoryScores = signals.values
+            .mapNotNull { signal -> categoryByStory[signal.storyId]?.let { it to signal.type.interestWeight() } }
+            .groupingBy(Pair<Category, Int>::first)
+            .fold(0) { score, (_, weight) -> score + weight }
+        val orderedStories = BriefingStoryPersonalizer.order(currentStories, categoryScores)
         return BriefingResponse(
             id = requireNotNull(id),
             briefingDate = briefingDate,
@@ -97,7 +125,7 @@ class BriefingService(
             readMinutes = readMinutes,
             verifiedCount = stories.count { it.verificationStatus == VerificationStatus.VERIFIED },
             lastVerifiedAt = lastVerifiedAt.atZoneSameInstant(zone).format(DateTimeFormatter.ofPattern("a h:mm", Locale.KOREAN)),
-            stories = stories.map { story ->
+            stories = orderedStories.map { story ->
                 val sources = story.sources.map { SourceResponse(it.publisher, it.url, it.publishedAt.toString(), it.primarySource) }
                 val claims = story.claims.map { claim ->
                     ClaimResponse(claim.statement, claim.sourceIndexes.split(',').mapNotNull(String::toIntOrNull).distinct().mapNotNull(sources::getOrNull))
@@ -108,8 +136,10 @@ class BriefingService(
                     story.summary, story.whyItMatters, story.whatToWatch, story.verificationStatus, story.qualityScore,
                     story.uncertainty, claims.isNotEmpty(), claims, sources,
                     correctionRepository.findAllByStoryIdOrderByCreatedAtDesc(requireNotNull(story.id)).map { CorrectionResponse(it.createdAt.toString(), it.reason) },
+                    signals[requireNotNull(story.id)]?.type?.toStoryInterest(),
                 )
             },
+            personalized = categoryScores.values.any { it != 0 },
         )
     }
 
@@ -128,5 +158,32 @@ class BriefingService(
         Category.CULTURE -> "문화"
         Category.SPORTS -> "스포츠"
         Category.ESPORTS -> "e스포츠"
+    }
+
+    private fun FeedbackType.interestWeight(): Int = when (this) {
+        FeedbackType.INTERESTED -> 2
+        FeedbackType.NOT_INTERESTED -> -1
+        else -> 0
+    }
+
+    private fun FeedbackType.toStoryInterest(): StoryInterest? = when (this) {
+        FeedbackType.INTERESTED -> StoryInterest.INTERESTED
+        FeedbackType.NOT_INTERESTED -> StoryInterest.NOT_INTERESTED
+        else -> null
+    }
+
+    companion object {
+        private val interestFeedbackTypes = listOf(FeedbackType.INTERESTED, FeedbackType.NOT_INTERESTED)
+    }
+}
+
+internal object BriefingStoryPersonalizer {
+    private const val CORE_STORY_COUNT = 3
+
+    fun order(stories: List<NewsStory>, categoryScores: Map<Category, Int>): List<NewsStory> {
+        val editorialOrder = stories.sortedBy(NewsStory::displayOrder)
+        if (editorialOrder.size <= CORE_STORY_COUNT || categoryScores.isEmpty()) return editorialOrder
+        return editorialOrder.take(CORE_STORY_COUNT) + editorialOrder.drop(CORE_STORY_COUNT)
+            .sortedWith(compareByDescending<NewsStory> { categoryScores[it.category] ?: 0 }.thenBy(NewsStory::displayOrder))
     }
 }
