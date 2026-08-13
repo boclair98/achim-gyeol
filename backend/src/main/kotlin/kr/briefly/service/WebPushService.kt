@@ -8,8 +8,10 @@ import kr.briefly.repository.ReaderEventRepository
 import kr.briefly.domain.PushDeliveryAttempt
 import kr.briefly.domain.DeliveryState
 import nl.martijndwars.webpush.Notification
+import nl.martijndwars.webpush.Encoding
 import nl.martijndwars.webpush.PushService
 import nl.martijndwars.webpush.Urgency
+import org.apache.http.util.EntityUtils
 import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.slf4j.LoggerFactory
@@ -29,6 +31,7 @@ import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.OffsetDateTime
+import java.nio.charset.StandardCharsets.UTF_8
 import java.time.ZoneId
 import java.time.zone.ZoneRulesException
 import java.util.Base64
@@ -366,7 +369,11 @@ class WebPushService(
             "tag" to if (test) "achim-gyeol-test" else "achim-gyeol-daily",
         ))
         val notification = Notification(subscription.endpoint, subscription.p256dh, subscription.auth, payload, Urgency.NORMAL)
-        val response = PushService(vapidKey!!.publicKey, privateKey, subject).send(notification)
+        // web-push 5.1.2 still defaults the synchronous send(notification) API to
+        // legacy AESGCM. Modern Chrome/FCM subscriptions require RFC 8188
+        // AES128GCM, so always select it explicitly.
+        val response = PushService(vapidKey!!.publicKey, privateKey, subject)
+            .send(notification, WEB_PUSH_CONTENT_ENCODING)
         val status = response.statusLine.statusCode
         if (status in 200..299) {
             // An operator test proves the device connection only. It must not consume
@@ -384,13 +391,18 @@ class WebPushService(
                 subscription.active = false
                 subscription.updatedAt = OffsetDateTime.now()
             }
-            subscription.lastError = "Push provider returned HTTP $status"
+            val providerDiagnostic = safeProviderDiagnostic(
+                status,
+                runCatching { response.entity?.let { EntityUtils.toString(it, UTF_8) } }.getOrNull(),
+            )
+            logger.warn("Web push provider rejected request: {}", providerDiagnostic)
+            subscription.lastError = "Push provider returned $providerDiagnostic"
             repository.saveAndFlush(subscription)
             if (endpointExpired) metricsService.recordIfChanged("PUSH_ENDPOINT_EXPIRED")
             PushResult(
                 delivered = false,
                 message = "푸시 제공자가 발송을 거절했습니다. (HTTP $status)",
-                diagnostic = "HTTP $status",
+                diagnostic = providerDiagnostic,
                 retryable = pushStatusIsRetryable(status),
             )
         }
@@ -405,6 +417,9 @@ class WebPushService(
             retryable = true,
         )
     }
+
+    private fun safeProviderDiagnostic(status: Int, responseBody: String?): String =
+        providerResponseDiagnostic(status, responseBody)
 
     private fun safeExceptionDiagnostic(exception: Exception): String {
         val detail = exception.message.orEmpty()
@@ -421,6 +436,18 @@ class WebPushService(
         fun endpointHash(endpoint: String): String = MessageDigest.getInstance("SHA-256")
             .digest(endpoint.toByteArray(StandardCharsets.UTF_8)).joinToString("") { "%02x".format(it) }
     }
+}
+
+internal val WEB_PUSH_CONTENT_ENCODING: Encoding = Encoding.AES128GCM
+
+internal fun providerResponseDiagnostic(status: Int, responseBody: String?): String {
+    val detail = responseBody.orEmpty()
+        .replace(Regex("https?://\\S+"), "<redacted-url>")
+        .replace(Regex("[\\r\\n\\t]+"), " ")
+        .replace(Regex("\\s{2,}"), " ")
+        .trim()
+        .take(240)
+    return "HTTP $status${if (detail.isBlank()) "" else ": $detail"}"
 }
 
 @Component
