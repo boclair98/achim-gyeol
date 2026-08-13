@@ -80,6 +80,18 @@ export function BriefingDelivery() {
       target.focus({ preventScroll: true });
     }));
   };
+  const openStoryCard = (storyId: number) => {
+    const card = document.getElementById(`briefing-card-${storyId}`);
+    const track = document.getElementById("briefing-card-track");
+    const deck = document.getElementById("briefing-card-deck");
+    if (!card || !track || !deck) return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const behavior: ScrollBehavior = reduceMotion ? "auto" : "smooth";
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#briefing-card-${storyId}`);
+    track.scrollTo({ left: Math.max(0, card.offsetLeft - track.offsetLeft - 14), behavior });
+    deck.scrollIntoView({ behavior, block: "start" });
+    card.focus({ preventScroll: true });
+  };
 
   const liveToday = loadState === "live" && isTodayInKorea(briefing.briefingDate);
   const reportingEnabled = loadState === "live" && liveToday && briefing.productionReady === true;
@@ -100,7 +112,7 @@ export function BriefingDelivery() {
     <div className="news-reader-layout">
       <section className="news-feed" aria-live="polite">
         <header className="news-feed-heading"><div><span>NEWS BRIEF</span><h2>{category === "전체" ? "품질 기준을 통과한 중요 뉴스" : `${category} 분야 중요 뉴스`}</h2></div><p>확인된 사실과 아직 확인되지 않은 내용을 구분했습니다.</p></header>
-        {stories.map((story) => <NewsArticle key={story.id} story={story} editionId={briefing.id} index={briefing.stories.findIndex((item) => item.id === story.id) + 1} reportingEnabled={reportingEnabled} />)}
+        {stories.map((story) => <NewsArticle key={story.id} story={story} editionId={briefing.id} index={briefing.stories.findIndex((item) => item.id === story.id) + 1} reportingEnabled={reportingEnabled} onBackToCard={openStoryCard} />)}
         {!loading && stories.length === 0 && <div className="reader-empty">이 분야에서 품질 기준을 통과한 중요 뉴스가 없습니다.</div>}
       </section>
 
@@ -201,8 +213,8 @@ function DailyBriefingSheets({ briefing, loading, reportingEnabled, onOpenStory 
       <details className="reader-disclosure"><summary>{briefing.humanReviewed ? "AI 요약 · 운영자 최종 승인" : "AI 요약 · 자동 품질검사"}</summary><p>확인된 사실, 의미, 아직 불확실한 내용을 나누고 각 문장에 근거 원문을 연결합니다.</p></details>
     </div>
 
-    <div className="brief-sheet-deck">
-      <div className="brief-sheet-track" ref={trackRef} onScroll={(event) => {
+    <div className="brief-sheet-deck" id="briefing-card-deck">
+      <div className="brief-sheet-track" id="briefing-card-track" ref={trackRef} onScroll={(event) => {
         const track = event.currentTarget;
         if (track.clientWidth) {
           const cards = Array.from(track.querySelectorAll<HTMLElement>("[data-page-index]"));
@@ -244,7 +256,7 @@ function DailyBriefingSheets({ briefing, loading, reportingEnabled, onOpenStory 
           const factLimit = digestSize === "compact" ? 1 : digestSize === "deep" ? 5 : 3;
           const facts = evidenceReady ? story.claims!.slice(0, factLimit).map((claim) => claim.statement) : summaryPoints(story.summary).slice(0, factLimit);
           const watchPoint = story.whatToWatch || story.uncertainty;
-          return <article className={`brief-sheet ${digestSize}`} data-page-index={pageIndex} aria-label={`${storyPageIndex + 1}번째 뉴스, ${story.title}`} key={`sheet-${story.id}`}>
+          return <article className={`brief-sheet ${digestSize}`} id={`briefing-card-${story.id}`} data-page-index={pageIndex} aria-label={`${storyPageIndex + 1}번째 뉴스, ${story.title}`} tabIndex={-1} key={`sheet-${story.id}`}>
           <header>
             <div><span>ACHIMGYEOL</span><strong>어제 뉴스 · 오늘 아침 한 번에</strong></div>
             <div><b>{briefing.dateLabel}</b><small>{storyPageIndex + 1} / {orderedStories.length}</small></div>
@@ -275,12 +287,13 @@ function DailyBriefingSheets({ briefing, loading, reportingEnabled, onOpenStory 
   </section>;
 }
 
-function NewsArticle({ story, editionId, index, reportingEnabled }: { story: Story; editionId: number; index: number; reportingEnabled: boolean }) {
+function NewsArticle({ story, editionId, index, reportingEnabled, onBackToCard }: { story: Story; editionId: number; index: number; reportingEnabled: boolean; onBackToCard: (storyId: number) => void }) {
   const evidenceReady = story.evidenceAvailable && Boolean(story.claims?.length);
   const verified = story.verificationStatus === "VERIFIED";
   const confirmedPoints = evidenceReady ? story.claims! : summaryPoints(story.summary).map((statement) => ({ statement, sources: [] }));
 
   return <article className="reader-article" id={`news-${story.id}`} tabIndex={-1}>
+    <a className="reader-card-return top" href={`#briefing-card-${story.id}`} onClick={(event) => { event.preventDefault(); onBackToCard(story.id); }}><ChevronLeft size={15} /> 이 뉴스 카드로 돌아가기</a>
     <div className="reader-article-meta"><b>{String(index).padStart(2, "0")}</b><span>{story.category}</span><em className={verified && evidenceReady ? "confirmed" : "checking"}><CheckCircle2 size={14} /> {evidenceReady ? (verified ? "근거 확인" : "추가 확인 중") : "원문 제공"}</em><small>AI 요약</small></div>
     <h2>{story.title}</h2>
     <section className="reader-conclusion"><span>한 줄 결론</span><p>{story.oneLineSummary || confirmedPoints[0]?.statement || story.title}</p></section>
@@ -307,6 +320,7 @@ function NewsArticle({ story, editionId, index, reportingEnabled }: { story: Sto
       <div>{story.sources.map((source, sourceIndex) => <a href={source.url} target="_blank" rel="noreferrer" onClick={() => { if (reportingEnabled) void trackReaderEvent("SOURCE_OPEN", editionId, story.id); }} key={`${source.publisher}-${source.url}`}><span><b>[{sourceIndex + 1}]</b>{source.publisher}{source.primarySource && <small>1차 자료</small>}</span><ExternalLink size={14} /></a>)}</div>
     </details>
     {reportingEnabled && <StoryFeedbackPanel storyId={story.id} />}
+    <a className="reader-card-return bottom" href={`#briefing-card-${story.id}`} onClick={(event) => { event.preventDefault(); onBackToCard(story.id); }}><ChevronLeft size={16} /> 이 뉴스 카드로 돌아가기</a>
   </article>;
 }
 
