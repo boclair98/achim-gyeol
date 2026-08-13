@@ -47,7 +47,7 @@ data class PushResult(
     /** A safe operator-facing diagnostic; never contains the push endpoint. */
     val diagnostic: String? = null,
     /** Whether a short in-process retry can reasonably recover the failure. */
-    val retryable: Boolean = true,
+    val retryable: Boolean = false,
 )
 data class PushDeliverySummary(
     val status: String,
@@ -63,6 +63,8 @@ data class PushDeliverySummary(
 internal fun deliveryWeekdayIndex(dayOfWeek: DayOfWeek): Int = dayOfWeek.value - 1
 internal val fixedDeliveryTime: LocalTime = LocalTime.of(7, 30)
 internal val lastDeliveryTime: LocalTime = LocalTime.of(8, 0)
+internal fun pushStatusIsRetryable(status: Int): Boolean = status == 408 || status == 429 || status >= 500
+internal fun pushEndpointIsInvalid(status: Int): Boolean = status == 400 || status == 404 || status == 410
 internal fun deliveryIsDue(current: LocalTime, scheduled: LocalTime = fixedDeliveryTime): Boolean =
     !current.isBefore(scheduled) && !current.isAfter(lastDeliveryTime)
 
@@ -199,11 +201,20 @@ class WebPushService(
                     failed += 1
                     attempt.state = if (subscription.active) DeliveryState.FAILED else DeliveryState.EXPIRED
                     attempt.error = subscription.lastError?.take(600) ?: result.message.take(600)
+                    failureReasons += failureReason(subscription, result)
                 }
                 deliveryAttemptRepository.save(attempt)
             }
         }
-        return PushDeliverySummary("COMPLETED", subscriptions.size, due, delivered, failed, "오늘 브리핑 발송 검사를 완료했습니다.")
+        return PushDeliverySummary(
+            "COMPLETED",
+            subscriptions.size,
+            due,
+            delivered,
+            failed,
+            "오늘 브리핑 발송 검사를 완료했습니다.",
+            failureReasons,
+        )
     }
 
     fun activeSubscriptionCount(): Int = repository.countByActiveTrue().toInt()
@@ -232,7 +243,15 @@ class WebPushService(
             }
             deliveryAttemptRepository.save(attempt)
         }
-        return PushDeliverySummary("RETRY_COMPLETED", repository.countByActiveTrue().toInt(), attempts.size, delivered, failed, "실패한 발송만 안전하게 재시도했습니다.")
+        return PushDeliverySummary(
+            "RETRY_COMPLETED",
+            repository.countByActiveTrue().toInt(),
+            attempts.size,
+            delivered,
+            failed,
+            "실패한 발송만 안전하게 재시도했습니다.",
+            failureReasons,
+        )
     }
 
     @Transactional
@@ -244,6 +263,7 @@ class WebPushService(
         }
         var delivered = 0
         var failed = 0
+        val failureReasons = mutableListOf<String>()
         subscriptions.forEach { subscription ->
             val result = send(
                 subscription,
@@ -251,7 +271,10 @@ class WebPushService(
                 body = "한 줄 결론·확인된 핵심·근거 출처가 연결된 새 뉴스 카드를 확인해 보세요.",
                 test = true,
             )
-            if (result.delivered) delivered += 1 else failed += 1
+            if (result.delivered) delivered += 1 else {
+                failed += 1
+                failureReasons += failureReason(subscription, result)
+            }
         }
         return PushDeliverySummary(
             status = if (failed == 0) "TEST_COMPLETED" else "TEST_PARTIAL_FAILURE",
@@ -260,6 +283,7 @@ class WebPushService(
             delivered = delivered,
             failed = failed,
             message = "운영자 테스트 알림을 발송했습니다. 정기 브리핑 발송 기록에는 반영하지 않았습니다.",
+            failureReasons = failureReasons,
         )
     }
 
@@ -309,7 +333,9 @@ class WebPushService(
             repository.save(subscription)
             PushResult(true, "푸시 알림을 발송했습니다.")
         } else {
-            val endpointExpired = subscription.active && (status == 404 || status == 410)
+            // If one endpoint returns 400 while other devices succeed, its
+            // subscription keys are stale/malformed and it must register again.
+            val endpointExpired = subscription.active && pushEndpointIsInvalid(status)
             if (endpointExpired) {
                 subscription.active = false
                 subscription.updatedAt = OffsetDateTime.now()
@@ -317,13 +343,23 @@ class WebPushService(
             subscription.lastError = "Push provider returned HTTP $status"
             repository.saveAndFlush(subscription)
             if (endpointExpired) metricsService.recordIfChanged("PUSH_ENDPOINT_EXPIRED")
-            PushResult(false, "푸시 제공자가 발송을 거절했습니다. (HTTP $status)")
+            PushResult(
+                delivered = false,
+                message = "푸시 제공자가 발송을 거절했습니다. (HTTP $status)",
+                diagnostic = "HTTP $status",
+                retryable = pushStatusIsRetryable(status),
+            )
         }
     } catch (exception: Exception) {
         logger.warn("Web push delivery failed: {}", exception.message)
         subscription.lastError = safeExceptionDiagnostic(exception)
         repository.save(subscription)
-        PushResult(false, "푸시 발송 중 오류가 발생했습니다.")
+        PushResult(
+            delivered = false,
+            message = "푸시 발송 중 오류가 발생했습니다.",
+            diagnostic = subscription.lastError,
+            retryable = true,
+        )
     }
 
     private fun safeExceptionDiagnostic(exception: Exception): String {

@@ -23,4 +23,23 @@ class WebPushServiceTest {
         assertThat(deliveryIsDue(LocalTime.of(8, 0), scheduled)).isTrue()
         assertThat(deliveryIsDue(LocalTime.of(8, 1), scheduled)).isFalse()
     }
+
+    @Test
+    fun `only transient push provider statuses are retried`() {
+        assertThat(pushStatusIsRetryable(408)).isTrue()
+        assertThat(pushStatusIsRetryable(429)).isTrue()
+        assertThat(pushStatusIsRetryable(503)).isTrue()
+        assertThat(pushStatusIsRetryable(400)).isFalse()
+        assertThat(pushStatusIsRetryable(404)).isFalse()
+        assertThat(pushStatusIsRetryable(410)).isFalse()
+    }
+
+    @Test
+    fun `invalid or expired subscriptions are deactivated for clean re-registration`() {
+        assertThat(pushEndpointIsInvalid(400)).isTrue()
+        assertThat(pushEndpointIsInvalid(404)).isTrue()
+        assertThat(pushEndpointIsInvalid(410)).isTrue()
+        assertThat(pushEndpointIsInvalid(429)).isFalse()
+        assertThat(pushEndpointIsInvalid(503)).isFalse()
+    }
 }
