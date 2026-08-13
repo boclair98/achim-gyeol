@@ -2,10 +2,27 @@ package kr.briefly.service
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import nl.martijndwars.webpush.Encoding
 import java.time.DayOfWeek
 import java.time.LocalTime
 
 class WebPushServiceTest {
+    @Test
+    fun `web push always uses modern AES128GCM content encoding`() {
+        assertThat(WEB_PUSH_CONTENT_ENCODING).isEqualTo(Encoding.AES128GCM)
+    }
+
+    @Test
+    fun `provider diagnostics redact endpoints and collapse whitespace`() {
+        val diagnostic = providerResponseDiagnostic(
+            403,
+            "denied\nendpoint=https://fcm.googleapis.com/fcm/send/secret\tbad token",
+        )
+
+        assertThat(diagnostic).isEqualTo("HTTP 403: denied endpoint=<redacted-url> bad token")
+        assertThat(diagnostic).doesNotContain("secret")
+    }
+
     @Test
     fun `delivery weekday indexes follow the frontend Monday-first order`() {
         assertThat(deliveryWeekdayIndex(DayOfWeek.MONDAY)).isEqualTo(0)
