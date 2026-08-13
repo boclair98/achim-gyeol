@@ -23,6 +23,8 @@ import java.net.URI
 import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.ZoneId
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
 import kotlin.math.ceil
 import kotlin.math.max
 
@@ -42,6 +44,11 @@ data class GenerationResult(
 
 data class ArticleCluster(val category: Category, val articles: List<CollectedArticle>, val rank: Int)
 data class EditorialStory(val story: NewsStory, val importanceScore: Int, val clusterRank: Int)
+private data class CandidateEvaluation(
+    val cluster: ArticleCluster,
+    val candidate: EditorialStory?,
+    val failure: String? = null,
+)
 
 internal fun collectArticlesForDate(
     coverageDate: LocalDate,
@@ -58,6 +65,22 @@ internal fun collectArticlesForDate(
         if (page.size < 100 || pageDates.any { it.isBefore(coverageDate) }) break
     }
     return collected.filter { it.publishedAt.atZoneSameInstant(zone).toLocalDate() == coverageDate }
+}
+
+internal fun selectBalancedAiCandidates(
+    clusters: List<ArticleCluster>,
+    maxPerCategory: Int,
+    maxTotal: Int,
+): List<ArticleCluster> {
+    val grouped = clusters.groupBy(ArticleCluster::category)
+        .mapValues { (_, values) -> values.sortedByDescending(ArticleCluster::rank) }
+    val selected = mutableListOf<ArticleCluster>()
+    for (round in 0 until maxPerCategory.coerceAtLeast(1)) {
+        Category.entries.forEach { category ->
+            grouped[category]?.getOrNull(round)?.let(selected::add)
+        }
+    }
+    return selected.take(maxTotal.coerceAtLeast(1))
 }
 
 @Component
@@ -182,6 +205,8 @@ class NewsBriefingGenerator(
     )
     @Value("\${app.pipeline.max-candidates-per-category:6}") private var maxCandidatesPerCategory: Int = 6
     @Value("\${app.pipeline.search-max-pages:3}") private var searchMaxPages: Int = 3
+    @Value("\${app.pipeline.max-ai-candidates:18}") private var maxAiCandidates: Int = 18
+    @Value("\${app.pipeline.ai-concurrency:3}") private var aiConcurrency: Int = 3
     @Value("\${app.pipeline.max-stories-per-category:3}") private var maxStoriesPerCategory: Int = 3
     @Value("\${app.pipeline.max-stories:15}") private var maxStories: Int = 15
     @Value("\${app.pipeline.minimum-importance-score:60}") private var minimumImportanceScore: Int = 60
@@ -215,19 +240,26 @@ class NewsBriefingGenerator(
             clusterer.cluster(category, articles, limit = maxCandidatesPerCategory)
         }.sortedByDescending(ArticleCluster::rank))
 
+        val aiCandidates = selectBalancedAiCandidates(
+            clusters = clusters,
+            maxPerCategory = maxCandidatesPerCategory,
+            maxTotal = maxAiCandidates,
+        )
+        val evaluations = evaluateCandidates(aiCandidates, summarizer)
+        log.info(
+            "Morning briefing AI review completed: selectedCandidates={}, totalClusters={}, concurrency={}",
+            aiCandidates.size,
+            clusters.size,
+            aiConcurrency.coerceIn(1, 6),
+        )
         val failures = mutableListOf<String>()
         val editorialStories = mutableListOf<EditorialStory>()
         val acceptedByCategory = mutableMapOf<Category, Int>()
-        clusters.forEach { cluster ->
+        evaluations.forEach { evaluation ->
+            val cluster = evaluation.cluster
             if ((acceptedByCategory[cluster.category] ?: 0) >= maxStoriesPerCategory.coerceAtLeast(1)) return@forEach
-            val candidate = runCatching { buildStory(cluster, summarizer) }
-                .onFailure { exception ->
-                    val reason = "${cluster.category}: ${exception.message ?: exception.javaClass.simpleName}"
-                    failures += reason
-                    log.warn("Briefing candidate rejected: {}", reason)
-                }
-                .getOrNull()
-                ?: return@forEach
+            evaluation.failure?.let(failures::add)
+            val candidate = evaluation.candidate ?: return@forEach
             if (editorialStories.any { existing -> sameEditorialEvent(existing, candidate) }) {
                 log.info("Duplicate morning briefing candidate excluded after AI summary: category={}, title={}", candidate.story.category, candidate.story.title)
                 return@forEach
@@ -283,9 +315,37 @@ class NewsBriefingGenerator(
             collectedArticles = collectedCount,
             candidateClusters = clusters.size,
             stories = stories,
-            rejectedCandidates = (clusters.size - editorialStories.size).coerceAtLeast(0),
+            rejectedCandidates = (aiCandidates.size - editorialStories.size).coerceAtLeast(0),
             coverage = coverage,
         )
+    }
+
+    private fun evaluateCandidates(
+        clusters: List<ArticleCluster>,
+        summarizer: AiSummarizer,
+    ): List<CandidateEvaluation> {
+        if (clusters.isEmpty()) return emptyList()
+        val executor = Executors.newFixedThreadPool(aiConcurrency.coerceIn(1, 6)) { runnable ->
+            Thread(runnable, "morning-ai-summary").apply { isDaemon = true }
+        }
+        return try {
+            val tasks = clusters.map { cluster ->
+                Callable {
+                    runCatching { buildStory(cluster, summarizer) }
+                        .fold(
+                            onSuccess = { CandidateEvaluation(cluster, it) },
+                            onFailure = { exception ->
+                                val reason = "${cluster.category}: ${exception.message ?: exception.javaClass.simpleName}"
+                                log.warn("Briefing candidate rejected: {}", reason)
+                                CandidateEvaluation(cluster, null, reason)
+                            },
+                        )
+                }
+            }
+            executor.invokeAll(tasks).map { it.get() }
+        } finally {
+            executor.shutdownNow()
+        }
     }
 
     private fun buildStory(cluster: ArticleCluster, summarizer: AiSummarizer): EditorialStory? {

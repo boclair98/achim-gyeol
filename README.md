@@ -320,12 +320,16 @@ NAVER_API_HUB_CLIENT_ID=...
 NAVER_API_HUB_CLIENT_SECRET=...
 OPENAI_API_KEY=...
 OPENAI_MODEL=gpt-5-mini
+OPENAI_CONNECT_TIMEOUT_SECONDS=10
+OPENAI_READ_TIMEOUT_SECONDS=90
 
 NEWS_PIPELINE_ENABLED=true
 NEWS_GENERATE_ON_STARTUP=true
 DEMO_DATA_ENABLED=false
 NEWS_MAX_CANDIDATES_PER_CATEGORY=6
 NEWS_SEARCH_MAX_PAGES=3
+NEWS_MAX_AI_CANDIDATES=18
+NEWS_AI_CONCURRENCY=3
 NEWS_MAX_STORIES_PER_CATEGORY=3
 NEWS_MAX_STORIES=15
 NEWS_MINIMUM_IMPORTANCE_SCORE=60
@@ -369,11 +373,15 @@ GET https://morningnews.coders.kr/api/push/public-key
 | `NAVER_API_HUB_BASE_URL` | NAVER API HUB 주소 | 공식 기본 주소 |
 | `OPENAI_API_KEY` | AI 요약 | 빈 값 |
 | `OPENAI_MODEL` | 요약 모델 | `gpt-5-mini` |
+| `OPENAI_CONNECT_TIMEOUT_SECONDS` | OpenAI 연결 제한 시간 | `10` |
+| `OPENAI_READ_TIMEOUT_SECONDS` | 사건 1건당 AI 응답 제한 시간 | `90` |
 | `NEWS_PIPELINE_ENABLED` | 자동 뉴스 생성 활성화 | `false` |
 | `NEWS_GENERATE_ON_STARTUP` | 시작 시 한 번 생성 | `false` |
 | `NEWS_GENERATION_CRON` | Spring 6필드 cron | `0 0 6 * * *` |
 | `NEWS_MAX_CANDIDATES_PER_CATEGORY` | 분야별로 AI 검토를 시도할 최대 사건 후보 | `6` |
 | `NEWS_SEARCH_MAX_PAGES` | 검색어별로 전날 날짜까지 내려가며 읽을 최대 API 페이지(페이지당 100건) | `3` |
+| `NEWS_MAX_AI_CANDIDATES` | 비용·시간을 제한하면서 분야 균형으로 AI가 검토할 전체 사건 수 | `18` |
+| `NEWS_AI_CONCURRENCY` | 동시에 처리할 AI 요약 요청 수 | `3` |
 | `NEWS_MAX_STORIES_PER_CATEGORY` | 한 분야에서 최종 선정할 최대 기사 | `3` |
 | `NEWS_MAX_STORIES` | 한 브리핑의 전체 최대 기사 | `15` |
 | `NEWS_MINIMUM_IMPORTANCE_SCORE` | AI 중요 뉴스 후보의 최소 점수 | `60` |
@@ -597,6 +605,7 @@ docker compose build
 
 - 실제 NAVER API HUB 뉴스 수집
 - OpenAI 기반 구조화 요약
+- 분야별 상위 사건을 번갈아 고르는 AI 후보 균형화, 전체 호출 상한과 동시 처리·타임아웃
 - 서로 다른 출처를 이용한 사건 묶기와 품질 검사
 - PostgreSQL 브리핑 저장
 - PWA 설치와 실제 Web Push 등록

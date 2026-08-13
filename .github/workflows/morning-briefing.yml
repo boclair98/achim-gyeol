@@ -131,7 +131,9 @@ jobs:
         env:
           ADMIN_TOKEN: ${{ secrets.BRIEFING_ADMIN_TOKEN }}
         run: |
-          for attempt in $(seq 1 72); do
+          # The 06:00 generation has ample lead time before the 07:30 dispatch.
+          # Candidate count, concurrency and per-request timeouts keep this wait bounded.
+          for attempt in $(seq 1 120); do
             status="$(curl --fail-with-body --silent --show-error \
               --retry 3 --retry-all-errors --max-time 30 \
               "https://morningnews.coders.kr/api/admin/briefings/status" \
@@ -163,7 +165,7 @@ jobs:
             fi
             sleep 10
           done
-          echo "AI briefing generation did not finish within 12 minutes" >&2
+          echo "AI briefing generation did not finish within the operational wait window" >&2
           exit 1
 
       - name: Dispatch after recovered generation
