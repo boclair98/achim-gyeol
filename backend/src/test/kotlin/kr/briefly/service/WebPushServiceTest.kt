@@ -37,6 +37,8 @@ class WebPushServiceTest {
     @Test
     fun `invalid or expired subscriptions are deactivated for clean re-registration`() {
         assertThat(pushEndpointIsInvalid(400)).isTrue()
+        assertThat(pushEndpointIsInvalid(401)).isTrue()
+        assertThat(pushEndpointIsInvalid(403)).isTrue()
         assertThat(pushEndpointIsInvalid(404)).isTrue()
         assertThat(pushEndpointIsInvalid(410)).isTrue()
         assertThat(pushEndpointIsInvalid(429)).isFalse()

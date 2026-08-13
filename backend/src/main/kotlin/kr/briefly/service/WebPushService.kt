@@ -64,7 +64,7 @@ internal fun deliveryWeekdayIndex(dayOfWeek: DayOfWeek): Int = dayOfWeek.value -
 internal val fixedDeliveryTime: LocalTime = LocalTime.of(7, 30)
 internal val lastDeliveryTime: LocalTime = LocalTime.of(8, 0)
 internal fun pushStatusIsRetryable(status: Int): Boolean = status == 408 || status == 429 || status >= 500
-internal fun pushEndpointIsInvalid(status: Int): Boolean = status == 400 || status == 404 || status == 410
+internal fun pushEndpointIsInvalid(status: Int): Boolean = status in setOf(400, 401, 403, 404, 410)
 internal fun deliveryIsDue(current: LocalTime, scheduled: LocalTime = fixedDeliveryTime): Boolean =
     !current.isBefore(scheduled) && !current.isAfter(lastDeliveryTime)
 
@@ -333,8 +333,9 @@ class WebPushService(
             repository.save(subscription)
             PushResult(true, "푸시 알림을 발송했습니다.")
         } else {
-            // If one endpoint returns 400 while other devices succeed, its
-            // subscription keys are stale/malformed and it must register again.
+            // 400/404/410 mean an invalid or expired endpoint. 401/403 mean the
+            // endpoint was created with older VAPID credentials. All require the
+            // browser to register a fresh subscription; repeating cannot recover.
             val endpointExpired = subscription.active && pushEndpointIsInvalid(status)
             if (endpointExpired) {
                 subscription.active = false
