@@ -69,6 +69,17 @@ export function BriefingDelivery() {
 
   const changeFont = (font: "small" | "normal" | "large") => { setReaderFont(font); window.localStorage.setItem("achim-gyeol-reader-font", font); };
   const retryBriefing = () => { setLoading(true); setLoadState("loading"); setReloadVersion((current) => current + 1); };
+  const openStoryDetail = (storyId: number) => {
+    setCategory("전체");
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      const target = document.getElementById(`news-${storyId}`);
+      if (!target) return;
+      window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#news-${storyId}`);
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+      target.focus({ preventScroll: true });
+    }));
+  };
 
   const liveToday = loadState === "live" && isTodayInKorea(briefing.briefingDate);
   const reportingEnabled = loadState === "live" && liveToday && briefing.productionReady === true;
@@ -80,7 +91,7 @@ export function BriefingDelivery() {
     </header>
 
     <BriefingAvailability state={loadState} briefing={briefing} liveToday={liveToday} onRetry={retryBriefing} />
-    <DailyBriefingSheets briefing={briefing} loading={loading} reportingEnabled={reportingEnabled} />
+    <DailyBriefingSheets briefing={briefing} loading={loading} reportingEnabled={reportingEnabled} onOpenStory={openStoryDetail} />
 
     <nav className="news-category-nav" aria-label="뉴스 분야">
       <div>{categories.map((item) => <button key={item} className={category === item ? "active" : ""} onClick={() => setCategory(item)}>{item}{item !== "전체" && <small>{briefing.stories.filter((story) => story.category === item).length}</small>}</button>)}</div>
@@ -96,7 +107,7 @@ export function BriefingDelivery() {
       <aside className="news-reader-aside">
         <div className="reader-toc">
           <span>오늘의 뉴스</span>
-          <ol>{briefing.stories.map((story, index) => <li key={story.id}><a href={`#news-${story.id}`}><b>{String(index + 1).padStart(2, "0")}</b><span>{story.title}</span></a></li>)}</ol>
+          <ol>{briefing.stories.map((story, index) => <li key={story.id}><a href={`#news-${story.id}`} onClick={(event) => { event.preventDefault(); openStoryDetail(story.id); }}><b>{String(index + 1).padStart(2, "0")}</b><span>{story.title}</span></a></li>)}</ol>
         </div>
         <div className="reader-trust-note"><FileCheck2 size={20} /><div><strong>어떻게 확인했나요?</strong><p>같은 사건을 보도한 독립 출처를 묶고, 각 핵심 문장에 근거 원문을 연결합니다. 사람의 일일 사전 승인이 아닌 자동 품질검사 방식입니다.</p><Link href="/trust">품질 기준 보기</Link></div></div>
         {!subscribed && <Link className="reader-subscribe" href="/#delivery-deck"><BellRing size={17} /> 매일 오전 7:30 받기</Link>}
@@ -118,7 +129,7 @@ function BriefingAvailability({ state, briefing, liveToday, onRetry }: { state: 
   return <div className={`briefing-availability ${state}`} role="status"><WifiOff size={16} /><span><strong>{state === "demo" ? "예시 뉴스 · 실제 뉴스 아님" : state === "cached" ? "오프라인 안전 모드" : state === "loading" ? "연결 중" : "최신 발행본"}</strong> · {message}</span>{state !== "loading" && <button type="button" onClick={onRetry}><RefreshCw size={14} /> 다시 연결</button>}</div>;
 }
 
-function DailyBriefingSheets({ briefing, loading, reportingEnabled }: { briefing: Briefing; loading: boolean; reportingEnabled: boolean }) {
+function DailyBriefingSheets({ briefing, loading, reportingEnabled, onOpenStory }: { briefing: Briefing; loading: boolean; reportingEnabled: boolean; onOpenStory: (storyId: number) => void }) {
   const [page, setPage] = useState(0);
   const [readStories, setReadStories] = useState<number[]>([]);
   const [preferredCategories, setPreferredCategories] = useState<string[]>([]);
@@ -168,6 +179,12 @@ function DailyBriefingSheets({ briefing, loading, reportingEnabled }: { briefing
       else await navigator.clipboard.writeText(url);
       if (reportingEnabled) void trackReaderEvent("SHARE", briefing.id, story.id);
     } catch { /* A dismissed share sheet is not an error. */ }
+  };
+
+  const openDetail = (story: Story, pageIndex: number) => {
+    markRead(story.id, pageIndex);
+    if (reportingEnabled) void trackReaderEvent("STORY_DETAIL", briefing.id, story.id);
+    onOpenStory(story.id);
   };
 
   return <section className="brief-sheet-section" aria-label="오늘의 아침결 카드 브리핑">
@@ -236,13 +253,14 @@ function DailyBriefingSheets({ briefing, loading, reportingEnabled }: { briefing
           <div className="brief-sheet-stories">
               <section className="brief-sheet-story">
                 <div className="brief-sheet-meta"><b>{String(storyIndex).padStart(2, "0")}</b><span>{story.category}</span>{storyIndex <= 3 && <i className="priority">먼저 보기</i>}{preferredCategories.includes(story.category) && <i>내 관심</i>}<em className={story.verificationStatus === "VERIFIED" && evidenceReady ? "confirmed" : "checking"}>{readStories.includes(story.id) ? "읽음" : evidenceReady ? (story.verificationStatus === "VERIFIED" ? "근거 연결" : "확인 진행 중") : "원문 제공"}</em></div>
-                <h2><a href={`#news-${story.id}`}>{story.title}</a></h2>
+                <h2><a href={`#news-${story.id}`} onClick={(event) => { event.preventDefault(); openDetail(story, pageIndex); }}>{story.title}</a></h2>
                 <p className="brief-sheet-conclusion"><strong>한 줄 결론</strong>{story.oneLineSummary || facts[0] || story.title}</p>
                 <strong className="brief-sheet-facts-label">확인된 핵심</strong>
                 <ul>{facts.map((fact, factIndex) => <li key={`${story.id}-fact-${factIndex}`}>{fact}</li>)}</ul>
                 <div className="brief-sheet-matter"><strong>왜 중요한가</strong><p>{story.whyItMatters}</p></div>
                 {watchPoint && <div className="brief-sheet-watch"><strong>{story.whatToWatch ? "다음 확인" : "아직 미정"}</strong><p>{watchPoint}</p></div>}
-                <footer><span>서로 다른 출처 {story.sources.length}개 · {story.sources.slice(0, 2).map((source) => source.publisher).join(" · ")}</span><div><button type="button" onClick={() => void shareStory(story)} aria-label="뉴스 공유"><Share2 size={13} /> 공유</button><a href={`#news-${story.id}`} onClick={() => { markRead(story.id, pageIndex); if (reportingEnabled) void trackReaderEvent("STORY_DETAIL", briefing.id, story.id); }}>근거 자세히 →</a></div></footer>
+                <a className="brief-sheet-detail-jump" href={`#news-${story.id}`} onClick={(event) => { event.preventDefault(); openDetail(story, pageIndex); }}><BookOpen size={18} /><span><strong>상세 내용 바로가기</strong><small>아래 본문에서 핵심 근거와 출처까지 확인</small></span><ChevronRight size={18} /></a>
+                <footer><span>서로 다른 출처 {story.sources.length}개 · {story.sources.slice(0, 2).map((source) => source.publisher).join(" · ")}</span><div><button type="button" onClick={() => void shareStory(story)} aria-label="뉴스 공유"><Share2 size={13} /> 공유</button></div></footer>
               </section>
           </div>
         </article>})}
@@ -250,7 +268,7 @@ function DailyBriefingSheets({ briefing, loading, reportingEnabled }: { briefing
       <div className="brief-sheet-progress" aria-hidden="true"><i style={{ width: `${((page + 1) / Math.max(deckPages.length, 1)) * 100}%` }} /></div>
       <div className="brief-sheet-controls">
         <button type="button" aria-label="이전 브리핑 카드" onClick={() => moveTo(page - 1)} disabled={page === 0}><ChevronLeft /></button>
-        <div><strong>{page === 0 ? "한눈에" : page}</strong><span>{page === 0 ? "" : `/ ${orderedStories.length}`}</span><small><Check size={11} /> {readStories.length}건 읽음 · 옆으로 넘겨보세요</small></div>
+        <div><strong>{page === 0 ? "한눈에" : page}</strong><span>{page === 0 ? "" : `/ ${orderedStories.length}`}</span><small><Check size={11} /> 옆으로 카드 · 아래로 상세 뉴스</small></div>
         <button type="button" aria-label="다음 브리핑 카드" onClick={() => moveTo(page + 1)} disabled={page >= deckPages.length - 1}><ChevronRight /></button>
       </div>
     </div>
@@ -262,7 +280,7 @@ function NewsArticle({ story, editionId, index, reportingEnabled }: { story: Sto
   const verified = story.verificationStatus === "VERIFIED";
   const confirmedPoints = evidenceReady ? story.claims! : summaryPoints(story.summary).map((statement) => ({ statement, sources: [] }));
 
-  return <article className="reader-article" id={`news-${story.id}`}>
+  return <article className="reader-article" id={`news-${story.id}`} tabIndex={-1}>
     <div className="reader-article-meta"><b>{String(index).padStart(2, "0")}</b><span>{story.category}</span><em className={verified && evidenceReady ? "confirmed" : "checking"}><CheckCircle2 size={14} /> {evidenceReady ? (verified ? "근거 확인" : "추가 확인 중") : "원문 제공"}</em><small>AI 요약</small></div>
     <h2>{story.title}</h2>
     <section className="reader-conclusion"><span>한 줄 결론</span><p>{story.oneLineSummary || confirmedPoints[0]?.statement || story.title}</p></section>

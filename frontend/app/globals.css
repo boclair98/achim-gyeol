@@ -302,7 +302,7 @@ button:disabled { cursor: wait; opacity: .55; }
 .brief-sheet-intro h1 em { color: #116d51; font-style: normal; }
 .brief-sheet-intro > p { margin: 22px 0 0; color: #4f5964; font-size: 16px; line-height: 1.78; }
 .brief-sheet-deck { min-width: 0; }
-.brief-sheet-track { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; overflow-x: auto; overflow-y: hidden; overscroll-behavior-inline: contain; scroll-behavior: smooth; scroll-snap-type: x mandatory; scrollbar-width: none; touch-action: pan-x; }
+.brief-sheet-track { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; overflow-x: auto; overflow-y: hidden; overscroll-behavior-inline: contain; overscroll-behavior-block: auto; scroll-behavior: smooth; scroll-snap-type: x mandatory; scrollbar-width: none; touch-action: pan-x pan-y pinch-zoom; }
 .brief-sheet-track::-webkit-scrollbar { display: none; }
 .brief-sheet { position: relative; box-sizing: border-box; width: 100%; min-height: 790px; overflow: hidden; scroll-snap-align: start; border: 1px solid #d9d0bf; border-radius: 6px 28px 28px 6px; background: #fffaf0; padding: 33px 38px 37px 51px; box-shadow: 0 28px 70px rgba(36,43,57,.16); }
 .brief-sheet::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 8px; background: linear-gradient(#19af78 0 34%, #d3ef6c 34% 67%, #16372e 67%); }
@@ -341,6 +341,13 @@ button:disabled { cursor: wait; opacity: .55; }
 .brief-sheet-watch { display: grid; grid-template-columns: 75px 1fr; gap: 10px; margin-top: 9px; border: 1px solid #e3c77f; border-radius: 11px; background: #fff8e8; padding: 10px 12px; }
 .brief-sheet-watch strong { color: #8a5a0c; font-size: 10px; }
 .brief-sheet-watch p { margin: 0; color: #5b4a2c; font-size: 10px; line-height: 1.55; }
+.brief-sheet-detail-jump { display: grid; grid-template-columns: 34px minmax(0,1fr) 18px; align-items: center; gap: 10px; margin-top: 14px; border-radius: 12px; background: #16372e; padding: 11px 13px; color: white; text-decoration: none; }
+.brief-sheet-detail-jump > svg:first-child { display: grid; width: 34px; height: 34px; border-radius: 9px; background: #d3ef6c; padding: 8px; color: #16372e; }
+.brief-sheet-detail-jump > span { display: grid; gap: 2px; min-width: 0; }
+.brief-sheet-detail-jump strong { color: white; font-size: 11px; }
+.brief-sheet-detail-jump small { overflow: hidden; color: rgba(255,255,255,.68); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+.brief-sheet-detail-jump > svg:last-child { color: #d3ef6c; }
+.brief-sheet-detail-jump:focus-visible { outline: 3px solid #1679ff; outline-offset: 3px; }
 .brief-sheet-story footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: 12px; color: #767a75; font-size: 9px; }
 .brief-sheet-story footer span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .brief-sheet-story footer a { flex: 0 0 auto; color: #116d51; font-weight: 900; text-decoration: none; }
@@ -394,6 +401,8 @@ button:disabled { cursor: wait; opacity: .55; }
 .news-feed-heading h2 { margin: 7px 0 0; font-size: clamp(27px, 3.5vw, 42px); letter-spacing: -.055em; }
 .news-feed-heading > p { max-width: 250px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.65; text-align: right; }
 .reader-article { scroll-margin-top: 145px; border-bottom: 1px solid #ccd0cb; background: white; padding: 46px 48px 50px; }
+.reader-article:target { box-shadow: inset 6px 0 0 #18a872; }
+.reader-article:focus { outline: none; }
 .reader-article:first-of-type { border-top: 7px solid var(--blue); }
 .reader-article-meta { display: flex; align-items: center; gap: 9px; }
 .reader-article-meta > b { margin-right: 4px; color: #adb3b8; font-size: 13px; }
@@ -489,6 +498,9 @@ button:disabled { cursor: wait; opacity: .55; }
   .brief-sheet-watch { grid-template-columns: 1fr; gap: 4px; }
   .brief-sheet-story footer { align-items: flex-end; }
   .brief-sheet-story footer span { max-width: 65%; white-space: normal; line-height: 1.45; }
+  .brief-sheet-detail-jump { margin-top: 13px; padding: 10px 11px; }
+  .brief-sheet-detail-jump strong { font-size: 11px; }
+  .brief-sheet-detail-jump small { font-size: 8px; }
   .brief-sheet-controls { padding: 0 20px; }
   .brief-overview-copy { padding: 21px 0 13px; }
   .brief-overview-copy h2 { font-size: 29px; }
