@@ -17,6 +17,7 @@ export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscript
   const [iosInstallRequired, setIosInstallRequired] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
   const [working, setWorking] = useState(false);
+  const [feedback, setFeedback] = useState("");
   const selectedDaysKey = selectedDays.join(",");
 
   useEffect(() => {
@@ -40,10 +41,12 @@ export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscript
 
   const subscribe = async () => {
     setWorking(true);
+    setFeedback("알림 권한을 확인하고 있어요…");
     try {
       if (!supported) throw new Error("이 브라우저는 웹푸시를 지원하지 않습니다.");
       if (selectedDays.length === 0) throw new Error("발송 요일을 하나 이상 선택해 주세요.");
-      if (await Notification.requestPermission() !== "granted") throw new Error("브라우저 설정에서 알림을 허용해 주세요.");
+      if (Notification.permission === "denied") throw new Error(samsungPermissionHelp());
+      if (await Notification.requestPermission() !== "granted") throw new Error("휴대폰의 알림 허용을 눌러야 등록할 수 있어요.");
       const configResponse = await fetch(`${apiBase}/api/push/public-key`, { cache: "no-store" });
       if (!configResponse.ok) throw new Error("푸시 설정을 불러오지 못했습니다.");
       const config = await configResponse.json() as PushConfig;
@@ -56,26 +59,42 @@ export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscript
         window.localStorage.removeItem(serverSubscriptionKey);
         current = null;
       }
-      const subscription = current ?? await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(config.publicKey) });
+      let subscription = current ?? await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(config.publicKey) });
       const [hour, minute] = deliveryTime.split(":").map(Number);
-      const response = await fetch(`${apiBase}/api/push/subscriptions`, {
-        method: "POST", headers: deviceHeaders(),
-        body: JSON.stringify({ endpoint: subscription.endpoint, keys: subscription.toJSON().keys, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Seoul", deliveryHour: hour, deliveryMinute: minute, weekdays: selectedDays }),
-      });
-      if (!response.ok) {
-        if (!current) await subscription.unsubscribe().catch(() => false);
-        window.localStorage.removeItem(serverSubscriptionKey);
-        throw new Error(await errorMessage(response, "알림 설정을 저장하지 못했습니다."));
+      await saveSubscription(subscription, hour, minute, selectedDays);
+
+      // A provider may invalidate an endpoint while the browser still returns it
+      // as an apparently valid subscription. Verify once during explicit signup;
+      // if stale, rotate the endpoint and register the fresh one automatically.
+      if (!subscribed) {
+        setFeedback("기기 연결을 확인하고 있어요…");
+        let validation = await validateSubscription(subscription.endpoint);
+        if (!validation.delivered) {
+          await subscription.unsubscribe().catch(() => false);
+          window.localStorage.removeItem(serverSubscriptionKey);
+          subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(config.publicKey) });
+          await saveSubscription(subscription, hour, minute, selectedDays);
+          validation = await validateSubscription(subscription.endpoint);
+          if (!validation.delivered) {
+            await subscription.unsubscribe().catch(() => false);
+            window.localStorage.removeItem(serverSubscriptionKey);
+            throw new Error(validation.message || "기기 알림 연결을 확인하지 못했습니다. 브라우저 알림 설정을 확인해 주세요.");
+          }
+        }
       }
       window.localStorage.setItem("achim-gyeol-delivery", JSON.stringify({ time: deliveryTime, days: selectedDays }));
       window.localStorage.setItem(serverSubscriptionKey, subscription.endpoint);
       setSubscribed(true);
       onSubscriptionChange?.(true);
-      onNotice(`등록 완료! 선택한 요일 ${deliveryTime} 이후, 준비된 어제 뉴스 종합을 이 기기로 보내드려요.`);
+      const message = `등록 완료! 연결 확인 알림을 보냈어요. 선택한 요일 ${deliveryTime} 이후 어제 뉴스 종합을 보내드려요.`;
+      setFeedback(message);
+      onNotice(message);
     } catch (error) {
       setSubscribed(false);
       onSubscriptionChange?.(false);
-      onNotice(error instanceof Error ? error.message : "알림 등록 중 오류가 발생했습니다.");
+      const message = error instanceof Error ? error.message : "알림 등록 중 오류가 발생했습니다.";
+      setFeedback(message);
+      onNotice(message);
     }
     finally { setWorking(false); }
   };
@@ -117,12 +136,46 @@ export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscript
     <p className="push-help">현재 브라우저가 Web Push를 지원하지 않습니다. 지원 브라우저에서 열면 이 버튼으로 바로 등록됩니다.</p>
   </div>;
   return <div className="push-controls">
-    <button className="primary-button" onClick={subscribe} disabled={working}><BellRing size={16} /> {subscribed ? "시간·요일 저장" : "이 기기에 알림 등록"}</button>
+    <button type="button" className="primary-button" onClick={subscribe} disabled={working}><BellRing size={16} /> {working ? "등록 확인 중…" : subscribed ? "시간·요일 저장" : "이 기기에 알림 등록"}</button>
+    {feedback && <p className="push-feedback" role="status">{feedback}</p>}
     {subscribed && <p className="push-status"><CheckCircle2 size={15} /> 이 기기는 실제 아침 브리핑 수신 등록이 완료됐습니다.</p>}
     {subscribed && <button className="secondary-button blue" onClick={sendTest} disabled={working}><Send size={16} /> 내 기기 실제 푸시 테스트</button>}
     {subscribed && <button className="text-button" onClick={unsubscribe} disabled={working}><BellOff size={15} /> 알림 해지</button>}
     <p className="push-help">회원가입 없이 바로 등록됩니다. 처음 한 번 브라우저 알림만 허용하면 되고, 테스트 발송은 이 기기에만 전송됩니다.</p>
   </div>;
+}
+
+async function saveSubscription(subscription: PushSubscription, hour: number, minute: number, selectedDays: number[]) {
+  const response = await fetch(`${apiBase}/api/push/subscriptions`, {
+    method: "POST",
+    headers: deviceHeaders(),
+    body: JSON.stringify({
+      endpoint: subscription.endpoint,
+      keys: subscription.toJSON().keys,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Seoul",
+      deliveryHour: hour,
+      deliveryMinute: minute,
+      weekdays: selectedDays,
+    }),
+  });
+  if (!response.ok) throw new Error(await errorMessage(response, "알림 설정을 저장하지 못했습니다."));
+}
+
+async function validateSubscription(endpoint: string) {
+  const response = await fetch(`${apiBase}/api/push/test`, {
+    method: "POST",
+    headers: deviceHeaders(),
+    body: JSON.stringify({ endpoint }),
+  });
+  if (!response.ok) throw new Error(await errorMessage(response, "기기 알림 연결을 확인하지 못했습니다."));
+  return response.json() as Promise<PushResponse>;
+}
+
+function samsungPermissionHelp() {
+  if (/SamsungBrowser/i.test(navigator.userAgent)) {
+    return "Samsung Internet에서 알림이 차단되어 있어요. 메뉴(≡) → 설정 → 사이트 및 다운로드 → 알림에서 morningnews.coders.kr을 허용해 주세요.";
+  }
+  return "브라우저 설정에서 morningnews.coders.kr 알림을 허용한 뒤 다시 눌러 주세요.";
 }
 
 function IosInstallGuide() {
