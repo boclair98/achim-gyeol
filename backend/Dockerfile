@@ -11,4 +11,4 @@ RUN addgroup -S briefly && adduser -S briefly -G briefly
 COPY --from=builder /app/target/briefly-api-0.1.0.jar app.jar
 USER briefly
 EXPOSE 8080
-ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75.0", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=60.0", "-XX:+ExitOnOutOfMemoryError", "-jar", "/app/app.jar"]
