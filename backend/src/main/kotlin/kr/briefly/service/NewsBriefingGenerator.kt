@@ -83,6 +83,32 @@ internal fun selectBalancedAiCandidates(
     return selected.take(maxTotal.coerceAtLeast(1))
 }
 
+internal fun selectBalancedCoverageArticles(
+    queryResults: List<List<CollectedArticle>>,
+    maxTotal: Int,
+): List<CollectedArticle> {
+    val limit = maxTotal.coerceAtLeast(1)
+    val iterators = queryResults.map { articles -> articles.iterator() }
+    val selected = mutableListOf<CollectedArticle>()
+    val seenUrls = mutableSetOf<String>()
+
+    while (selected.size < limit) {
+        var addedThisRound = false
+        iterators.forEach { iterator ->
+            while (selected.size < limit && iterator.hasNext()) {
+                val article = iterator.next()
+                if (seenUrls.add(article.originalUrl)) {
+                    selected += article
+                    addedThisRound = true
+                    break
+                }
+            }
+        }
+        if (!addedThisRound) break
+    }
+    return selected
+}
+
 @Component
 class ArticleClusterer {
     private val stopWords = setOf(
@@ -204,9 +230,10 @@ class NewsBriefingGenerator(
         Category.ESPORTS to listOf("LCK e스포츠", "리그오브레전드 대회", "발로란트 e스포츠", "오버워치 e스포츠", "e스포츠 경기 결과"),
     )
     @Value("\${app.pipeline.max-candidates-per-category:6}") private var maxCandidatesPerCategory: Int = 6
+    @Value("\${app.pipeline.max-articles-per-category:240}") private var maxArticlesPerCategory: Int = 240
     @Value("\${app.pipeline.search-max-pages:3}") private var searchMaxPages: Int = 3
     @Value("\${app.pipeline.max-ai-candidates:18}") private var maxAiCandidates: Int = 18
-    @Value("\${app.pipeline.ai-concurrency:3}") private var aiConcurrency: Int = 3
+    @Value("\${app.pipeline.ai-concurrency:1}") private var aiConcurrency: Int = 1
     @Value("\${app.pipeline.max-stories-per-category:3}") private var maxStoriesPerCategory: Int = 3
     @Value("\${app.pipeline.max-stories:15}") private var maxStories: Int = 15
     @Value("\${app.pipeline.minimum-importance-score:60}") private var minimumImportanceScore: Int = 60
@@ -234,8 +261,12 @@ class NewsBriefingGenerator(
         val coverageDate = briefingDate.minusDays(1)
         var collectedCount = 0
         val clusters = deduplicateClusters(queries.flatMap { (category, categoryQueries) ->
-            val articles = categoryQueries.flatMap { query -> newsProviders.flatMap { provider -> collectCoverageArticles(provider, query, coverageDate) } }
-                .distinctBy { it.originalUrl }
+            val articles = selectBalancedCoverageArticles(
+                queryResults = categoryQueries.map { query ->
+                    newsProviders.flatMap { provider -> collectCoverageArticles(provider, query, coverageDate) }
+                },
+                maxTotal = maxArticlesPerCategory,
+            )
             collectedCount += articles.size
             clusterer.cluster(category, articles, limit = maxCandidatesPerCategory)
         }.sortedByDescending(ArticleCluster::rank))

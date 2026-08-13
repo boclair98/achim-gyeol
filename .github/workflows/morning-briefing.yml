@@ -135,9 +135,14 @@ jobs:
           # Candidate count, concurrency and per-request timeouts keep this wait bounded.
           for attempt in $(seq 1 120); do
             status="$(curl --fail-with-body --silent --show-error \
-              --retry 3 --retry-all-errors --max-time 30 \
+              --retry 2 --retry-all-errors --max-time 30 \
               "https://morningnews.coders.kr/api/admin/briefings/status" \
-              -H "X-Briefing-Admin-Token: $ADMIN_TOKEN")"
+              -H "X-Briefing-Admin-Token: $ADMIN_TOKEN" 2>/dev/null || true)"
+            if ! jq -e '.generationJob.state' <<< "$status" >/dev/null 2>&1; then
+              echo "Briefing status temporarily unavailable (attempt ${attempt}/120); retrying" >&2
+              sleep 10
+              continue
+            fi
             ready="$(jq -r '.productionReady' <<< "$status")"
             state="$(jq -r '.generationJob.state' <<< "$status")"
             if [[ "$ready" == "true" ]]; then exit 0; fi
