@@ -100,7 +100,7 @@ class BriefingService(
 
     private fun BriefingEdition.toResponse(viewerId: String?): BriefingResponse {
         val zone = ZoneId.of("Asia/Seoul")
-        val signals = if (viewerId == null) emptyList() else feedbackRepository
+        val signals: Map<Long, StoryFeedback> = if (viewerId == null) emptyMap() else feedbackRepository
             .findAllByUserIdAndTypeInAndCreatedAtAfter(viewerId, interestFeedbackTypes, OffsetDateTime.now().minusDays(90))
             .groupBy(StoryFeedback::storyId)
             .mapValues { (_, values) -> values.maxBy(StoryFeedback::createdAt) }
@@ -109,10 +109,10 @@ class BriefingService(
         val missingStoryIds = signals.keys.filterNot(currentCategories::containsKey)
         val categoryByStory = currentCategories + if (missingStoryIds.isEmpty()) emptyMap() else
             storyRepository.findAllById(missingStoryIds).associate { requireNotNull(it.id) to it.category }
-        val categoryScores = signals.values
-            .mapNotNull { signal -> categoryByStory[signal.storyId]?.let { it to signal.type.interestWeight() } }
-            .groupingBy(Pair<Category, Int>::first)
-            .fold(0) { score, (_, weight) -> score + weight }
+        val categoryScores: Map<Category, Int> = signals.values
+            .mapNotNull { signal: StoryFeedback -> categoryByStory[signal.storyId]?.let { it to signal.type.interestWeight() } }
+            .groupBy(keySelector = { it.first }, valueTransform = { it.second })
+            .mapValues { (_, weights) -> weights.sum() }
         val orderedStories = BriefingStoryPersonalizer.order(currentStories, categoryScores)
         return BriefingResponse(
             id = requireNotNull(id),
