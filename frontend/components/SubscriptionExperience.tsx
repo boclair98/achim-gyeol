@@ -16,6 +16,8 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
   const deliveryTime = "07:30";
   const [selectedDays, setSelectedDays] = useState([0, 1, 2, 3, 4]);
   const [subscribed, setSubscribed] = useState(false);
+  const [externalBrowserHref, setExternalBrowserHref] = useState<string | null>(null);
+  const [quickSubscribe, setQuickSubscribe] = useState(false);
   const [deviceLabel, setDeviceLabel] = useState("이 브라우저에서 바로 등록할 수 있어요");
   const closeButton = useRef<HTMLButtonElement>(null);
 
@@ -30,10 +32,11 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
       window.localStorage.removeItem("achim-gyeol-delivery");
     }
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    const inAppBrowser = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV/i.test(navigator.userAgent);
+    const detectedInAppBrowser = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV/i.test(navigator.userAgent);
+    const androidInAppBrowser = detectedInAppBrowser && /android/i.test(navigator.userAgent);
     const standalone = window.matchMedia("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
-    const detectedDeviceLabel = inAppBrowser
-      ? "카카오톡·앱 내부 화면에서는 등록할 수 없어요. 메뉴에서 Chrome으로 열어주세요"
+    const detectedDeviceLabel = detectedInAppBrowser
+      ? "알림 받기를 누르면 지원 브라우저로 자동 연결해요"
       : ios && !standalone
       ? "아이폰은 홈 화면에 추가한 뒤 등록할 수 있어요"
       : standalone
@@ -43,11 +46,21 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
           : "이 브라우저에서 바로 등록할 수 있어요";
     queueMicrotask(() => {
       if (storedDays) setSelectedDays(storedDays);
+      setExternalBrowserHref(androidInAppBrowser ? buildAndroidBrowserHref() : null);
       setDeviceLabel(detectedDeviceLabel);
-      if (new URLSearchParams(window.location.search).get("ios-guide") === "1") setOpen(true);
+      const params = new URLSearchParams(window.location.search);
+      const shouldQuickSubscribe = params.get("subscribe") === "1";
+      setQuickSubscribe(shouldQuickSubscribe);
+      if (params.get("ios-guide") === "1" || shouldQuickSubscribe) setOpen(true);
     });
 
-    const show = () => setOpen(true);
+    const show = () => {
+      if (androidInAppBrowser) {
+        window.location.href = buildAndroidBrowserHref();
+        return;
+      }
+      setOpen(true);
+    };
     window.addEventListener(openEvent, show);
     return () => window.removeEventListener(openEvent, show);
   }, []);
@@ -71,11 +84,15 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
   };
 
   return <>
-    <button className={subscribed ? "mobile-subscribe-bar subscribed" : "mobile-subscribe-bar"} type="button" onClick={() => setOpen(true)}>
+    {externalBrowserHref ? <a className="mobile-subscribe-bar" href={externalBrowserHref}>
+      <BellRing size={17} />
+      <span>무료 알림 받기</span>
+      <b>한 번에</b>
+    </a> : <button className={subscribed ? "mobile-subscribe-bar subscribed" : "mobile-subscribe-bar"} type="button" onClick={() => setOpen(true)}>
       {subscribed ? <CheckCircle2 size={17} /> : <BellRing size={17} />}
       <span>{subscribed ? `알림 등록됨 · ${deliveryTime}` : "무료 알림 받기"}</span>
       <b>{subscribed ? "설정" : "30초"}</b>
-    </button>
+    </button>}
 
     {open && <div className="subscription-modal-layer" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
       <section className="subscription-modal" role="dialog" aria-modal="true" aria-labelledby="subscription-title">
@@ -86,19 +103,27 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
 
         <div className="device-readiness"><Smartphone size={19} /><div><strong>현재 기기 확인</strong><span>{deviceLabel}</span></div></div>
 
-        <div className="modal-setting-grid">
+        {!quickSubscribe && <div className="modal-setting-grid">
           <div className="modal-time-field"><span><Clock3 size={15} /> 고정 도착 시각</span><div className="fixed-delivery-time"><strong>오전 7:30</strong><small>전날 뉴스는 오전 6시부터 종합해요</small></div></div>
           <div className="modal-day-field"><span><CalendarDays size={15} /> 받을 요일</span><div className="weekday-list">{weekdays.map((day, index) => <button type="button" key={day} className={selectedDays.includes(index) ? "active" : ""} onClick={() => toggleDay(index)}>{day}</button>)}</div></div>
-        </div>
+        </div>}
 
-        <div className="modal-arrival-preview">
+        {!quickSubscribe && <div className="modal-arrival-preview">
           <div className="push-app-icon"><BellRing size={18} /></div>
           <div><strong>아침결 · 오늘 알아야 할 뉴스가 도착했어요</strong><span>선택한 요일 오전 7:30 · 핵심 내용과 알아야 할 것</span></div>
-        </div>
+        </div>}
 
         <PushControls deliveryTime={deliveryTime} selectedDays={selectedDays} onNotice={(message) => { onNotice(message); }} onSubscriptionChange={setSubscribed} />
         <p className="modal-privacy"><LockKeyhole size={14} /> 이름·이메일 없이 익명 기기 ID와 알림 시간만 저장합니다.</p>
       </section>
     </div>}
   </>;
+}
+
+function buildAndroidBrowserHref() {
+  const target = new URL(window.location.href);
+  target.searchParams.set("subscribe", "1");
+  target.hash = "";
+  const destination = `${target.host}${target.pathname}${target.search}`;
+  return `intent://${destination}#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;S.browser_fallback_url=${encodeURIComponent(target.toString())};end`;
 }
