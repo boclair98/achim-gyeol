@@ -1,6 +1,7 @@
 package kr.briefly.config
 
 import kr.briefly.domain.Category
+import kr.briefly.domain.FeedbackType
 import org.slf4j.LoggerFactory
 import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.ApplicationRunner
@@ -22,7 +23,7 @@ class DatabaseSchemaCompatibility(private val jdbcTemplate: JdbcTemplate) : Appl
         } == true
         if (!isPostgres) return
 
-        val allowedCategories = Category.entries.joinToString(", ") { "'${it.name}'" }
+        val allowedCategories = enumCheckValues(Category.entries.map { it.name })
         jdbcTemplate.execute(
             "ALTER TABLE news_stories DROP CONSTRAINT IF EXISTS news_stories_category_check",
         )
@@ -31,5 +32,17 @@ class DatabaseSchemaCompatibility(private val jdbcTemplate: JdbcTemplate) : Appl
                 "CHECK (category IN ($allowedCategories))",
         )
         log.info("Synchronized news_stories category constraint: {}", Category.entries.joinToString { it.name })
+
+        val allowedFeedbackTypes = enumCheckValues(FeedbackType.entries.map { it.name })
+        jdbcTemplate.execute(
+            "ALTER TABLE story_feedback DROP CONSTRAINT IF EXISTS story_feedback_type_check",
+        )
+        jdbcTemplate.execute(
+            "ALTER TABLE story_feedback ADD CONSTRAINT story_feedback_type_check " +
+                "CHECK (type IN ($allowedFeedbackTypes))",
+        )
+        log.info("Synchronized story_feedback type constraint: {}", FeedbackType.entries.joinToString { it.name })
     }
 }
+
+internal fun enumCheckValues(values: List<String>): String = values.joinToString(", ") { "'$it'" }
