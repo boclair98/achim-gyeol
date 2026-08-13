@@ -7,10 +7,12 @@ import { deviceHeaders } from "@/lib/device";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 const serverSubscriptionKey = "achim-gyeol-server-subscription";
+let reconciliationInFlight: Promise<boolean> | null = null;
 
 type Props = { deliveryTime: string; selectedDays: number[]; onNotice: (message: string) => void; onSubscriptionChange?: (subscribed: boolean) => void };
 type PushConfig = { enabled: boolean; publicKey: string };
 type PushResponse = { delivered: boolean; message: string };
+type PushSubscriptionStatus = { registered: boolean; active: boolean; needsRenewal: boolean };
 
 export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscriptionChange }: Props) {
   const [supported, setSupported] = useState(true);
@@ -217,7 +219,14 @@ function subscriptionUsesKey(subscription: PushSubscription, publicKey: string) 
   return current.length === expected.length && current.every((value, index) => value === expected[index]);
 }
 
-export async function reconcileExistingSubscription(deliveryTime: string, selectedDays: number[]) {
+export function reconcileExistingSubscription(deliveryTime: string, selectedDays: number[]) {
+  if (reconciliationInFlight) return reconciliationInFlight;
+  reconciliationInFlight = reconcileSubscription(deliveryTime, selectedDays)
+    .finally(() => { reconciliationInFlight = null; });
+  return reconciliationInFlight;
+}
+
+async function reconcileSubscription(deliveryTime: string, selectedDays: number[]) {
   const registration = await navigator.serviceWorker.ready;
   let subscription = await registration.pushManager.getSubscription();
   const savedEndpoint = window.localStorage.getItem(serverSubscriptionKey);
@@ -228,6 +237,27 @@ export async function reconcileExistingSubscription(deliveryTime: string, select
   const config = await configResponse.json() as PushConfig;
   if (!config.enabled || !config.publicKey) return Boolean(savedEndpoint && savedEndpoint === subscription.endpoint);
   let needsServerSync = savedEndpoint !== subscription.endpoint;
+
+  const serverStatus = await fetch(`${apiBase}/api/push/subscriptions/status`, {
+    method: "POST",
+    headers: deviceHeaders(),
+    body: JSON.stringify({ endpoint: subscription.endpoint }),
+  }).then(async (response) => response.ok ? response.json() as Promise<PushSubscriptionStatus> : null).catch(() => null);
+
+  if (serverStatus?.needsRenewal) {
+    // The push provider can expire an endpoint while the browser still exposes
+    // it locally. Existing permission lets us rotate it on a normal page visit,
+    // without asking the reader to press the registration button again.
+    await subscription.unsubscribe().catch(() => false);
+    window.localStorage.removeItem(serverSubscriptionKey);
+    subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(config.publicKey),
+    });
+    needsServerSync = true;
+  } else if (serverStatus && !serverStatus.registered) {
+    needsServerSync = true;
+  }
 
   if (!subscriptionUsesKey(subscription, config.publicKey)) {
     // A VAPID key rotation makes the old endpoint permanently unusable. Because

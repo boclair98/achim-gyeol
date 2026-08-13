@@ -89,6 +89,10 @@ class WebPushService(
 
     fun config() = PushConfigResponse(isConfigured(), if (isConfigured()) publicKey else "")
 
+    @Transactional(readOnly = true)
+    fun subscriptionStatus(ownerId: String, endpoint: String): PushSubscription? =
+        repository.findByEndpointHash(endpointHash(endpoint))?.takeIf { it.ownerId == ownerId }
+
     @Transactional
     fun subscribe(ownerId: String, registration: PushRegistration): PushSubscription {
         requireConfigured()
