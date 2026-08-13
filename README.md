@@ -233,6 +233,8 @@ Safari 공유 메뉴에서 **홈 화면에 추가**한 뒤, 홈 화면의 아침
 
 서버는 일시적인 네트워크 오류와 푸시 제공자 오류(`408`, `429`, `5xx`)만 최대 3회 재시도합니다. 만료·손상됐거나 이전 푸시 키로 만들어진 구독(`400`, `401`, `403`, `404`, `410`)은 계속 실패시키지 않고 비활성화합니다. 이 경우 사용자가 아침결을 다시 열어 `이 기기에 알림 등록`을 누르면 현재 키를 사용하는 새 푸시 주소로 정상 등록됩니다.
 
+이미 알림 권한이 허용된 기기는 사이트를 다시 열 때 현재 서버 키와 브라우저 구독 키를 비교합니다. 키가 달라졌다면 별도의 권한 창 없이 기존 구독을 해지하고 현재 키로 자동 재등록합니다. 자동 복구가 지원되지 않는 브라우저에서만 `이 기기에 알림 등록`을 한 번 다시 누르면 됩니다.
+
 ### 오전 7시 30분이 지났는데 안 왔어요
 
 정규 발송에는 두 조건이 모두 필요합니다.
@@ -248,62 +250,7 @@ Safari 공유 메뉴에서 **홈 화면에 추가**한 뒤, 홈 화면의 아침
 
 ### 앱스토어에서 앱을 설치해야 하나요?
 
-아닙니다. 아침결은 PWA입니다. 아이폰은 Safari의 `홈 화면에 추가`, 안드로이드는 브라우저 설치 기능을 사용합니다.
-
-### 한 사람이 여러 기기에서 받을 수 있나요?
-
-가능합니다. 휴대전화와 PC에서 각각 등록하면 각각 하나의 활성 기기로 저장됩니다. 운영 통계는 사람 수가 아니라 활성 기기 수를 기준으로 집계합니다.
-
-### 사용자 1,000명이면 AI 비용도 1,000배인가요?
-
-아닙니다. 뉴스 수집과 AI 요약은 하루 브리핑을 만들 때 한 번 실행합니다. 완성된 같은 브리핑을 여러 구독자에게 보내므로 사용자 수가 늘어도 AI 생성 비용이 동일 비율로 증가하지 않습니다. 푸시 발송과 서버·데이터베이스 비용은 사용량에 따라 별도로 늘 수 있습니다.
-
-### Codex 유료 구독이 있으면 OpenAI API도 무료인가요?
-
-아닙니다. Codex 또는 ChatGPT 구독과 OpenAI API 사용료는 별도입니다. 운영 서버에는 별도의 `OPENAI_API_KEY`와 API 크레딧이 필요합니다.
-
-### 결제나 후원 버튼이 있나요?
-
-없습니다. 현재 `donations`, `subscriptions`, `support_badge`는 모두 비활성화 상태입니다.
-
----
-
-# 운영자·개발자 안내
-
-이 아래는 서비스를 직접 실행하거나 운영할 때 필요한 내용입니다. 일반 사용자는 읽지 않아도 됩니다.
-
-## 기술 구성
-
-- Frontend: Next.js 16, React 19, TypeScript, PWA Service Worker
-- Backend: Kotlin, Spring Boot, Spring Data JPA
-- Database: PostgreSQL 16, 로컬 H2 지원
-- News: NAVER API HUB
-- AI: OpenAI Responses API, Structured Outputs
-- Push: Web Push, VAPID
-- Hosting: coders.kr
-- Automation: GitHub Actions
-
-## 로컬에서 가장 빠르게 실행하기
-
-### 준비물
-
-- Git
-- Docker Desktop와 Docker Compose
-- 실제 뉴스 생성을 사용할 때만 NAVER API와 OpenAI API 키
-
-저장소를 받은 뒤 루트에서 실행합니다.
-
-```bash
-docker compose up --build
-```
-
-실행 주소:
-
-- 프런트엔드: [http://localhost:3000](http://localhost:3000)
-- 백엔드 상태: [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health)
-- 최신 브리핑 API: [http://localhost:8080/api/briefings/today](http://localhost:8080/api/briefings/today)
-
-API 키 없이 실행하면 데모 데이터로 화면을 확인할 수 있습니다.
+아닙니다. 아침결은 PWA입니다. 아…614 tokens truncated…이터로 화면을 확인할 수 있습니다.
 
 종료:
 
