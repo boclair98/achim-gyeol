@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { BellOff, BellRing, CheckCircle2, Send } from "lucide-react";
+import { BellOff, BellRing, Check, CheckCircle2, Compass, Copy, Send } from "lucide-react";
 import { deviceHeaders } from "@/lib/device";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
@@ -17,6 +17,7 @@ type PushSubscriptionStatus = { registered: boolean; active: boolean; needsRenew
 export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscriptionChange }: Props) {
   const [supported, setSupported] = useState(true);
   const [iosInstallRequired, setIosInstallRequired] = useState(false);
+  const [iosSafariBrowser, setIosSafariBrowser] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
   const [working, setWorking] = useState(false);
   const [feedback, setFeedback] = useState("");
@@ -25,9 +26,11 @@ export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscript
   useEffect(() => {
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     const standalone = window.matchMedia("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
+    const inAppBrowser = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV/i.test(navigator.userAgent);
+    const safari = /Safari/i.test(navigator.userAgent) && !/CriOS|FxiOS|EdgiOS|OPiOS/i.test(navigator.userAgent) && !inAppBrowser;
     const guidePreview = new URLSearchParams(window.location.search).get("ios-guide") === "1";
     if ((ios && !standalone) || guidePreview) {
-      queueMicrotask(() => { setIosInstallRequired(true); setSupported(false); });
+      queueMicrotask(() => { setIosInstallRequired(true); setIosSafariBrowser(safari); setSupported(false); });
       return;
     }
     const available = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
@@ -132,7 +135,7 @@ export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscript
     finally { setWorking(false); }
   };
 
-  if (iosInstallRequired) return <div className="push-controls ios-push-controls"><IosInstallGuide /></div>;
+  if (iosInstallRequired) return <div className="push-controls ios-push-controls"><IosInstallGuide safari={iosSafariBrowser} /></div>;
   if (!supported) return <div className="push-controls unsupported-push-controls">
     <button className="primary-button" onClick={() => onNotice("Safari 또는 최신 Chrome·Edge에서 열어 주세요. 아이폰은 Safari의 ‘홈 화면에 추가’ 후 등록할 수 있습니다.")}><BellRing size={16} /> 이 기기에 알림 등록</button>
     <p className="push-help">현재 브라우저가 Web Push를 지원하지 않습니다. 지원 브라우저에서 열면 이 버튼으로 바로 등록됩니다.</p>
@@ -180,13 +183,33 @@ function samsungPermissionHelp() {
   return "브라우저 설정에서 morningnews.coders.kr 알림을 허용한 뒤 다시 눌러 주세요.";
 }
 
-function IosInstallGuide() {
+function IosInstallGuide({ safari }: { safari: boolean }) {
+  const [copied, setCopied] = useState(false);
+
+  const copySafariUrl = async () => {
+    const target = new URL(window.location.href);
+    target.searchParams.set("ios-guide", "1");
+    target.hash = "delivery-deck";
+    try {
+      await navigator.clipboard.writeText(target.toString());
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2500);
+    } catch {
+      window.prompt("아래 주소를 복사해 Safari 주소창에 붙여넣으세요.", target.toString());
+    }
+  };
+
   return <section className="ios-install-guide" aria-labelledby="ios-guide-title">
     <div className="ios-guide-heading">
-      <span className="ios-guide-badge">iPhone · 처음 한 번만</span>
-      <h3 id="ios-guide-title">아이폰 알림은 이렇게 켜세요</h3>
-      <p>앱스토어 설치 없이, Safari에서 아래 순서대로 하면 됩니다.</p>
+      <span className="ios-guide-badge">{safari ? "Safari · 처음 한 번만" : "iPhone · Safari 필요"}</span>
+      <h3 id="ios-guide-title">{safari ? "Safari에서 홈 화면에 추가하세요" : "Safari에서 이어서 설정하세요"}</h3>
+      <p>{safari ? "지금 열린 Safari에서 아래 순서대로 하면 됩니다." : "카카오톡·네이버 앱 안에서는 알림을 등록할 수 없어 Safari로 한 번 옮겨야 합니다."}</p>
     </div>
+    {!safari && <div className="ios-safari-handoff">
+      <Compass size={22} />
+      <div><strong>먼저 Safari로 옮기기</strong><span>주소를 복사한 뒤 Safari 주소창에 붙여넣으세요.</span></div>
+      <button type="button" onClick={() => void copySafariUrl()}>{copied ? <Check size={15} /> : <Copy size={15} />}{copied ? "복사됨" : "주소 복사"}</button>
+    </div>}
     <Image
       className="ios-guide-image"
       src="/iphone-pwa-guide.png"
@@ -197,6 +220,7 @@ function IosInstallGuide() {
       priority
     />
     <ol className="ios-guide-text-steps">
+      {!safari && <li><b>Safari</b> 앱을 열고 복사한 주소를 붙여넣어요.</li>}
       <li><b>…</b> 버튼을 누르고 <b>더 보기</b>를 선택해요.</li>
       <li>아래로 내려 <b>홈 화면에 추가</b>를 눌러요.</li>
       <li><b>추가</b> 후 홈 화면의 아침결에서 알림을 허용해요.</li>

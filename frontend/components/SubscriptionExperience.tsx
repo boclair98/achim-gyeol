@@ -18,6 +18,7 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
   const [subscribed, setSubscribed] = useState(false);
   const [externalBrowserHref, setExternalBrowserHref] = useState<string | null>(null);
   const [quickSubscribe, setQuickSubscribe] = useState(false);
+  const [iphoneSafariSetup, setIphoneSafariSetup] = useState(false);
   const [deviceLabel, setDeviceLabel] = useState("이 브라우저에서 바로 등록할 수 있어요");
   const closeButton = useRef<HTMLButtonElement>(null);
 
@@ -46,6 +47,7 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
           : "이 브라우저에서 바로 등록할 수 있어요";
     queueMicrotask(() => {
       if (storedDays) setSelectedDays(storedDays);
+      setIphoneSafariSetup(ios && !standalone);
       setExternalBrowserHref(androidInAppBrowser ? buildAndroidBrowserHref() : null);
       setDeviceLabel(detectedDeviceLabel);
       const params = new URLSearchParams(window.location.search);
@@ -90,8 +92,8 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
       <b>한 번에</b>
     </a> : <button className={subscribed ? "mobile-subscribe-bar subscribed" : "mobile-subscribe-bar"} type="button" onClick={() => setOpen(true)}>
       {subscribed ? <CheckCircle2 size={17} /> : <BellRing size={17} />}
-      <span>{subscribed ? `알림 등록됨 · ${deliveryTime}` : "무료 알림 받기"}</span>
-      <b>{subscribed ? "설정" : "30초"}</b>
+      <span>{subscribed ? `알림 등록됨 · ${deliveryTime}` : iphoneSafariSetup ? "Safari에서 무료 알림 설정" : "무료 알림 받기"}</span>
+      <b>{subscribed ? "설정" : iphoneSafariSetup ? "안내" : "30초"}</b>
     </button>}
 
     {open && <div className="subscription-modal-layer" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
