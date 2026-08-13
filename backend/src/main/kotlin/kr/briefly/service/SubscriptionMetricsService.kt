@@ -32,6 +32,8 @@ data class ActiveDeviceDetail(
     val registeredAt: OffsetDateTime,
     val lastUpdatedAt: OffsetDateTime,
     val lastSentAt: OffsetDateTime?,
+    /** Operator-only delivery diagnostic; never includes a push endpoint. */
+    val lastError: String? = null,
 )
 
 internal data class DeviceClient(val deviceType: String, val browser: String)
@@ -112,6 +114,7 @@ class SubscriptionMetricsService(
             registeredAt = subscription.createdAt,
             lastUpdatedAt = subscription.updatedAt,
             lastSentAt = subscription.lastSentAt,
+            lastError = subscription.lastError,
         )
     }
 

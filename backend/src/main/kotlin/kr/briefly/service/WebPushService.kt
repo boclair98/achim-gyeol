@@ -41,7 +41,14 @@ data class PushRegistration(
     val userAgent: String?,
 )
 data class PushConfigResponse(val enabled: Boolean, val publicKey: String)
-data class PushResult(val delivered: Boolean, val message: String)
+data class PushResult(
+    val delivered: Boolean,
+    val message: String,
+    /** A safe operator-facing diagnostic; never contains the push endpoint. */
+    val diagnostic: String? = null,
+    /** Whether a short in-process retry can reasonably recover the failure. */
+    val retryable: Boolean = true,
+)
 data class PushDeliverySummary(
     val status: String,
     val activeSubscriptions: Int,
@@ -49,6 +56,8 @@ data class PushDeliverySummary(
     val delivered: Int,
     val failed: Int,
     val message: String,
+    /** Sanitized device/error details for the operator console only. */
+    val failureReasons: List<String> = emptyList(),
 )
 
 internal fun deliveryWeekdayIndex(dayOfWeek: DayOfWeek): Int = dayOfWeek.value - 1
@@ -129,7 +138,7 @@ class WebPushService(
             ?.takeIf { it.active && it.ownerId == ownerId } ?: return PushResult(false, "이 계정의 활성 구독을 찾을 수 없습니다.")
         val briefing = runCatching { briefingService.latest() }.getOrNull()
         val count = briefing?.stories?.size ?: 0
-        return send(
+        return sendWithRetry(
             subscription,
             title = "[운영자 테스트] 아침결 알림",
             body = if (count > 0) "연결 확인 완료 · 뉴스 카드 ${count}건을 열어볼 수 있어요." else "웹푸시 연결이 정상적으로 완료됐어요.",
@@ -159,6 +168,7 @@ class WebPushService(
         var due = 0
         var delivered = 0
         var failed = 0
+        val failureReasons = mutableListOf<String>()
         subscriptions.forEach { subscription ->
             val zone = runCatching { ZoneId.of(subscription.timezone) }.getOrDefault(ZoneId.of("Asia/Seoul"))
             val now = OffsetDateTime.now(zone)
@@ -207,6 +217,7 @@ class WebPushService(
         val attempts = deliveryAttemptRepository.findAllByEditionIdAndState(editionId, DeliveryState.FAILED)
         var delivered = 0
         var failed = 0
+        val failureReasons = mutableListOf<String>()
         attempts.forEach { attempt ->
             val subscription = repository.findById(attempt.subscriptionId).orElse(null)
             if (subscription == null || !subscription.active || attempt.attempts >= 5) return@forEach
@@ -217,6 +228,7 @@ class WebPushService(
                 delivered += 1; attempt.state = DeliveryState.DELIVERED; attempt.deliveredAt = OffsetDateTime.now(); attempt.error = null
             } else {
                 failed += 1; attempt.error = subscription.lastError ?: result.message
+                failureReasons += failureReason(subscription, result)
             }
             deliveryAttemptRepository.save(attempt)
         }
@@ -251,7 +263,35 @@ class WebPushService(
         )
     }
 
-    private fun send(subscription: PushSubscription, title: String, body: String, test: Boolean): PushResult = try {
+    private fun send(subscription: PushSubscription, title: String, body: String, test: Boolean): PushResult =
+        sendWithRetry(subscription, title, body, test)
+
+    private fun sendWithRetry(
+        subscription: PushSubscription,
+        title: String,
+        body: String,
+        test: Boolean,
+        maxAttempts: Int = 3,
+    ): PushResult {
+        var attempt = 1
+        var result = sendOnce(subscription, title, body, test)
+        while (!result.delivered && result.retryable && subscription.active && attempt < maxAttempts) {
+            // Provider/network hiccups are common during a fan-out. A bounded, short
+            // retry prevents a single transient failure from looking like a missed briefing.
+            Thread.sleep(250L * attempt)
+            attempt += 1
+            result = sendOnce(subscription, title, body, test)
+        }
+        return result
+    }
+
+    private fun failureReason(subscription: PushSubscription, result: PushResult): String {
+        val client = classifyDeviceClient(subscription.userAgent)
+        val detail = result.diagnostic ?: result.message
+        return "${client.deviceType}/${client.browser}: ${detail.take(240)}"
+    }
+
+    private fun sendOnce(subscription: PushSubscription, title: String, body: String, test: Boolean): PushResult = try {
         val payload = mapper.writeValueAsString(mapOf(
             "title" to title,
             "body" to body,
@@ -281,9 +321,17 @@ class WebPushService(
         }
     } catch (exception: Exception) {
         logger.warn("Web push delivery failed: {}", exception.message)
-        subscription.lastError = exception.message?.take(600)
+        subscription.lastError = safeExceptionDiagnostic(exception)
         repository.save(subscription)
         PushResult(false, "푸시 발송 중 오류가 발생했습니다.")
+    }
+
+    private fun safeExceptionDiagnostic(exception: Exception): String {
+        val detail = exception.message.orEmpty()
+            .replace(Regex("https?://\\S+"), "<redacted-url>")
+            .replace(Regex("[\\r\\n\\t]+"), " ")
+            .trim()
+        return "${exception::class.simpleName ?: "Exception"}${if (detail.isBlank()) "" else ": $detail"}".take(600)
     }
 
     private fun isConfigured() = enabled && publicKey.isNotBlank() && privateKey.isNotBlank()
