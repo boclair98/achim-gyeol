@@ -30,8 +30,11 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
       window.localStorage.removeItem("achim-gyeol-delivery");
     }
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const inAppBrowser = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV/i.test(navigator.userAgent);
     const standalone = window.matchMedia("(display-mode: standalone)").matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
-    const detectedDeviceLabel = ios && !standalone
+    const detectedDeviceLabel = inAppBrowser
+      ? "카카오톡·앱 내부 화면에서는 등록할 수 없어요. 메뉴에서 Chrome으로 열어주세요"
+      : ios && !standalone
       ? "아이폰은 홈 화면에 추가한 뒤 등록할 수 있어요"
       : standalone
         ? "홈 화면에 설치된 아침결에서 등록 중이에요"

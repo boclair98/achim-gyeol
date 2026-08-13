@@ -172,7 +172,24 @@ jobs:
             fi
             ready="$(jq -r '.productionReady' <<< "$status")"
             state="$(jq -r '.generationJob.state' <<< "$status")"
-            if [[ "$ready" == "true" ]]; then exit 0; fi
+            if [[ "$ready" == "true" ]]; then
+              coverage_ready="$(jq -r '.coverageReady' <<< "$status")"
+              if [[ "$coverage_ready" != "true" ]]; then
+                stories="$(jq -r '.stories' <<< "$status")"
+                categories="$(jq -r '.categories' <<< "$status")"
+                reasons="$(jq -r '.blockReasons | join(", ")' <<< "$status")"
+                {
+                  echo "### 분량·분야 목표 경고"
+                  echo ""
+                  echo "- 생성 뉴스: ${stories}건"
+                  echo "- 포함 분야: ${categories}개"
+                  echo "- 경고: ${reasons}"
+                  echo ""
+                  echo "> 기사별 검증을 통과한 내용은 그대로 오전 7시 30분에 발송합니다."
+                } >> "$GITHUB_STEP_SUMMARY"
+              fi
+              exit 0
+            fi
             if [[ "$state" == "FAILED" ]]; then
               jq -r '.generationJob.error' <<< "$status" >&2
               exit 1
@@ -184,15 +201,15 @@ jobs:
               minimum_categories="$(jq -r '.minimumCategories' <<< "$status")"
               reasons="$(jq -r '.blockReasons | join(", ")' <<< "$status")"
               {
-                echo "### 브리핑 발송 보류"
+                echo "### 브리핑 발송 불가"
                 echo ""
                 echo "- 생성 뉴스: ${stories}건 / 최소 ${minimum_stories}건"
                 echo "- 포함 분야: ${categories}개 / 최소 ${minimum_categories}개"
                 echo "- 이유: ${reasons}"
                 echo ""
-                echo "> 적은 뉴스를 억지로 보내지 않고 다음 복구 작업에서 API 수집과 AI 선별을 다시 실행합니다."
+                echo "> 분량 부족은 발송을 막지 않습니다. 이 상태는 생성 실패 또는 운영자 보류 여부를 확인해야 합니다."
               } >> "$GITHUB_STEP_SUMMARY"
-              echo "Briefing coverage gate blocked delivery: $reasons" >&2
+              echo "Briefing is not publishable: $reasons" >&2
               exit 1
             fi
             sleep 10

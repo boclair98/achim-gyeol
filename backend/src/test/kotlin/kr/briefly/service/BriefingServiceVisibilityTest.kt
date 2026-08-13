@@ -45,7 +45,7 @@ class BriefingServiceVisibilityTest {
     }
 
     @Test
-    fun `발행 상태여도 두 건 한 분야면 정규 발송 준비로 표시하지 않는다`() {
+    fun `두 건 한 분야여도 검증된 브리핑은 정규 발송 준비로 표시한다`() {
         val date = LocalDate.of(2026, 8, 13)
         val thinEdition = edition(date, EditorialState.AUTO_APPROVED, 13)
         thinEdition.addStory(story(Category.TECH, 131))
@@ -60,7 +60,25 @@ class BriefingServiceVisibilityTest {
         val result = strictService.latest()
 
         assertThat(result.stories).hasSize(2)
-        assertThat(result.productionReady).isFalse()
+        assertThat(result.productionReady).isTrue()
+    }
+
+    @Test
+    fun `검증 카드가 없는 날도 생성 완료 안내 브리핑을 공개한다`() {
+        val date = LocalDate.of(2026, 8, 13)
+        val emptyEdition = BriefingEdition(
+            briefingDate = date,
+            lead = "자동 검증을 통과한 카드가 아직 없습니다.",
+            pipelineGenerated = true,
+            editorialState = EditorialState.AUTO_APPROVED,
+            id = 14,
+        )
+        `when`(editionRepository.findTop30ByOrderByBriefingDateDesc()).thenReturn(listOf(emptyEdition))
+
+        val result = service.latest()
+
+        assertThat(result.stories).isEmpty()
+        assertThat(result.productionReady).isTrue()
     }
 
     private fun edition(date: LocalDate, state: EditorialState, id: Long): BriefingEdition {

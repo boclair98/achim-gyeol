@@ -62,7 +62,10 @@ class BriefingService(
         BriefingBuildStatus(
             briefingDate = edition.briefingDate,
             coverageReady = coverage.ready,
-            productionReady = edition.pipelineGenerated == true && coverage.ready && publishableState,
+            // Story/category targets are editorial warnings, not a reason to make
+            // the daily news service go silent. Individual stories have already
+            // passed the source and claim checks before they reach the edition.
+            productionReady = edition.pipelineGenerated == true && publishableState,
             stories = coverage.storyCount,
             categories = coverage.categoryCount,
             minimumStories = coverage.minimumStories,
@@ -83,11 +86,10 @@ class BriefingService(
 
     private fun BriefingEdition.toResponse(): BriefingResponse {
         val zone = ZoneId.of("Asia/Seoul")
-        val coverageReady = coveragePolicy.evaluate(stories).ready
         return BriefingResponse(
             id = requireNotNull(id),
             briefingDate = briefingDate,
-            productionReady = pipelineGenerated == true && coverageReady && (editorialState ?: EditorialState.AUTO_APPROVED) in setOf(EditorialState.AUTO_APPROVED, EditorialState.APPROVED, EditorialState.PUBLISHED),
+            productionReady = pipelineGenerated == true && (editorialState ?: EditorialState.AUTO_APPROVED) in setOf(EditorialState.AUTO_APPROVED, EditorialState.APPROVED, EditorialState.PUBLISHED),
             editorialState = editorialState ?: EditorialState.AUTO_APPROVED,
             humanReviewed = (editorialState ?: EditorialState.AUTO_APPROVED) in setOf(EditorialState.APPROVED, EditorialState.PUBLISHED),
             dateLabel = briefingDate.format(DateTimeFormatter.ofPattern("M월 d일 EEEE", Locale.KOREAN)),
@@ -113,7 +115,7 @@ class BriefingService(
 
     private fun firstSentence(summary: String): String = summary.split(Regex("(?<=[.!?])\\s+")).firstOrNull()?.trim().orEmpty().ifBlank { summary.take(120) }
 
-    private fun BriefingEdition.isPubliclyReadable(): Boolean = pipelineGenerated == true && stories.isNotEmpty() &&
+    private fun BriefingEdition.isPubliclyReadable(): Boolean = pipelineGenerated == true &&
         (editorialState ?: EditorialState.AUTO_APPROVED) in setOf(EditorialState.AUTO_APPROVED, EditorialState.APPROVED, EditorialState.PUBLISHED)
 
     private fun categoryLabel(category: Category) = when (category) {

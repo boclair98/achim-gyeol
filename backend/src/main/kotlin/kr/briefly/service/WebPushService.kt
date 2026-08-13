@@ -188,10 +188,15 @@ class WebPushService(
                 val lead = briefing.stories.firstOrNull()
                 val body = lead?.let {
                     "${it.category} 1순위 · ${it.oneLineSummary.take(82)}"
-                } ?: "어제 핵심 뉴스 ${briefing.stories.size}건 · 약 ${briefing.readMinutes}분"
+                } ?: "오늘은 자동 검증을 통과한 뉴스 카드가 아직 없습니다. 수집과 검증을 계속 진행하고 있어요."
+                val title = if (briefing.stories.isEmpty()) {
+                    "아침결 · 오늘 브리핑 안내"
+                } else {
+                    "아침결 · 어제 핵심 ${briefing.stories.size}건 · 약 ${briefing.readMinutes}분"
+                }
                 attempt.attempts += 1
                 attempt.lastAttemptAt = OffsetDateTime.now()
-                val result = send(subscription, "아침결 · 어제 핵심 ${briefing.stories.size}건 · 약 ${briefing.readMinutes}분", body, false)
+                val result = send(subscription, title, body, false)
                 if (result.delivered) {
                     delivered += 1
                     attempt.state = DeliveryState.DELIVERED

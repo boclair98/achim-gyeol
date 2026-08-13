@@ -164,7 +164,7 @@ function subscriptionUsesKey(subscription: PushSubscription, publicKey: string) 
   return current.length === expected.length && current.every((value, index) => value === expected[index]);
 }
 
-async function reconcileExistingSubscription(deliveryTime: string, selectedDays: number[]) {
+export async function reconcileExistingSubscription(deliveryTime: string, selectedDays: number[]) {
   const registration = await navigator.serviceWorker.ready;
   let subscription = await registration.pushManager.getSubscription();
   const savedEndpoint = window.localStorage.getItem(serverSubscriptionKey);

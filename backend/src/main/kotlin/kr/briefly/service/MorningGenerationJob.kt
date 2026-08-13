@@ -47,6 +47,8 @@ class MorningGenerationJob(private val generator: NewsBriefingGenerator) {
                 started.copy(state = GenerationJobState.COMPLETED, finishedAt = OffsetDateTime.now(), result = result)
             } catch (exception: Exception) {
                 logger.error("Asynchronous morning briefing generation failed", exception)
+                runCatching { generator.persistUnavailableEdition(briefingDate, exception.message) }
+                    .onFailure { fallbackError -> logger.error("Could not persist the daily generation-delay notice", fallbackError) }
                 started.copy(
                     state = GenerationJobState.FAILED,
                     finishedAt = OffsetDateTime.now(),
