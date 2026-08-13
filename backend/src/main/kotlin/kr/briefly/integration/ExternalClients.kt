@@ -2,6 +2,7 @@ package kr.briefly.integration
 
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression
+import org.springframework.http.client.SimpleClientHttpRequestFactory
 import org.springframework.stereotype.Component
 import org.springframework.web.client.RestClient
 import org.springframework.web.util.HtmlUtils
@@ -9,6 +10,7 @@ import tools.jackson.databind.JsonNode
 import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.net.URI
 import java.time.OffsetDateTime
+import java.time.Duration
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
@@ -125,11 +127,18 @@ class NaverNewsClient(
 class OpenAiSummarizer(
     @Value("\${app.ai.openai.api-key}") private val apiKey: String,
     @Value("\${app.ai.openai.model:gpt-5-mini}") private val model: String,
+    @Value("\${app.ai.openai.connect-timeout-seconds:10}") connectTimeoutSeconds: Long,
+    @Value("\${app.ai.openai.read-timeout-seconds:90}") readTimeoutSeconds: Long,
 ) : AiSummarizer {
     private val mapper = jacksonObjectMapper()
+    private val requestFactory = SimpleClientHttpRequestFactory().apply {
+        setConnectTimeout(Duration.ofSeconds(connectTimeoutSeconds.coerceIn(1, 60)))
+        setReadTimeout(Duration.ofSeconds(readTimeoutSeconds.coerceIn(15, 180)))
+    }
     private val client = RestClient.builder()
         .baseUrl("https://api.openai.com/v1")
         .defaultHeader("Authorization", "Bearer $apiKey")
+        .requestFactory(requestFactory)
         .build()
 
     override fun summarize(articles: List<CollectedArticle>): AiSummary {
