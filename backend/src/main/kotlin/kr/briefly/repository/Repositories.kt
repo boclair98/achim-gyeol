@@ -34,6 +34,7 @@ interface StoryFeedbackRepository : JpaRepository<StoryFeedback, Long> {
 interface PushSubscriptionRepository : JpaRepository<PushSubscription, Long> {
     fun findByEndpointHash(endpointHash: String): PushSubscription?
     fun findAllByActiveTrue(): List<PushSubscription>
+    fun findAllByActiveFalseAndLastError(lastError: String): List<PushSubscription>
     fun findAllByActiveFalseAndUpdatedAtBefore(cutoff: OffsetDateTime): List<PushSubscription>
     fun countByActiveTrue(): Long
     fun findAllByOwnerId(ownerId: String): List<PushSubscription>
