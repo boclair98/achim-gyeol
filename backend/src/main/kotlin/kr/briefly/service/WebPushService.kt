@@ -10,6 +10,7 @@ import kr.briefly.domain.DeliveryState
 import nl.martijndwars.webpush.Notification
 import nl.martijndwars.webpush.PushService
 import nl.martijndwars.webpush.Urgency
+import org.bouncycastle.jce.ECNamedCurveTable
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.nio.charset.StandardCharsets
+import java.math.BigInteger
 import java.security.MessageDigest
 import java.security.Security
 import java.time.DayOfWeek
@@ -29,6 +31,7 @@ import java.time.LocalTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.zone.ZoneRulesException
+import java.util.Base64
 
 data class PushKeys(val p256dh: String, val auth: String)
 data class PushRegistration(
@@ -65,6 +68,28 @@ internal val fixedDeliveryTime: LocalTime = LocalTime.of(7, 30)
 internal val lastDeliveryTime: LocalTime = LocalTime.of(8, 0)
 internal fun pushStatusIsRetryable(status: Int): Boolean = status == 408 || status == 429 || status >= 500
 internal fun pushEndpointIsInvalid(status: Int): Boolean = status in setOf(400, 401, 403, 404, 410)
+internal data class VapidKeyResolution(val publicKey: String, val configuredPublicKeyMatchesPrivateKey: Boolean)
+internal fun resolveVapidKey(configuredPublicKey: String, privateKey: String): VapidKeyResolution {
+    val privateKeyBytes = decodeBase64Url(privateKey)
+    require(privateKeyBytes.size == 32) { "VAPID private key must contain 32 bytes" }
+
+    val curve = requireNotNull(ECNamedCurveTable.getParameterSpec("secp256r1")) { "P-256 curve is unavailable" }
+    val scalar = BigInteger(1, privateKeyBytes)
+    require(scalar.signum() > 0 && scalar < curve.n) { "VAPID private key is outside the P-256 range" }
+    val derivedPublicKey = Base64.getUrlEncoder().withoutPadding()
+        .encodeToString(curve.g.multiply(scalar).normalize().getEncoded(false))
+    return VapidKeyResolution(
+        publicKey = derivedPublicKey,
+        configuredPublicKeyMatchesPrivateKey = configuredPublicKey.trim().trimEnd('=') == derivedPublicKey,
+    )
+}
+
+private fun decodeBase64Url(value: String): ByteArray {
+    val normalized = value.trim().trimEnd('=')
+    val padding = "=".repeat((4 - normalized.length % 4) % 4)
+    return Base64.getUrlDecoder().decode(normalized + padding)
+}
+
 internal fun deliveryIsDue(current: LocalTime, scheduled: LocalTime = fixedDeliveryTime): Boolean =
     !current.isBefore(scheduled) && !current.isAfter(lastDeliveryTime)
 
@@ -82,12 +107,21 @@ class WebPushService(
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val mapper = jacksonObjectMapper()
+    private val vapidKey = runCatching { resolveVapidKey(publicKey, privateKey) }.getOrNull()
 
     init {
         if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) Security.addProvider(BouncyCastleProvider())
+        if (enabled && privateKey.isNotBlank() && vapidKey == null) {
+            logger.error("Web push is disabled because the VAPID private key is invalid")
+        } else if (enabled && vapidKey?.configuredPublicKeyMatchesPrivateKey == false) {
+            // A mismatched pair produces provider HTTP 401/403 even though browser
+            // permission and subscription creation both succeed. The private key is
+            // the signing authority, so derive its public half and use it everywhere.
+            logger.warn("Configured VAPID public key does not match the private key; using the derived public key")
+        }
     }
 
-    fun config() = PushConfigResponse(isConfigured(), if (isConfigured()) publicKey else "")
+    fun config() = PushConfigResponse(isConfigured(), if (isConfigured()) vapidKey!!.publicKey else "")
 
     @Transactional(readOnly = true)
     fun subscriptionStatus(ownerId: String, endpoint: String): PushSubscription? =
@@ -332,7 +366,7 @@ class WebPushService(
             "tag" to if (test) "achim-gyeol-test" else "achim-gyeol-daily",
         ))
         val notification = Notification(subscription.endpoint, subscription.p256dh, subscription.auth, payload, Urgency.NORMAL)
-        val response = PushService(publicKey, privateKey, subject).send(notification)
+        val response = PushService(vapidKey!!.publicKey, privateKey, subject).send(notification)
         val status = response.statusLine.statusCode
         if (status in 200..299) {
             // An operator test proves the device connection only. It must not consume
@@ -380,7 +414,7 @@ class WebPushService(
         return "${exception::class.simpleName ?: "Exception"}${if (detail.isBlank()) "" else ": $detail"}".take(600)
     }
 
-    private fun isConfigured() = enabled && publicKey.isNotBlank() && privateKey.isNotBlank()
+    private fun isConfigured() = enabled && privateKey.isNotBlank() && vapidKey != null
     private fun requireConfigured() = check(isConfigured()) { "웹푸시가 아직 설정되지 않았습니다." }
 
     companion object {
@@ -410,6 +444,25 @@ class PersonalDataRetentionCleanup(
         if (inactiveSubscriptions.isNotEmpty() || expiredFeedback.isNotEmpty() || expiredReaderEvents.isNotEmpty()) {
             logger.info("Deleted {} inactive push subscription(s), {} expired feedback record(s), and {} reader event(s)", inactiveSubscriptions.size, expiredFeedback.size, expiredReaderEvents.size)
         }
+    }
+}
+
+@Component
+class RejectedPushSubscriptionCleanup(
+    private val repository: PushSubscriptionRepository,
+) : ApplicationRunner {
+    private val logger = LoggerFactory.getLogger(javaClass)
+
+    @Transactional
+    override fun run(args: ApplicationArguments) {
+        val rejected = repository.findAllByActiveFalseAndLastError("Push provider returned HTTP 403")
+        if (rejected.isEmpty()) return
+
+        // These endpoints have already been rejected by the push provider and
+        // deactivated. Removing only those rows leaves every active reader
+        // untouched and lets the affected browser register a clean endpoint.
+        repository.deleteAllInBatch(rejected)
+        logger.info("Deleted {} inactive push subscription(s) rejected with HTTP 403", rejected.size)
     }
 }
 
