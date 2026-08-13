@@ -40,6 +40,8 @@ data class GenerationResult(
     val minimumDeliveryCategories: Int,
     val deliveryReady: Boolean,
     val deliveryBlockReasons: List<String>,
+    val coverageTargetMet: Boolean,
+    val coverageWarnings: List<String>,
 )
 
 data class ArticleCluster(val category: Category, val articles: List<CollectedArticle>, val rank: Int)
@@ -325,12 +327,8 @@ class NewsBriefingGenerator(
             acceptedByCategory[cluster.category] = (acceptedByCategory[cluster.category] ?: 0) + 1
         }
         val stories = selectBalancedStories(editorialStories)
-        check(stories.isNotEmpty()) {
-            "교차 검증 기준을 통과한 뉴스가 없습니다 (수집 $collectedCount, 사건 ${clusters.size}, 실패 ${failures.take(3).joinToString(" | ")})"
-        }
         val coverage = coveragePolicy.evaluate(stories)
         val editionState = when {
-            !coverage.ready -> EditorialState.HELD
             requireHumanApproval -> EditorialState.REVIEW
             else -> EditorialState.AUTO_APPROVED
         }
@@ -340,17 +338,17 @@ class NewsBriefingGenerator(
                 briefingDate = briefingDate,
                 lead = "",
             )
-        edition.lead = "${coverageDate.monthValue}월 ${coverageDate.dayOfMonth}일 보도 중 ${stories.map(NewsStory::category).distinct().size}개 분야 핵심 ${stories.size}건을 서로 다른 출처로 교차 확인했습니다."
+        edition.lead = if (stories.isEmpty()) {
+            "${coverageDate.monthValue}월 ${coverageDate.dayOfMonth}일 뉴스 수집은 완료했지만 자동 검증을 통과한 카드가 아직 없습니다. 원문 수집과 검증을 계속 진행하고 있습니다."
+        } else {
+            "${coverageDate.monthValue}월 ${coverageDate.dayOfMonth}일 보도 중 ${stories.map(NewsStory::category).distinct().size}개 분야 핵심 ${stories.size}건을 서로 다른 출처로 교차 확인했습니다."
+        }
         edition.readMinutes = max(3, ceil(stories.size * 1.25).toInt())
         edition.lastVerifiedAt = OffsetDateTime.now(zone)
         edition.pipelineGenerated = true
         edition.editorialState = editionState
         edition.approvedAt = if (editionState == EditorialState.AUTO_APPROVED) OffsetDateTime.now(zone) else null
-        edition.approvedBy = when (editionState) {
-            EditorialState.AUTO_APPROVED -> "QUALITY_GATE"
-            EditorialState.HELD -> coverageHoldMarker
-            else -> null
-        }
+        edition.approvedBy = if (editionState == EditorialState.AUTO_APPROVED) "QUALITY_GATE" else null
         edition.stories.clear()
         stories.forEachIndexed { index, story ->
             story.displayOrder = index + 1
@@ -360,8 +358,8 @@ class NewsBriefingGenerator(
         editionRepository.save(edition)
 
         if (!coverage.ready) {
-            log.error(
-                "Morning briefing held by coverage gate: date={}, stories={}, categories={}, reasons={}",
+            log.warn(
+                "Morning briefing will still be delivered with coverage warnings: date={}, stories={}, categories={}, reasons={}",
                 briefingDate, coverage.storyCount, coverage.categoryCount, coverage.reasons.joinToString(),
             )
         }
@@ -375,6 +373,24 @@ class NewsBriefingGenerator(
             rejectedCandidates = (aiCandidates.size - editorialStories.size).coerceAtLeast(0),
             coverage = coverage,
         )
+    }
+
+    @Transactional
+    fun persistUnavailableEdition(briefingDate: LocalDate, failure: String?) {
+        val existing = editionRepository.findByBriefingDate(briefingDate)
+        if (existing?.pipelineGenerated == true && existing.stories.isNotEmpty()) return
+        val coverageDate = briefingDate.minusDays(1)
+        val edition = existing ?: BriefingEdition(briefingDate = briefingDate, lead = "")
+        edition.lead = "${coverageDate.monthValue}월 ${coverageDate.dayOfMonth}일 뉴스 수집·검증이 지연되고 있습니다. 확인된 내용이 준비되는 대로 브리핑에 반영하겠습니다."
+        edition.readMinutes = 1
+        edition.lastVerifiedAt = OffsetDateTime.now(zone)
+        edition.pipelineGenerated = true
+        edition.editorialState = EditorialState.AUTO_APPROVED
+        edition.approvedAt = OffsetDateTime.now(zone)
+        edition.approvedBy = "GENERATION_FALLBACK"
+        edition.stories.clear()
+        editionRepository.save(edition)
+        log.error("Stored an unavailable-edition notice so daily delivery does not go silent: date={}, failure={}", briefingDate, failure?.take(300))
     }
 
     private fun evaluateCandidates(
@@ -468,9 +484,9 @@ class NewsBriefingGenerator(
     private fun shouldReuseExistingEdition(edition: BriefingEdition): Boolean {
         if (edition.pipelineGenerated != true || edition.stories.isEmpty()) return false
         val state = edition.editorialState ?: EditorialState.AUTO_APPROVED
-        if (state in setOf(EditorialState.REVIEW, EditorialState.APPROVED, EditorialState.PUBLISHED)) return true
+        if (state in setOf(EditorialState.AUTO_APPROVED, EditorialState.REVIEW, EditorialState.APPROVED, EditorialState.PUBLISHED)) return true
         if (state == EditorialState.HELD && edition.approvedBy != coverageHoldMarker) return true
-        return coveragePolicy.evaluate(edition.stories).ready
+        return false
     }
 
     private fun collectCoverageArticles(provider: NewsProvider, query: String, coverageDate: LocalDate): List<CollectedArticle> {
@@ -529,8 +545,10 @@ class NewsBriefingGenerator(
         categoryCounts = stories.groupingBy { it.category.name }.eachCount().toSortedMap(),
         minimumDeliveryStories = coverage.minimumStories,
         minimumDeliveryCategories = coverage.minimumCategories,
-        deliveryReady = coverage.ready,
-        deliveryBlockReasons = coverage.reasons,
+        deliveryReady = true,
+        deliveryBlockReasons = emptyList(),
+        coverageTargetMet = coverage.ready,
+        coverageWarnings = coverage.reasons,
     )
 
     private fun deduplicateClusters(clusters: List<ArticleCluster>): List<ArticleCluster> = clusters.fold(mutableListOf<ArticleCluster>()) { unique, candidate ->

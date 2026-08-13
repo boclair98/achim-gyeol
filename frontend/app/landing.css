@@ -416,7 +416,7 @@ body {
   .ios-guide-image { margin-top: 14px; border-radius: 12px; }
   .ios-guide-text-steps { font-size: 10px; }
   .ios-guide-finish { font-size: 9px; line-height: 1.45; }
-  .mobile-subscribe-bar { position: fixed; left: 14px; right: 14px; bottom: calc(13px + env(safe-area-inset-bottom)); z-index: 60; min-height: 50px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 9px; border: 0; border-radius: 13px; background: var(--landing-green-dark); padding: 0 15px; color: white; cursor: pointer; box-shadow: 0 13px 33px rgba(5,46,32,.28); }
+  .mobile-subscribe-bar { position: fixed; left: 14px; right: 14px; bottom: calc(13px + env(safe-area-inset-bottom)); z-index: 60; min-height: 50px; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 9px; border: 0; border-radius: 13px; background: var(--landing-green-dark); padding: 0 15px; color: white; cursor: pointer; box-shadow: 0 13px 33px rgba(5,46,32,.28); text-decoration: none; }
   .mobile-subscribe-bar span { font-size: 12px; font-weight: 850; text-align: left; }
   .mobile-subscribe-bar b { border-radius: 999px; background: #72e0af; padding: 5px 8px; color: #073d2c; font-size: 8px; }
   .mobile-subscribe-bar.subscribed { background: #0d6849; }
