@@ -231,6 +231,8 @@ Safari 공유 메뉴에서 **홈 화면에 추가**한 뒤, 홈 화면의 아침
 3. PWA를 완전히 종료했다가 다시 엽니다.
 4. 등록을 해지한 뒤 다시 등록합니다.
 
+서버는 일시적인 네트워크 오류와 푸시 제공자 오류(`408`, `429`, `5xx`)만 최대 3회 재시도합니다. 만료되거나 손상된 구독(`400`, `404`, `410`)은 계속 실패시키지 않고 비활성화합니다. 이 경우 사용자가 아침결을 다시 열어 `이 기기에 알림 등록`을 누르면 새 푸시 주소로 정상 등록됩니다.
+
 ### 오전 7시 30분이 지났는데 안 왔어요
 
 정규 발송에는 두 조건이 모두 필요합니다.
@@ -439,7 +441,7 @@ X-Briefing-Admin-Token: <BRIEFING_ADMIN_TOKEN>
 | `POST` | `/api/admin/briefings/dispatch` | 시간이 된 구독자에게 발송 |
 | `POST` | `/api/admin/briefings/run` | 생성 누락 복구 후 발송 |
 | `GET` | `/api/admin/briefings/status` | 생성 상태·기사 수·활성 기기 수 확인 |
-| `GET` | `/api/admin/briefings/subscriptions` | 활성 기기 수·기기 종류·브라우저·등록/갱신/발송 시각 확인 |
+| `GET` | `/api/admin/briefings/subscriptions` | 활성 기기 수·기기 종류·브라우저·등록/갱신/발송 시각·마지막 오류 확인 |
 | `POST` | `/api/admin/briefings/retry-failed/{editionId}` | 성공한 기기를 제외하고 실패 발송만 재시도 |
 | `GET` | `/api/admin/editorial/queue` | 실제 최신 에디션과 뉴스별 검수 상태 |
 | `PATCH` | `/api/admin/editorial/stories/{storyId}` | 제목·요약·중요성·불확실성·승인 상태 수정 |
@@ -462,7 +464,7 @@ X-Briefing-Admin-Token: <BRIEFING_ADMIN_TOKEN>
 
 이 숫자는 회원 수나 설치 시도 횟수가 아니라, 현재 서버에서 발송 가능한 **고유 활성 푸시 endpoint 수**입니다. 같은 사람이 휴대전화와 PC를 각각 등록하면 2대로 집계되고, 같은 기기에서 다시 등록하면 중복 증가하지 않습니다.
 
-GitHub Actions 요약에는 `iPhone/iPad · Safari/PWA`, `Galaxy/Android · Chrome`처럼 분류한 대수만 표시합니다. 관리자 API의 `activeDevices`에는 최초 등록 시각, 최근 갱신 시각, 마지막 정상 발송 시각이 포함됩니다. 원본 User-Agent, endpoint, 익명 기기 ID, IP와 위치는 반환하지 않습니다.
+GitHub Actions 요약에는 `iPhone/iPad · Safari/PWA`, `Galaxy/Android · Chrome`처럼 분류한 대수만 표시합니다. 관리자 API의 `activeDevices`에는 최초 등록 시각, 최근 갱신 시각, 마지막 정상 발송 시각과 마지막 발송 오류가 포함됩니다. 테스트·정규 발송 결과의 `failureReasons`에도 기기 종류와 안전하게 정리된 오류만 표시됩니다. 원본 User-Agent, endpoint, 익명 기기 ID, IP와 위치는 반환하지 않습니다.
 
 PowerShell 예시:
 
