@@ -111,6 +111,17 @@ internal fun selectBalancedCoverageArticles(
 
 @Component
 class ArticleClusterer {
+    private data class TextFingerprint(
+        val tokens: Set<String>,
+        val characterBigrams: Set<String>,
+    )
+
+    private data class IndexedArticle(
+        val article: CollectedArticle,
+        val title: TextFingerprint,
+        val context: TextFingerprint,
+    )
+
     private val stopWords = setOf(
         "관련", "대한", "위해", "통해", "이번", "오늘", "어제", "내일", "정부", "발표", "공개", "기자", "뉴스",
         "주요", "내용", "세부안", "개편", "조정", "확대", "변경", "확정", "결정", "추진", "검토", "계획",
@@ -130,7 +141,8 @@ class ArticleClusterer {
             .filter { it.title.isNotBlank() && it.originalUrl.isNotBlank() }
             .distinctBy { canonicalUrl(it.originalUrl) }
             .sortedByDescending { it.publishedAt }
-        val groups = mutableListOf<MutableList<CollectedArticle>>()
+            .map(::indexArticle)
+        val groups = mutableListOf<MutableList<IndexedArticle>>()
 
         unique.forEach { article ->
             val target = groups
@@ -142,43 +154,64 @@ class ArticleClusterer {
         }
 
         return groups.mapNotNull { group ->
-            val independent = group.distinctBy { newsSourceFamily(it.originalUrl) }
+            val groupedArticles = group.map(IndexedArticle::article)
+            val independent = groupedArticles.distinctBy { newsSourceFamily(it.originalUrl) }
             if (independent.size < 2) return@mapNotNull null
             val selected = independent.take(6)
-            val combinedText = group.joinToString(" ") { "${it.title} ${it.description}" }
+            val combinedText = groupedArticles.joinToString(" ") { "${it.title} ${it.description}" }
             val impactSignals = publicImpactTerms.count { combinedText.contains(it, ignoreCase = true) }
             val primarySources = selected.count { isPrimaryNewsSource(it.originalUrl) }
             val broadCoverage = independent.size >= 4
             if (!broadCoverage && primarySources == 0 && impactSignals == 0) return@mapNotNull null
-            val rank = selected.size * 100 + primarySources * 80 + impactSignals.coerceAtMost(5) * 30 + group.size.coerceAtMost(10) * 5
+            val rank = selected.size * 100 + primarySources * 80 + impactSignals.coerceAtMost(5) * 30 + groupedArticles.size.coerceAtMost(10) * 5
             ArticleCluster(category, selected, rank)
         }.sortedByDescending(ArticleCluster::rank).take(limit.coerceAtLeast(1))
     }
 
-    internal fun similarity(left: String, right: String): Double {
-        val leftTokens = tokens(left)
-        val rightTokens = tokens(right)
-        if (leftTokens.isEmpty() || rightTokens.isEmpty()) return 0.0
-        val common = leftTokens.intersect(rightTokens).size.toDouble()
-        val containment = common / minOf(leftTokens.size, rightTokens.size)
-        val dice = (2.0 * common) / (leftTokens.size + rightTokens.size)
+    internal fun similarity(left: String, right: String): Double = similarity(fingerprint(left), fingerprint(right))
+
+    private fun similarity(left: TextFingerprint, right: TextFingerprint): Double {
+        if (left.tokens.isEmpty() || right.tokens.isEmpty()) return 0.0
+        val common = commonElements(left.tokens, right.tokens).toDouble()
+        val containment = common / minOf(left.tokens.size, right.tokens.size)
+        val dice = (2.0 * common) / (left.tokens.size + right.tokens.size)
+        val bigramCommon = commonElements(left.characterBigrams, right.characterBigrams).toDouble()
+        val characterDice = if (left.characterBigrams.isEmpty() || right.characterBigrams.isEmpty()) {
+            0.0
+        } else {
+            (2.0 * bigramCommon) / (left.characterBigrams.size + right.characterBigrams.size)
+        }
         return max(
             containment * 0.65 + dice * 0.35,
-            characterSimilarity(leftTokens.sorted().joinToString(" "), rightTokens.sorted().joinToString(" ")),
+            characterDice,
         )
     }
 
-    private fun eventSimilarity(left: CollectedArticle, right: CollectedArticle): Double {
+    private fun eventSimilarity(left: IndexedArticle, right: IndexedArticle): Double {
         val titleScore = similarity(left.title, right.title)
         if (titleScore >= 0.42) return titleScore
-        val sharedTitleTokens = tokens(left.title).intersect(tokens(right.title)).size
+        val sharedTitleTokens = commonElements(left.title.tokens, right.title.tokens)
         if (sharedTitleTokens < 2) return 0.0
-        val contextScore = similarity(
-            "${left.title} ${left.description.take(180)}",
-            "${right.title} ${right.description.take(180)}",
-        )
+        val contextScore = similarity(left.context, right.context)
         return max(titleScore, contextScore * 0.9)
     }
+
+    private fun indexArticle(article: CollectedArticle) = IndexedArticle(
+        article = article,
+        title = fingerprint(article.title),
+        context = fingerprint("${article.title} ${article.description.take(180)}"),
+    )
+
+    private fun fingerprint(value: String): TextFingerprint {
+        val valueTokens = tokens(value)
+        return TextFingerprint(
+            tokens = valueTokens,
+            characterBigrams = bigrams(valueTokens.sorted().joinToString(" ")),
+        )
+    }
+
+    private fun <T> commonElements(left: Set<T>, right: Set<T>): Int =
+        if (left.size <= right.size) left.count(right::contains) else right.count(left::contains)
 
     private fun tokens(title: String): Set<String> = title.lowercase()
         .replace(Regex("\\[[^]]+]"), " ")
@@ -187,13 +220,6 @@ class ArticleClusterer {
         .map(String::trim)
         .filter { it.length >= 2 && it !in stopWords }
         .toSet()
-
-    private fun characterSimilarity(left: String, right: String): Double {
-        val a = bigrams(left)
-        val b = bigrams(right)
-        if (a.isEmpty() || b.isEmpty()) return 0.0
-        return (2.0 * a.intersect(b).size) / (a.size + b.size)
-    }
 
     private fun bigrams(value: String): Set<String> {
         val normalized = value.lowercase().replace(Regex("[^가-힣a-z0-9]"), "")
@@ -230,7 +256,7 @@ class NewsBriefingGenerator(
         Category.ESPORTS to listOf("LCK e스포츠", "리그오브레전드 대회", "발로란트 e스포츠", "오버워치 e스포츠", "e스포츠 경기 결과"),
     )
     @Value("\${app.pipeline.max-candidates-per-category:6}") private var maxCandidatesPerCategory: Int = 6
-    @Value("\${app.pipeline.max-articles-per-category:240}") private var maxArticlesPerCategory: Int = 240
+    @Value("\${app.pipeline.max-articles-per-category:120}") private var maxArticlesPerCategory: Int = 120
     @Value("\${app.pipeline.search-max-pages:3}") private var searchMaxPages: Int = 3
     @Value("\${app.pipeline.max-ai-candidates:18}") private var maxAiCandidates: Int = 18
     @Value("\${app.pipeline.ai-concurrency:1}") private var aiConcurrency: Int = 1
@@ -535,14 +561,15 @@ internal fun newsSourceFamily(url: String): String = runCatching {
 
 @Component
 @ConditionalOnProperty(name = ["app.pipeline.enabled"], havingValue = "true")
-class NewsGenerationScheduler(private val generator: NewsBriefingGenerator) {
+class NewsGenerationScheduler(private val generationJob: MorningGenerationJob) {
     private val log = LoggerFactory.getLogger(javaClass)
 
     @Scheduled(cron = "\${app.pipeline.cron:0 0 6 * * *}", zone = "Asia/Seoul")
     fun generateEveryMorning() {
-        runCatching { generator.generate() }
-            .onSuccess { log.info("Morning briefing generated: {}", it) }
-            .onFailure { log.error("Morning briefing generation failed", it) }
+        val briefingDate = LocalDate.now(ZoneId.of("Asia/Seoul"))
+        runCatching { generationJob.start(briefingDate) }
+            .onSuccess { log.info("Scheduled morning briefing generation submitted: {}", it) }
+            .onFailure { log.error("Scheduled morning briefing generation could not be submitted", it) }
     }
 }
 

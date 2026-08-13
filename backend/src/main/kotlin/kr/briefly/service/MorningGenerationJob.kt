@@ -22,7 +22,10 @@ data class GenerationJobSnapshot(
 class MorningGenerationJob(private val generator: NewsBriefingGenerator) {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val executor = Executors.newSingleThreadExecutor { runnable ->
-        Thread(runnable, "morning-briefing-generation").apply { isDaemon = false }
+        Thread(runnable, "morning-briefing-generation").apply {
+            isDaemon = false
+            priority = (Thread.NORM_PRIORITY - 2).coerceAtLeast(Thread.MIN_PRIORITY)
+        }
     }
 
     @Volatile

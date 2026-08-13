@@ -327,7 +327,7 @@ NEWS_PIPELINE_ENABLED=true
 NEWS_GENERATE_ON_STARTUP=true
 DEMO_DATA_ENABLED=false
 NEWS_MAX_CANDIDATES_PER_CATEGORY=6
-NEWS_MAX_ARTICLES_PER_CATEGORY=240
+NEWS_MAX_ARTICLES_PER_CATEGORY=120
 NEWS_SEARCH_MAX_PAGES=3
 NEWS_MAX_AI_CANDIDATES=18
 NEWS_AI_CONCURRENCY=1
@@ -380,7 +380,7 @@ GET https://morningnews.coders.kr/api/push/public-key
 | `NEWS_GENERATE_ON_STARTUP` | 시작 시 한 번 생성 | `false` |
 | `NEWS_GENERATION_CRON` | Spring 6필드 cron | `0 0 6 * * *` |
 | `NEWS_MAX_CANDIDATES_PER_CATEGORY` | 분야별로 AI 검토를 시도할 최대 사건 후보 | `6` |
-| `NEWS_MAX_ARTICLES_PER_CATEGORY` | 분야별 클러스터링에 사용할 원문 후보 상한. 검색어별 결과를 번갈아 담아 주제 편향을 줄임 | `240` |
+| `NEWS_MAX_ARTICLES_PER_CATEGORY` | 분야별 클러스터링에 사용할 원문 후보 상한. 검색어별 결과를 번갈아 담아 주제 편향을 줄임 | `120` |
 | `NEWS_SEARCH_MAX_PAGES` | 검색어별로 전날 날짜까지 내려가며 읽을 최대 API 페이지(페이지당 100건) | `3` |
 | `NEWS_MAX_AI_CANDIDATES` | 비용·시간을 제한하면서 분야 균형으로 AI가 검토할 전체 사건 수 | `18` |
 | `NEWS_AI_CONCURRENCY` | 동시에 처리할 AI 요약 요청 수. 작은 운영 컨테이너의 안정성을 위해 `1` 권장 | `1` |
