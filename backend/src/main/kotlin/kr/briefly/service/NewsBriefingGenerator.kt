@@ -186,9 +186,11 @@ class ArticleClusterer {
             val combinedText = groupedArticles.joinToString(" ") { "${it.title} ${it.description}" }
             val impactSignals = publicImpactTerms.count { combinedText.contains(it, ignoreCase = true) }
             val primarySources = selected.count { isPrimaryNewsSource(it.originalUrl) }
+            val curatedPriority = selected.maxOfOrNull(CollectedArticle::editorialPriority) ?: 0
             val broadCoverage = independent.size >= 4
-            if (!broadCoverage && primarySources == 0 && impactSignals == 0) return@mapNotNull null
-            val rank = selected.size * 100 + primarySources * 80 + impactSignals.coerceAtMost(5) * 30 + groupedArticles.size.coerceAtMost(10) * 5
+            if (!broadCoverage && primarySources == 0 && impactSignals == 0 && curatedPriority < 60) return@mapNotNull null
+            val rank = selected.size * 100 + primarySources * 80 + impactSignals.coerceAtMost(5) * 30 +
+                curatedPriority.coerceIn(0, 100) + groupedArticles.size.coerceAtMost(10) * 5
             ArticleCluster(category, selected, rank)
         }.sortedByDescending(ArticleCluster::rank).take(limit.coerceAtLeast(1))
     }
@@ -521,7 +523,7 @@ class NewsBriefingGenerator(
 
     private fun collectCoverageArticles(provider: NewsProvider, query: String, coverageDate: LocalDate): List<CollectedArticle> {
         return collectArticlesForDate(coverageDate, zone, searchMaxPages) { start ->
-            runCatching { provider.search(query, display = 100, start = start) }
+            runCatching { provider.searchForDate(query, coverageDate, zone, display = 100, start = start) }
                 .onFailure { log.warn("News provider failed: query={}, start={}, message={}", query, start, it.message) }
                 .getOrDefault(emptyList())
         }
@@ -663,7 +665,9 @@ class NewsBriefingGenerator(
 internal fun isPrimaryNewsSource(url: String): Boolean {
     val host = runCatching { URI(url).host?.lowercase() }.getOrNull() ?: return false
     return host.endsWith(".go.kr") || host == "korea.kr" || host.endsWith(".korea.kr") ||
-        host == "opendart.fss.or.kr" || host.endsWith(".bok.or.kr") || host.endsWith(".kosis.kr")
+        host == "opendart.fss.or.kr" || host.endsWith(".bok.or.kr") || host.endsWith(".kosis.kr") ||
+        host.endsWith(".fsc.go.kr") || host.endsWith(".fss.or.kr") || host.endsWith(".krx.co.kr") ||
+        host.endsWith(".kdca.go.kr")
 }
 
 internal fun newsSourceFamily(url: String): String = runCatching {

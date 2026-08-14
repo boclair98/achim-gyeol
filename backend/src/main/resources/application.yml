@@ -26,6 +26,16 @@ app:
       client-id: ${NAVER_API_HUB_CLIENT_ID:${NAVER_CLIENT_ID:}}
       client-secret: ${NAVER_API_HUB_CLIENT_SECRET:${NAVER_CLIENT_SECRET:}}
       base-url: ${NAVER_API_HUB_BASE_URL:https://naverapihub.apigw.ntruss.com}
+    gdelt:
+      enabled: ${GDELT_NEWS_ENABLED:true}
+      api-key: ${GDELT_CLOUD_API_KEY:}
+      base-url: ${GDELT_CLOUD_BASE_URL:https://gdeltcloud.com}
+      minimum-article-count: ${GDELT_MINIMUM_ARTICLE_COUNT:3}
+      minimum-significance: ${GDELT_MINIMUM_SIGNIFICANCE:0.45}
+      read-timeout-seconds: ${GDELT_READ_TIMEOUT_SECONDS:30}
+    official-rss:
+      enabled: ${OFFICIAL_NEWS_RSS_ENABLED:true}
+      read-timeout-seconds: ${OFFICIAL_NEWS_RSS_READ_TIMEOUT_SECONDS:20}
   ai:
     openai:
       api-key: ${OPENAI_API_KEY:}
