@@ -291,6 +291,61 @@ class WebPushService(
 
     fun activeSubscriptionCount(): Int = repository.countByActiveTrue().toInt()
 
+    @Transactional
+    @Synchronized
+    fun deliverLatestToAll(expectedBriefingDate: LocalDate, expectedActiveSubscriptions: Int): PushDeliverySummary {
+        requireConfigured()
+        val today = LocalDate.now(ZoneId.of("Asia/Seoul"))
+        require(expectedBriefingDate == today) {
+            "전체 발송 기준일이 오늘과 다릅니다. 예상 $expectedBriefingDate, 오늘 $today"
+        }
+        val briefing = briefingService.latest()
+        require(briefing.briefingDate == expectedBriefingDate && briefing.productionReady) {
+            "오늘의 재생성 브리핑이 발송 가능한 상태가 아닙니다"
+        }
+        val subscriptions = repository.findAllByActiveTrue()
+        require(subscriptions.size == expectedActiveSubscriptions) {
+            "등록 기기 수가 예상과 다릅니다. 예상 ${expectedActiveSubscriptions}대, 현재 ${subscriptions.size}대"
+        }
+
+        val lead = briefing.stories.firstOrNull()
+        val title = "[다시 보내드림] 아침결 · 어제 핵심 ${briefing.stories.size}건"
+        val body = lead?.let { "${it.category} 1순위 · ${it.oneLineSummary.take(82)}" }
+            ?: "오늘 브리핑을 다시 점검해 보내드립니다."
+        var delivered = 0
+        var failed = 0
+        val failureReasons = mutableListOf<String>()
+        subscriptions.forEach { subscription ->
+            val subscriptionId = requireNotNull(subscription.id)
+            val attempt = deliveryAttemptRepository.findByEditionIdAndSubscriptionId(briefing.id, subscriptionId)
+                ?: PushDeliveryAttempt(editionId = briefing.id, subscriptionId = subscriptionId)
+            attempt.attempts += 1
+            attempt.lastAttemptAt = OffsetDateTime.now()
+            val result = send(subscription, title, body, false)
+            if (result.delivered) {
+                delivered += 1
+                attempt.state = DeliveryState.DELIVERED
+                attempt.deliveredAt = OffsetDateTime.now()
+                attempt.error = null
+            } else {
+                failed += 1
+                attempt.state = if (subscription.active) DeliveryState.FAILED else DeliveryState.EXPIRED
+                attempt.error = subscription.lastError?.take(600) ?: result.message.take(600)
+                failureReasons += failureReason(subscription, result)
+            }
+            deliveryAttemptRepository.save(attempt)
+        }
+        return PushDeliverySummary(
+            status = if (failed == 0) "FORCED_DELIVERY_COMPLETED" else "FORCED_DELIVERY_PARTIAL_FAILURE",
+            activeSubscriptions = subscriptions.size,
+            dueSubscriptions = subscriptions.size,
+            delivered = delivered,
+            failed = failed,
+            message = "오늘 브리핑을 선택 요일과 기존 발송 여부에 관계없이 전체 활성 기기에 보냈습니다.",
+            failureReasons = failureReasons,
+        )
+    }
+
     @Transactional(readOnly = true)
     fun welcomePreviewStatus(): WelcomePreviewStatus {
         val activeSubscriptions = repository.findAllByActiveTrue()

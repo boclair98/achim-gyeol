@@ -18,6 +18,7 @@ on:
           - generate
           - dispatch
           - run
+          - regenerate-all
           - test-push
           - welcome-preview-status
           - welcome-preview
@@ -146,6 +147,14 @@ jobs:
               -H "X-Briefing-Admin-Token: $ADMIN_TOKEN" \
               -H "Content-Type: application/json" \
               --data "{\"expectedNewSubscriptions\":${expected_new},\"expectedTotalSubscriptions\":${expected_total}}"
+          elif [[ "$OPERATION" == "regenerate-all" ]]; then
+            briefing_date="$(TZ=Asia/Seoul date +%F)"
+            curl --fail-with-body --silent --show-error \
+              --retry 3 --retry-all-errors --max-time 90 \
+              -X POST "https://morningnews.coders.kr/api/admin/briefings/regenerate" \
+              -H "X-Briefing-Admin-Token: $ADMIN_TOKEN" \
+              -H "Content-Type: application/json" \
+              --data "{\"expectedBriefingDate\":\"${briefing_date}\"}"
           elif [[ "$OPERATION" == "generate" ]]; then
             accepted=false
             for attempt in $(seq 1 12); do
@@ -181,10 +190,11 @@ jobs:
           fi
 
       - name: Wait for AI briefing generation
-        if: steps.operation.outputs.operation == 'generate' || steps.operation.outputs.operation == 'run'
+        if: steps.operation.outputs.operation == 'generate' || steps.operation.outputs.operation == 'run' || steps.operation.outputs.operation == 'regenerate-all'
         shell: bash
         env:
           ADMIN_TOKEN: ${{ secrets.BRIEFING_ADMIN_TOKEN }}
+          OPERATION: ${{ steps.operation.outputs.operation }}
         run: |
           # The 06:00 generation has ample lead time before the 07:30 dispatch.
           # Candidate count, concurrency and per-request timeouts keep this wait bounded.
@@ -200,6 +210,21 @@ jobs:
             fi
             ready="$(jq -r '.productionReady' <<< "$status")"
             state="$(jq -r '.generationJob.state' <<< "$status")"
+            if [[ "$OPERATION" == "regenerate-all" ]]; then
+              if [[ "$state" == "FAILED" ]]; then
+                jq -r '.generationJob.error' <<< "$status" >&2
+                exit 1
+              fi
+              result_date="$(jq -r '.generationJob.result.briefingDate // empty' <<< "$status")"
+              today="$(TZ=Asia/Seoul date +%F)"
+              if [[ "$state" == "COMPLETED" && "$result_date" == "$today" ]]; then
+                if [[ "$ready" == "true" ]]; then exit 0; fi
+                echo "Regenerated briefing is not publishable" >&2
+                exit 1
+              fi
+              sleep 10
+              continue
+            fi
             if [[ "$ready" == "true" ]]; then
               coverage_ready="$(jq -r '.coverageReady' <<< "$status")"
               if [[ "$coverage_ready" != "true" ]]; then
@@ -255,6 +280,24 @@ jobs:
             --retry 3 --retry-all-errors --max-time 90 \
             -X POST "https://morningnews.coders.kr/api/admin/briefings/dispatch" \
             -H "X-Briefing-Admin-Token: $ADMIN_TOKEN"
+
+      - name: Dispatch regenerated briefing to every active device
+        if: steps.operation.outputs.operation == 'regenerate-all'
+        shell: bash
+        env:
+          ADMIN_TOKEN: ${{ secrets.BRIEFING_ADMIN_TOKEN }}
+        run: |
+          briefing_date="$(TZ=Asia/Seoul date +%F)"
+          active="$(curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-all-errors --max-time 90 \
+            "https://morningnews.coders.kr/api/admin/briefings/subscriptions" \
+            -H "X-Briefing-Admin-Token: $ADMIN_TOKEN" | jq -r '.activeSubscriptions')"
+          curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-all-errors --max-time 180 \
+            -X POST "https://morningnews.coders.kr/api/admin/briefings/dispatch-all" \
+            -H "X-Briefing-Admin-Token: $ADMIN_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "{\"expectedBriefingDate\":\"${briefing_date}\",\"expectedActiveSubscriptions\":${active}}"
 
       - name: Send private Telegram operator report
         if: ${{ always() && ((github.event_name == 'schedule' && github.event.schedule == '45 21 * * *') || (github.event_name == 'workflow_dispatch' && inputs.send_telegram_report)) }}

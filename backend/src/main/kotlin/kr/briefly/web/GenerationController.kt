@@ -25,6 +25,8 @@ data class MorningRunResult(val generationStarted: Boolean, val generationJob: G
 data class MorningStatusResponse(val date: LocalDate?, val coverageReady: Boolean, val productionReady: Boolean, val stories: Int, val categories: Int, val minimumStories: Int, val minimumCategories: Int, val blockReasons: List<String>, val activeSubscriptions: Int, val generationJob: GenerationJobSnapshot)
 data class OperatorTestRequest(val expectedActiveSubscriptions: Int)
 data class WelcomePreviewRequest(val expectedNewSubscriptions: Int, val expectedTotalSubscriptions: Int)
+data class ForceRegenerationRequest(val expectedBriefingDate: LocalDate)
+data class ForceDispatchRequest(val expectedBriefingDate: LocalDate, val expectedActiveSubscriptions: Int)
 
 @RestController
 @RequestMapping("/api/admin/briefings")
@@ -44,10 +46,36 @@ class GenerationController(
         return if (current?.productionReady == true) generationJob.status() else generationJob.start(today)
     }
 
+    @PostMapping("/regenerate")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    fun regenerate(
+        @RequestHeader("X-Briefing-Admin-Token", required = false) suppliedToken: String?,
+        @RequestBody request: ForceRegenerationRequest,
+    ): GenerationJobSnapshot {
+        adminAuthorizer.authorize(suppliedToken)
+        val today = LocalDate.now(ZoneId.of("Asia/Seoul"))
+        require(request.expectedBriefingDate == today) {
+            "강제 재생성 기준일이 오늘과 다릅니다. 예상 ${request.expectedBriefingDate}, 오늘 $today"
+        }
+        return generationJob.start(today, force = true)
+    }
+
     @PostMapping("/dispatch")
     fun dispatch(@RequestHeader("X-Briefing-Admin-Token", required = false) suppliedToken: String?): PushDeliverySummary {
         adminAuthorizer.authorize(suppliedToken)
         return webPushService.deliverDueBriefings()
+    }
+
+    @PostMapping("/dispatch-all")
+    fun dispatchAll(
+        @RequestHeader("X-Briefing-Admin-Token", required = false) suppliedToken: String?,
+        @RequestBody request: ForceDispatchRequest,
+    ): PushDeliverySummary {
+        adminAuthorizer.authorize(suppliedToken)
+        return webPushService.deliverLatestToAll(
+            request.expectedBriefingDate,
+            request.expectedActiveSubscriptions,
+        )
     }
 
     @PostMapping("/test-push")
