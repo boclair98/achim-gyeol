@@ -1,4 +1,3 @@
-
 # 아침결
 
 전날의 중요한 뉴스를 AI가 묶고 검증해, 다음 날 아침 **PWA 알림과 모바일 뉴스 리더**로 전달하는 뉴스 브리핑 서비스입니다.
@@ -240,7 +239,153 @@ Safari 공유 메뉴에서 **홈 화면에 추가**한 뒤, 홈 화면의 아침
 3. PWA를 완전히 종료했다가 다시 엽니다.
 4. 등록을 해지한 뒤 다시 등록합니다.
 
-서버는 일시적인 네…2163 tokens truncated…도 되지만 개인키는 GitHub나 프런트엔드 코드에 넣으면 안 됩니다.
+서버는 일시적인 네트워크 오류와 푸시 제공자 오류(`408`, `429`, `5xx`)만 최대 3회 재시도합니다. 만료·손상됐거나 이전 푸시 키로 만들어진 구독(`400`, `401`, `403`, `404`, `410`)은 계속 실패시키지 않고 비활성화합니다. 이 경우 사용자가 아침결을 다시 열어 `이 기기에 알림 등록`을 누르면 현재 키를 사용하는 새 푸시 주소로 정상 등록됩니다.
+
+이미 알림 권한이 허용된 기기는 사이트를 다시 열 때 현재 서버 키와 브라우저 구독 키를 비교합니다. 키가 달라졌다면 별도의 권한 창 없이 기존 구독을 해지하고 현재 키로 자동 재등록합니다. 자동 복구가 지원되지 않는 브라우저에서만 `이 기기에 알림 등록`을 한 번 다시 누르면 됩니다.
+
+이 자동 복구는 알림 설정 창을 열지 않아도 모든 페이지 접속에서 실행됩니다. 갤럭시에서 카카오톡 링크로 접속한 경우에는 카카오톡 인앱브라우저가 아닌 메뉴의 `다른 브라우저로 열기` 또는 `Chrome으로 열기`를 선택한 뒤 등록해야 합니다.
+
+이미 알림을 허용한 Chrome·Samsung Internet 사용자는 푸시 제공자가 기존 endpoint를 만료시키더라도 등록 버튼을 다시 누를 필요가 없습니다. 다음에 아침결을 열면 브라우저가 서버의 비활성 상태를 확인하고 오래된 구독을 폐기한 뒤 새 endpoint를 자동 등록합니다. 사용자가 브라우저 알림을 직접 차단했거나 사이트 데이터를 삭제한 경우에만 다시 허용해야 합니다.
+
+카카오톡 링크로 들어온 Android 사용자는 뉴스를 그대로 읽을 수 있고 별도 설치 안내를 강제로 보지 않습니다. 화면의 `무료 알림 받기`를 누르면 중간 설명창 없이 Chrome·Samsung Internet 등 기본 외부 브라우저의 간편 등록 화면으로 바로 이어집니다. 여기서 `이 기기에 알림 등록`과 시스템 알림 `허용`만 누르면 끝납니다. 브라우저 보안상 이 동의는 사용자 본인이 해야 하며, 서비스가 대신 허용하거나 링크만으로 몰래 등록할 수는 없습니다.
+
+### 오전 7시 30분이 지났는데 안 왔어요
+
+정규 발송에는 두 조건이 모두 필요합니다.
+
+- 오늘자 실제 브리핑이 `productionReady=true` 상태일 것
+- 해당 기기가 서버에 등록돼 있을 것
+
+뉴스가 8건·5개 분야 목표에 못 미쳐도 발송은 계속됩니다. 검증 카드가 한 건도 만들어지지 않은 날에는 서비스가 침묵하지 않고 수집·검증 지연 안내를 보냅니다. 운영자가 명시적으로 에디션을 보류했거나 생성 작업 자체가 완료되지 않은 경우에만 정규 뉴스 발송이 중단됩니다.
+
+뉴스 공급원 또는 AI 생성 작업 자체가 실패해도 그날의 빈 안내 에디션을 자동 생성합니다. 따라서 오전 7시 30분에는 검증된 뉴스 카드 또는 수집·검증 지연 안내 중 하나가 등록 기기에 전달됩니다. 확인되지 않은 내용을 뉴스처럼 만들어 보내지는 않습니다.
+
+등록 전에는 이미 만들어진 브리핑을 보낼 주소가 없습니다. 오전 8시 이후 등록한 기기는 당일 정규 알림을 뒤늦게 받지 않고 다음 선택 요일부터 받습니다. 등록 직후에는 `[운영자 테스트]` 푸시로 기기 연결부터 확인해 주세요.
+
+### 사이트를 열어야만 알림이 오나요?
+
+아닙니다. 한 번 등록하면 사이트를 계속 열어 둘 필요가 없습니다. 브라우저 또는 설치된 PWA가 운영체제의 푸시 기능을 통해 알림을 받습니다.
+
+### 앱스토어에서 앱을 설치해야 하나요?
+
+아닙니다. 아침결은 PWA입니다. 아이폰은 Safari의 `홈 화면에 추가`, 안드로이드는 브라우저 설치 기능을 사용합니다.
+
+### 한 사람이 여러 기기에서 받을 수 있나요?
+
+가능합니다. 휴대전화와 PC에서 각각 등록하면 각각 하나의 활성 기기로 저장됩니다. 운영 통계는 사람 수가 아니라 활성 기기 수를 기준으로 집계합니다.
+
+### 사용자 1,000명이면 AI 비용도 1,000배인가요?
+
+아닙니다. 후보 AI 요약과 상위 모델의 최종 편집은 하루 브리핑 생성 때만 실행합니다. 완성된 같은 브리핑을 여러 구독자에게 보내므로 사용자 수가 늘어도 AI 생성 비용이 동일 비율로 증가하지 않습니다. 사용자별 관심도는 추가 AI 호출 없이 DB 점수로 카드 순서만 조정합니다. 푸시 발송과 서버·데이터베이스 비용은 사용량에 따라 별도로 늘 수 있습니다.
+
+### Codex 유료 구독이 있으면 OpenAI API도 무료인가요?
+
+아닙니다. Codex 또는 ChatGPT 구독과 OpenAI API 사용료는 별도입니다. 운영 서버에는 별도의 `OPENAI_API_KEY`와 API 크레딧이 필요합니다.
+
+### 결제나 후원 버튼이 있나요?
+
+없습니다. 현재 `donations`, `subscriptions`, `support_badge`는 모두 비활성화 상태입니다.
+
+---
+
+# 운영자·개발자 안내
+
+이 아래는 서비스를 직접 실행하거나 운영할 때 필요한 내용입니다. 일반 사용자는 읽지 않아도 됩니다.
+
+## 기술 구성
+
+- Frontend: Next.js 16, React 19, TypeScript, PWA Service Worker
+- Backend: Kotlin, Spring Boot, Spring Data JPA
+- Database: PostgreSQL 16, 로컬 H2 지원
+- News: NAVER API HUB, GDELT Cloud v2, 국내 공식기관 RSS
+- AI: OpenAI Responses API, Structured Outputs
+- Push: Web Push, VAPID
+- Hosting: coders.kr
+- Automation: GitHub Actions
+
+## 로컬에서 가장 빠르게 실행하기
+
+### 준비물
+
+- Git
+- Docker Desktop와 Docker Compose
+- 실제 뉴스 생성을 사용할 때만 NAVER·GDELT·OpenAI API 키. GDELT 없이도 국내 뉴스 파이프라인은 동작합니다.
+
+저장소를 받은 뒤 루트에서 실행합니다.
+
+```bash
+docker compose up --build
+```
+
+실행 주소:
+
+- 프런트엔드: [http://localhost:3000](http://localhost:3000)
+- 백엔드 상태: [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health)
+- 최신 브리핑 API: [http://localhost:8080/api/briefings/today](http://localhost:8080/api/briefings/today)
+
+API 키 없이 실행하면 데모 데이터로 화면을 확인할 수 있습니다.
+
+종료:
+
+```bash
+docker compose down
+```
+
+데이터까지 제거하려면 볼륨 삭제의 영향을 이해한 뒤 별도로 실행해야 합니다. 운영 데이터베이스에는 사용하지 마세요.
+
+## 실제 뉴스 생성 설정
+
+`backend/.env.example`을 `backend/.env`로 복사하고 필요한 값을 입력합니다.
+
+```env
+NAVER_API_HUB_CLIENT_ID=...
+NAVER_API_HUB_CLIENT_SECRET=...
+GDELT_CLOUD_API_KEY=...
+GDELT_NEWS_ENABLED=true
+OFFICIAL_NEWS_RSS_ENABLED=true
+OPENAI_API_KEY=...
+OPENAI_CANDIDATE_MODEL=gpt-5.6-terra
+OPENAI_EDITOR_MODEL=gpt-5.6-sol
+OPENAI_CONNECT_TIMEOUT_SECONDS=10
+OPENAI_READ_TIMEOUT_SECONDS=90
+OPENAI_EDITOR_READ_TIMEOUT_SECONDS=180
+NEWS_EDITORIAL_PASS_ENABLED=true
+
+NEWS_PIPELINE_ENABLED=true
+NEWS_GENERATE_ON_STARTUP=true
+DEMO_DATA_ENABLED=false
+NEWS_MAX_CANDIDATES_PER_CATEGORY=6
+NEWS_MAX_ARTICLES_PER_CATEGORY=120
+NEWS_SEARCH_MAX_PAGES=3
+NEWS_MAX_AI_CANDIDATES=18
+NEWS_AI_CONCURRENCY=1
+NEWS_MAX_STORIES_PER_CATEGORY=3
+NEWS_MAX_STORIES=15
+NEWS_MINIMUM_IMPORTANCE_SCORE=60
+NEWS_MINIMUM_DELIVERY_STORIES=8
+NEWS_MINIMUM_DELIVERY_CATEGORIES=5
+
+BRIEFING_ADMIN_TOKEN=충분히-긴-무작위-문자열
+REQUIRE_HUMAN_APPROVAL=false
+```
+
+`NEWS_GENERATE_ON_STARTUP=true`는 로컬 테스트용입니다. 운영에서는 GitHub Actions와 중복 생성을 피하기 위해 `false`를 권장합니다.
+
+## 웹푸시 설정
+
+운영 웹푸시에는 VAPID 키 한 쌍이 필요합니다.
+
+```env
+WEB_PUSH_ENABLED=true
+VAPID_PUBLIC_KEY=...
+VAPID_PRIVATE_KEY=...
+VAPID_SUBJECT=https://morningnews.coders.kr
+PUBLIC_APP_URL=https://morningnews.coders.kr
+```
+
+서버는 시작할 때 `VAPID_PRIVATE_KEY`에서 공개키를 다시 계산합니다. 설정된 공개키와 짝이 맞지 않으면 계산된 공개키를 구독 API와 실제 발송에 함께 사용하므로, 브라우저 구독은 성공하지만 푸시 제공자가 HTTP 401/403으로 거절하는 키 불일치를 방지합니다. 비밀키는 절대 교체하지 말고 보관해야 하며, 부득이하게 교체하면 기존 사용자가 사이트를 다시 열 때 새 공개키로 구독이 자동 갱신됩니다.
+
+공개키는 브라우저에 전달돼도 되지만 개인키는 GitHub나 프런트엔드 코드에 넣으면 안 됩니다.
 
 설정 확인:
 
@@ -575,4 +720,3 @@ docker compose build
 - 오늘 브리핑: [https://morningnews.coders.kr/briefing](https://morningnews.coders.kr/briefing)
 - 품질 기준: [https://morningnews.coders.kr/trust](https://morningnews.coders.kr/trust)
 - 개인정보 안내: [https://morningnews.coders.kr/privacy](https://morningnews.coders.kr/privacy)
-
