@@ -7,7 +7,9 @@ import kr.briefly.domain.NewsStory
 import kr.briefly.domain.NewsClaim
 import kr.briefly.domain.EditorialState
 import kr.briefly.integration.AiSummarizer
+import kr.briefly.integration.AiEditorialReviewer
 import kr.briefly.integration.CollectedArticle
+import kr.briefly.integration.EditorialCandidate
 import kr.briefly.integration.NewsProvider
 import kr.briefly.repository.BriefingEditionRepository
 import org.slf4j.LoggerFactory
@@ -42,6 +44,10 @@ data class GenerationResult(
     val deliveryBlockReasons: List<String>,
     val coverageTargetMet: Boolean,
     val coverageWarnings: List<String>,
+    val editorialPassApplied: Boolean = false,
+    val editorialModel: String? = null,
+    val editorialDurationMillis: Long = 0,
+    val editorialFallbackReason: String? = null,
 )
 
 data class ArticleCluster(val category: Category, val articles: List<CollectedArticle>, val rank: Int)
@@ -51,6 +57,23 @@ private data class CandidateEvaluation(
     val candidate: EditorialStory?,
     val failure: String? = null,
 )
+
+private data class EditorialPassOutcome(
+    val stories: List<NewsStory>,
+    val applied: Boolean,
+    val model: String? = null,
+    val durationMillis: Long = 0,
+    val fallbackReason: String? = null,
+)
+
+internal fun resolveEditorialSelection(
+    candidatesByRef: Map<String, EditorialStory>,
+    orderedRefs: List<String>,
+): List<EditorialStory> {
+    val selected = orderedRefs.distinct().mapNotNull(candidatesByRef::get)
+    check(selected.isNotEmpty()) { "최종 편집기가 선택한 기사가 없습니다" }
+    return selected
+}
 
 internal fun collectArticlesForDate(
     coverageDate: LocalDate,
@@ -238,6 +261,7 @@ class ArticleClusterer {
 class NewsBriefingGenerator(
     private val newsProviders: List<NewsProvider>,
     private val aiSummarizer: AiSummarizer?,
+    private val editorialReviewer: AiEditorialReviewer?,
     private val clusterer: ArticleClusterer,
     private val qualityGate: QualityGate,
     private val coveragePolicy: BriefingCoveragePolicy,
@@ -326,7 +350,8 @@ class NewsBriefingGenerator(
             editorialStories += candidate
             acceptedByCategory[cluster.category] = (acceptedByCategory[cluster.category] ?: 0) + 1
         }
-        val stories = selectBalancedStories(editorialStories)
+        val editorialPass = applyEditorialPass(editorialStories)
+        val stories = editorialPass.stories
         val coverage = coveragePolicy.evaluate(stories)
         val editionState = when {
             requireHumanApproval -> EditorialState.REVIEW
@@ -349,6 +374,10 @@ class NewsBriefingGenerator(
         edition.editorialState = editionState
         edition.approvedAt = if (editionState == EditorialState.AUTO_APPROVED) OffsetDateTime.now(zone) else null
         edition.approvedBy = if (editionState == EditorialState.AUTO_APPROVED) "QUALITY_GATE" else null
+        edition.editorialPassApplied = editorialPass.applied
+        edition.editorialModel = editorialPass.model
+        edition.editorialDurationMillis = editorialPass.durationMillis
+        edition.editorialFallbackReason = editorialPass.fallbackReason
         edition.stories.clear()
         stories.forEachIndexed { index, story ->
             story.displayOrder = index + 1
@@ -372,6 +401,7 @@ class NewsBriefingGenerator(
             stories = stories,
             rejectedCandidates = (aiCandidates.size - editorialStories.size).coerceAtLeast(0),
             coverage = coverage,
+            editorialPass = editorialPass,
         )
     }
 
@@ -497,7 +527,7 @@ class NewsBriefingGenerator(
         }
     }
 
-    private fun selectBalancedStories(candidates: List<EditorialStory>): List<NewsStory> {
+    private fun selectBalancedEditorialStories(candidates: List<EditorialStory>): List<EditorialStory> {
         val comparator = compareByDescending<EditorialStory> { it.importanceScore }
             .thenByDescending { it.clusterRank }
         val sortedByCategory = candidates.groupBy { it.story.category }
@@ -511,7 +541,68 @@ class NewsBriefingGenerator(
         } else {
             categoryLeads + remaining.take(limit - categoryLeads.size)
         }
-        return selected.sortedWith(comparator).map(EditorialStory::story)
+        return selected.sortedWith(comparator)
+    }
+
+    private fun applyEditorialPass(candidates: List<EditorialStory>): EditorialPassOutcome {
+        val baseline = selectBalancedEditorialStories(candidates)
+        val reviewer = editorialReviewer
+            ?: return EditorialPassOutcome(baseline.map(EditorialStory::story), applied = false)
+        if (baseline.isEmpty()) return EditorialPassOutcome(emptyList(), applied = false, model = reviewer.modelName)
+
+        val comparator = compareByDescending<EditorialStory> { it.importanceScore }
+            .thenByDescending { it.clusterRank }
+        val pool = (baseline + candidates.filterNot(baseline::contains).sortedWith(comparator)).distinct()
+        val byRef = pool.mapIndexed { index, candidate -> "N${index + 1}" to candidate }.toMap()
+        val reviewCandidates = byRef.map { (ref, candidate) ->
+            EditorialCandidate(
+                ref = ref,
+                category = candidate.story.category.name,
+                title = candidate.story.title,
+                oneLineSummary = candidate.story.oneLineSummary.orEmpty(),
+                whyItMatters = candidate.story.whyItMatters,
+                importanceScore = candidate.importanceScore,
+                qualityScore = candidate.story.qualityScore,
+                sourceCount = candidate.story.sources.map { newsSourceFamily(it.url) }.distinct().size,
+                claims = candidate.story.claims.map(NewsClaim::statement),
+            )
+        }
+        val startedAt = System.nanoTime()
+        return runCatching {
+            val review = reviewer.review(reviewCandidates, maxStories.coerceAtLeast(1))
+            val reviewed = resolveEditorialSelection(byRef, review.orderedRefs)
+                .take(maxStories.coerceAtLeast(1))
+            val baselineCoverage = coveragePolicy.evaluate(baseline.map(EditorialStory::story))
+            val reviewedCoverage = coveragePolicy.evaluate(reviewed.map(EditorialStory::story))
+            check(
+                if (baselineCoverage.ready) reviewedCoverage.ready
+                else reviewedCoverage.storyCount >= baselineCoverage.storyCount &&
+                    reviewedCoverage.categoryCount >= baselineCoverage.categoryCount,
+            ) {
+                "최종 편집 결과가 기존 안전 선정의 기사·분야 범위를 충족하지 못했습니다 " +
+                    "(stories=${reviewedCoverage.storyCount}, categories=${reviewedCoverage.categoryCount})"
+            }
+            val elapsed = (System.nanoTime() - startedAt) / 1_000_000
+            log.info(
+                "Morning briefing final editorial pass applied: model={}, durationMs={}, selected={}, excluded={}, rationale={}",
+                reviewer.modelName,
+                elapsed,
+                reviewed.joinToString { it.story.title.take(60) },
+                review.excludedRefs.joinToString(),
+                review.rationale.take(300),
+            )
+            EditorialPassOutcome(reviewed.map(EditorialStory::story), true, reviewer.modelName, elapsed)
+        }.getOrElse { exception ->
+            val elapsed = (System.nanoTime() - startedAt) / 1_000_000
+            val reason = (exception.message ?: exception.javaClass.simpleName).take(500)
+            log.warn(
+                "Morning briefing final editorial pass failed safely; deterministic selection will be used: model={}, durationMs={}, reason={}",
+                reviewer.modelName,
+                elapsed,
+                reason,
+            )
+            EditorialPassOutcome(baseline.map(EditorialStory::story), false, reviewer.modelName, elapsed, reason)
+        }
     }
 
     private fun sameEditorialEvent(left: EditorialStory, right: EditorialStory): Boolean {
@@ -535,6 +626,7 @@ class NewsBriefingGenerator(
         stories: Collection<NewsStory>,
         rejectedCandidates: Int,
         coverage: BriefingCoverageDecision,
+        editorialPass: EditorialPassOutcome = EditorialPassOutcome(stories.toList(), applied = false),
     ) = GenerationResult(
         briefingDate = briefingDate,
         coverageDate = coverageDate,
@@ -549,6 +641,10 @@ class NewsBriefingGenerator(
         deliveryBlockReasons = emptyList(),
         coverageTargetMet = coverage.ready,
         coverageWarnings = coverage.reasons,
+        editorialPassApplied = editorialPass.applied,
+        editorialModel = editorialPass.model,
+        editorialDurationMillis = editorialPass.durationMillis,
+        editorialFallbackReason = editorialPass.fallbackReason,
     )
 
     private fun deduplicateClusters(clusters: List<ArticleCluster>): List<ArticleCluster> = clusters.fold(mutableListOf<ArticleCluster>()) { unique, candidate ->

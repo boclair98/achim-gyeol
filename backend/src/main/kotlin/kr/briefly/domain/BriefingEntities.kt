@@ -24,6 +24,10 @@ class BriefingEdition(
     @Enumerated(EnumType.STRING) @Column var editorialState: EditorialState? = EditorialState.AUTO_APPROVED,
     @Column var approvedAt: OffsetDateTime? = null,
     @Column(length = 80) var approvedBy: String? = null,
+    @Column var editorialPassApplied: Boolean? = false,
+    @Column(length = 80) var editorialModel: String? = null,
+    @Column var editorialDurationMillis: Long? = null,
+    @Column(length = 600) var editorialFallbackReason: String? = null,
     @OneToMany(mappedBy = "edition", cascade = [CascadeType.ALL], orphanRemoval = true)
     @OrderBy("displayOrder ASC")
     var stories: MutableList<NewsStory> = mutableListOf(),

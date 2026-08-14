@@ -21,7 +21,7 @@ class NewsBriefingGeneratorIdempotencyTest {
         val edition = BriefingEdition(date, "이미 생성된 브리핑", pipelineGenerated = true)
         edition.addStory(NewsStory(Category.ECONOMY, "기존 뉴스", "기존 요약", whyItMatters = "기존 의미", verificationStatus = VerificationStatus.VERIFIED, qualityScore = 90, displayOrder = 1))
         `when`(repository.findByBriefingDate(date)).thenReturn(edition)
-        val generator = NewsBriefingGenerator(listOf(provider), summarizer, ArticleClusterer(), QualityGate(), BriefingCoveragePolicy(1, 1), repository)
+        val generator = NewsBriefingGenerator(listOf(provider), summarizer, null, ArticleClusterer(), QualityGate(), BriefingCoveragePolicy(1, 1), repository)
 
         val result = generator.generate(date)
 
