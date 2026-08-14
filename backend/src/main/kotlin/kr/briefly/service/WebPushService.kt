@@ -66,6 +66,32 @@ data class PushDeliverySummary(
     val failureReasons: List<String> = emptyList(),
 )
 
+data class WelcomePreviewStatus(
+    val activeSubscriptions: Int,
+    val operatorIncluded: Boolean,
+    val newSubscriptions: Int,
+    val totalTargets: Int,
+)
+
+internal data class WelcomePreviewTargets(
+    val operator: PushSubscription?,
+    val newSubscribers: List<PushSubscription>,
+) {
+    val all: List<PushSubscription> = listOfNotNull(operator) + newSubscribers
+}
+
+internal fun selectWelcomePreviewTargets(subscriptions: List<PushSubscription>): WelcomePreviewTargets {
+    val active = subscriptions.filter(PushSubscription::active).sortedBy(PushSubscription::createdAt)
+    val operator = active.firstOrNull()
+    val operatorId = operator?.id
+    val newSubscribers = active.filter { subscription ->
+        subscription.id != operatorId &&
+            subscription.lastSentAt == null &&
+            subscription.onboardingPreviewSentAt == null
+    }
+    return WelcomePreviewTargets(operator, newSubscribers)
+}
+
 internal fun deliveryWeekdayIndex(dayOfWeek: DayOfWeek): Int = dayOfWeek.value - 1
 internal val fixedDeliveryTime: LocalTime = LocalTime.of(7, 30)
 internal val lastDeliveryTime: LocalTime = LocalTime.of(8, 0)
@@ -265,6 +291,18 @@ class WebPushService(
 
     fun activeSubscriptionCount(): Int = repository.countByActiveTrue().toInt()
 
+    @Transactional(readOnly = true)
+    fun welcomePreviewStatus(): WelcomePreviewStatus {
+        val activeSubscriptions = repository.findAllByActiveTrue()
+        val targets = selectWelcomePreviewTargets(activeSubscriptions)
+        return WelcomePreviewStatus(
+            activeSubscriptions = activeSubscriptions.size,
+            operatorIncluded = targets.operator != null,
+            newSubscriptions = targets.newSubscribers.size,
+            totalTargets = targets.all.size,
+        )
+    }
+
     @Transactional
     @Synchronized
     fun retryFailedDeliveries(editionId: Long): PushDeliverySummary {
@@ -329,6 +367,54 @@ class WebPushService(
             delivered = delivered,
             failed = failed,
             message = "운영자 테스트 알림을 발송했습니다. 정기 브리핑 발송 기록에는 반영하지 않았습니다.",
+            failureReasons = failureReasons,
+        )
+    }
+
+    @Transactional
+    @Synchronized
+    fun sendWelcomePreview(expectedNewSubscriptions: Int, expectedTotalSubscriptions: Int): PushDeliverySummary {
+        requireConfigured()
+        val activeSubscriptions = repository.findAllByActiveTrue()
+        val targets = selectWelcomePreviewTargets(activeSubscriptions)
+        require(targets.newSubscribers.size == expectedNewSubscriptions) {
+            "신규 안내 대상 수가 예상과 다릅니다. 예상 ${expectedNewSubscriptions}대, 현재 ${targets.newSubscribers.size}대"
+        }
+        require(targets.all.size == expectedTotalSubscriptions) {
+            "전체 안내 대상 수가 예상과 다릅니다. 예상 ${expectedTotalSubscriptions}대, 현재 ${targets.all.size}대"
+        }
+
+        val briefing = runCatching { briefingService.latest() }.getOrNull()
+        val storyCount = briefing?.stories?.size ?: 0
+        val title = "아침결 · 내일부터 이렇게 도착해요"
+        val body = if (storyCount > 0) {
+            "매일 오전 7시 30분, 전날 핵심 뉴스 ${storyCount}건을 카드로 정리해드려요. 눌러서 오늘 브리핑을 확인해보세요."
+        } else {
+            "매일 오전 7시 30분, 전날 꼭 알아야 할 뉴스를 검토해 카드로 정리해드려요."
+        }
+
+        var delivered = 0
+        var failed = 0
+        val failureReasons = mutableListOf<String>()
+        targets.all.forEach { subscription ->
+            val result = send(subscription, title, body, true)
+            if (result.delivered) {
+                delivered += 1
+                subscription.onboardingPreviewSentAt = OffsetDateTime.now()
+                repository.save(subscription)
+            } else {
+                failed += 1
+                failureReasons += failureReason(subscription, result)
+            }
+        }
+
+        return PushDeliverySummary(
+            status = if (failed == 0) "WELCOME_PREVIEW_COMPLETED" else "WELCOME_PREVIEW_PARTIAL_FAILURE",
+            activeSubscriptions = activeSubscriptions.size,
+            dueSubscriptions = targets.all.size,
+            delivered = delivered,
+            failed = failed,
+            message = "운영자 기기와 신규 구독 기기에 뉴스 수신 안내를 보냈습니다.",
             failureReasons = failureReasons,
         )
     }

@@ -116,6 +116,7 @@ class PushSubscription(
     @Column(nullable = false) var createdAt: OffsetDateTime = OffsetDateTime.now(),
     @Column(nullable = false) var updatedAt: OffsetDateTime = OffsetDateTime.now(),
     var lastSentAt: OffsetDateTime? = null,
+    var onboardingPreviewSentAt: OffsetDateTime? = null,
     @Column(length = 600) var lastError: String? = null,
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) var id: Long? = null,
 )
