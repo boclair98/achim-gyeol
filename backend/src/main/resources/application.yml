@@ -29,9 +29,13 @@ app:
   ai:
     openai:
       api-key: ${OPENAI_API_KEY:}
-      model: ${OPENAI_MODEL:gpt-5-mini}
+      candidate-model: ${OPENAI_CANDIDATE_MODEL:${OPENAI_MODEL:gpt-5.6-terra}}
       connect-timeout-seconds: ${OPENAI_CONNECT_TIMEOUT_SECONDS:10}
       read-timeout-seconds: ${OPENAI_READ_TIMEOUT_SECONDS:90}
+      editor:
+        enabled: ${NEWS_EDITORIAL_PASS_ENABLED:false}
+        model: ${OPENAI_EDITOR_MODEL:gpt-5.6-sol}
+        read-timeout-seconds: ${OPENAI_EDITOR_READ_TIMEOUT_SECONDS:180}
   push:
     enabled: ${WEB_PUSH_ENABLED:false}
     public-key: ${VAPID_PUBLIC_KEY:}
