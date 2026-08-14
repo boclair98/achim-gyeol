@@ -110,8 +110,8 @@ class OpenAiEditorialReviewer(
             ?: error("OpenAI 최종 편집 응답이 비어 있습니다")
         val json = mapper.readTree(extractOutputText(root))
         return EditorialReview(
-            orderedRefs = json.path("orderedRefs").map { it.asText() },
-            excludedRefs = json.path("excludedRefs").map { it.asText() },
+            orderedRefs = json.path("orderedRefs").values().map { it.asText() },
+            excludedRefs = json.path("excludedRefs").values().map { it.asText() },
             rationale = json.path("rationale").asText().take(1000),
         )
     }
