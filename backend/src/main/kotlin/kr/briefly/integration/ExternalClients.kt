@@ -9,8 +9,10 @@ import org.springframework.web.util.HtmlUtils
 import tools.jackson.databind.JsonNode
 import tools.jackson.module.kotlin.jacksonObjectMapper
 import java.net.URI
+import java.time.LocalDate
 import java.time.OffsetDateTime
 import java.time.Duration
+import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 
@@ -20,6 +22,7 @@ data class CollectedArticle(
     val originalUrl: String,
     val publishedAt: OffsetDateTime,
     val publisher: String,
+    val editorialPriority: Int = 0,
 )
 
 data class AiFact(val statement: String, val sourceIds: List<String>)
@@ -40,6 +43,14 @@ data class AiSummary(
 
 interface NewsProvider {
     fun search(query: String, display: Int = 100, start: Int = 1): List<CollectedArticle>
+
+    fun searchForDate(
+        query: String,
+        coverageDate: LocalDate,
+        zone: ZoneId,
+        display: Int = 100,
+        start: Int = 1,
+    ): List<CollectedArticle> = search(query, display, start)
 }
 
 interface AiSummarizer {
@@ -161,7 +172,10 @@ class OpenAiSummarizer(
                     "role" to "developer",
                     "content" to """
                         당신은 한국어 아침 뉴스 브리핑의 팩트 에디터입니다.
+                        국내 기사뿐 아니라 외국어 기사도 다룹니다. title, oneLineSummary, summary, whyItMatters, whatToWatch, keyFacts, uncertainty, importanceReason을 모두 자연스러운 한국어로 작성하세요.
+                        외국어 문장을 그대로 남기지 말고 사실관계를 유지해 번역하세요. 기관·인명·지명은 국내에서 널리 쓰는 한국어 표기를 우선하고, 꼭 필요할 때만 첫 등장에 원어를 괄호로 한 번 병기하세요.
                         제공된 기사 제목과 설명에 공통으로 명시된 사실만 사용하세요. 한 출처에만 있는 주장, 추측, 선정적 표현은 제외하세요.
+                        설명에 표시된 수집 중요도, 기사 수, 분류값은 후보 선별용 메타데이터일 뿐이므로 독자에게 전달할 핵심 사실이나 keyFacts로 쓰지 마세요.
                         기사 게시 시각과 사건 발생 시각을 혼동하지 마세요. 날짜·수치·인명·기관명·정책 시행 여부는 서로 독립된 출처 두 곳에서 같은 의미로 확인될 때만 확정 사실로 쓰세요.
                         기사 설명만으로 알 수 없는 배경, 원인, 전망을 상식으로 보충하지 마세요. 정부·기업의 계획이나 검토는 확정·시행으로 바꾸어 표현하지 마세요.
                         title은 한눈에 사건을 이해할 수 있는 중립적인 자체 제목으로 작성하세요.
@@ -212,7 +226,7 @@ class OpenAiSummarizer(
             importanceScore = json.path("importanceScore").asInt(0).coerceIn(0, 100),
             recommendedForMorningBriefing = json.path("recommendedForMorningBriefing").asBoolean(false),
             importanceReason = json.path("importanceReason").asText(),
-        )
+        ).also(::requireKoreanBriefing)
     }
 
     private fun extractOutputText(root: JsonNode): String {
@@ -277,3 +291,21 @@ class OpenAiSummarizer(
         "required" to listOf("title", "oneLineSummary", "summary", "whyItMatters", "whatToWatch", "keyFacts", "uncertainty", "sourcesConflict", "importanceScore", "recommendedForMorningBriefing", "importanceReason"),
     )
 }
+
+internal fun requireKoreanBriefing(summary: AiSummary) {
+    val requiredKoreanFields = buildList {
+        add(summary.title)
+        add(summary.oneLineSummary)
+        add(summary.summary)
+        add(summary.whyItMatters)
+        add(summary.importanceReason)
+        addAll(summary.keyFacts.map(AiFact::statement))
+        summary.whatToWatch.takeIf(String::isNotBlank)?.let(::add)
+        summary.uncertainty?.takeIf(String::isNotBlank)?.let(::add)
+    }
+    require(requiredKoreanFields.all(::containsHangul)) {
+        "AI 요약에 한국어로 변환되지 않은 필드가 있습니다"
+    }
+}
+
+private fun containsHangul(value: String): Boolean = value.any { it in '\uAC00'..'\uD7A3' }

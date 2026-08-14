@@ -19,6 +19,10 @@ services:
       DATABASE_USER: ${db.user}
       DATABASE_PASSWORD: ${db.password}
       NEWS_PIPELINE_ENABLED: "true"
+      GDELT_NEWS_ENABLED: "true"
+      GDELT_MINIMUM_ARTICLE_COUNT: "3"
+      GDELT_MINIMUM_SIGNIFICANCE: "0.45"
+      OFFICIAL_NEWS_RSS_ENABLED: "true"
       NEWS_GENERATE_ON_STARTUP: "false"
       DEMO_DATA_ENABLED: "false"
       OPENAI_CANDIDATE_MODEL: "gpt-5.6-terra"
