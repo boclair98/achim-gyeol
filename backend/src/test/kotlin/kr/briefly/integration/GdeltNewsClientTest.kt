@@ -42,6 +42,16 @@ class GdeltNewsClientTest {
                           ]
                         },
                         {
+                          "title": "Two outlets only",
+                          "story_date": "2026-08-13",
+                          "category": "Economic",
+                          "metrics": {"significance": 0.91, "article_count": 10},
+                          "top_articles": [
+                            {"url": "https://same-one.example/story", "title": "First report", "domain": "same-one.example"},
+                            {"url": "https://same-two.example/story", "title": "Second report", "domain": "same-two.example"}
+                          ]
+                        },
+                        {
                           "title": "Minor corporate update",
                           "story_date": "2026-08-13",
                           "category": "Corporate",
