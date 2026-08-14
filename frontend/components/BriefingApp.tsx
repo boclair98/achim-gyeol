@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -53,7 +53,6 @@ export function BriefingApp() {
     () => ["전체", ...briefingCategoryOrder.filter((item) => briefing.stories.some((story) => story.category === item))],
     [briefing.stories],
   );
-  const leadStory = briefing.stories[0] ?? demoBriefing.stories[0];
 
   return (
     <main className="page-shell landing-shell">
@@ -79,17 +78,7 @@ export function BriefingApp() {
           <div className="hero-orbit hero-orbit-one" aria-hidden="true" />
           <div className="hero-orbit hero-orbit-two" aria-hidden="true" />
           <div className="phone-mockup">
-            <div className="phone-status"><span>7:30</span><span>● ● ●</span></div>
-            <div className="push-mockup">
-              <div className="push-app-icon"><Newspaper size={19} /></div>
-              <div><strong>아침결</strong><span>지금</span><p>어제 핵심 뉴스 {briefing.stories.length}건이 도착했어요</p></div>
-            </div>
-            <article className="hero-news-card">
-              <div><span>{leadStory.category}</span><b>교차 확인</b></div>
-              <h2>{leadStory.title}</h2>
-              <p>{leadStory.summary}</p>
-              <footer><span>약 {briefing.readMinutes}분</span><span>출처 {leadStory.sources.length}개</span></footer>
-            </article>
+            <HeroNewsCarousel stories={briefing.stories} readMinutes={briefing.readMinutes} />
           </div>
           <div className="hero-floating-note"><ShieldCheck size={18} /><div><strong>출처까지 함께</strong><span>요약만 믿지 않아도 돼요</span></div></div>
         </div>
@@ -160,6 +149,60 @@ export function BriefingApp() {
 
       {notice && <div className="notice" role="status"><span>{notice}</span><button onClick={() => setNotice("")}>확인</button></div>}
     </main>
+  );
+}
+
+function HeroNewsCarousel({ stories, readMinutes }: { stories: Story[]; readMinutes: number }) {
+  const previewStories = useMemo(() => (stories.length ? stories : demoBriefing.stories).slice(0, 5), [stories]);
+  const [cycle, setCycle] = useState(0);
+  const [visible, setVisible] = useState(true);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const signature = previewStories.map((story) => story.id).join(":");
+  const activeIndex = previewStories.length ? cycle % previewStories.length : 0;
+  const previousIndex = cycle > 0 && previewStories.length ? (cycle - 1) % previewStories.length : -1;
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root || typeof IntersectionObserver === "undefined") return;
+    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { threshold: 0.35 });
+    observer.observe(root);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!visible || previewStories.length < 2 || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") setCycle((current) => current + 1);
+    }, 4800);
+    return () => window.clearInterval(timer);
+  }, [previewStories.length, visible, signature]);
+
+  return (
+    <div ref={rootRef} className="hero-auto-carousel" aria-label="중요 뉴스가 자동으로 넘어가는 미리보기" aria-live="off">
+      <div className="phone-status">
+        <span>7:30</span>
+        <span className="hero-slide-dots" aria-hidden="true">
+          {previewStories.map((story, index) => <i key={`${story.id}-dot`} className={index === activeIndex ? "active" : ""} />)}
+        </span>
+      </div>
+      <div className="push-mockup">
+        <div className="push-app-icon"><Newspaper size={19} /></div>
+        <div><strong>아침결</strong><span>지금</span><p>어제 핵심 뉴스 {stories.length}건이 도착했어요</p></div>
+      </div>
+      <div className="hero-news-window">
+        {previewStories.map((story, index) => {
+          const state = index === activeIndex ? "active" : index === previousIndex ? "leaving" : "waiting";
+          return (
+            <article key={`${story.id}-${index}`} className={`hero-news-card ${state}`} aria-hidden={state !== "active"}>
+              <div><span>{story.category}</span><b>교차 확인</b></div>
+              <h2>{story.title}</h2>
+              <p>{story.summary}</p>
+              <footer><span>약 {readMinutes}분</span><span>출처 {story.sources.length}개</span></footer>
+            </article>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
