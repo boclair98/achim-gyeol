@@ -32,7 +32,7 @@ class MorningGenerationJob(private val generator: NewsBriefingGenerator) {
     private var current = GenerationJobSnapshot(GenerationJobState.IDLE)
 
     @Synchronized
-    fun start(briefingDate: LocalDate): GenerationJobSnapshot {
+    fun start(briefingDate: LocalDate, force: Boolean = false): GenerationJobSnapshot {
         if (current.state == GenerationJobState.RUNNING) return current
         val started = GenerationJobSnapshot(
             state = GenerationJobState.RUNNING,
@@ -42,7 +42,7 @@ class MorningGenerationJob(private val generator: NewsBriefingGenerator) {
         current = started
         executor.submit {
             current = try {
-                val result = generator.generate(briefingDate)
+                val result = generator.generate(briefingDate, force)
                 logger.info("Asynchronous morning briefing generated: {}", result)
                 started.copy(state = GenerationJobState.COMPLETED, finishedAt = OffsetDateTime.now(), result = result)
             } catch (exception: Exception) {

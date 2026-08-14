@@ -294,10 +294,14 @@ class NewsBriefingGenerator(
     @Value("\${app.pipeline.require-human-approval:false}") private var requireHumanApproval: Boolean = false
     @Synchronized
     @Transactional
-    fun generate(briefingDate: LocalDate = LocalDate.now(ZoneId.of("Asia/Seoul"))): GenerationResult {
-        editionRepository.findByBriefingDate(briefingDate)
-            ?.takeIf(::shouldReuseExistingEdition)
-            ?.let { existing ->
+    fun generate(
+        briefingDate: LocalDate = LocalDate.now(ZoneId.of("Asia/Seoul")),
+        force: Boolean = false,
+    ): GenerationResult {
+        if (!force) {
+            editionRepository.findByBriefingDate(briefingDate)
+                ?.takeIf(::shouldReuseExistingEdition)
+                ?.let { existing ->
                 val coverage = coveragePolicy.evaluate(existing.stories)
                 log.info("Morning briefing generation skipped because the edition already exists: date={}, stories={}", briefingDate, existing.stories.size)
                 return generationResult(
@@ -310,6 +314,7 @@ class NewsBriefingGenerator(
                     coverage = coverage,
                 )
             }
+        }
         check(newsProviders.isNotEmpty()) { "뉴스 공급원 API가 설정되지 않았습니다" }
         val summarizer = aiSummarizer ?: error("OpenAI API 키가 설정되지 않았습니다")
         val coverageDate = briefingDate.minusDays(1)
