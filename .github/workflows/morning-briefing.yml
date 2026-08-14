@@ -1,3 +1,4 @@
+
 name: Morning briefing operations
 
 on:
@@ -19,6 +20,11 @@ on:
           - run
           - test-push
           - status
+      send_telegram_report:
+        description: Send the private operator report after this manual run
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -227,3 +233,78 @@ jobs:
             --retry 3 --retry-all-errors --max-time 90 \
             -X POST "https://morningnews.coders.kr/api/admin/briefings/dispatch" \
             -H "X-Briefing-Admin-Token: $ADMIN_TOKEN"
+
+      - name: Send private Telegram operator report
+        if: ${{ always() && ((github.event_name == 'schedule' && github.event.schedule == '45 21 * * *') || (github.event_name == 'workflow_dispatch' && inputs.send_telegram_report)) }}
+        shell: bash
+        env:
+          ADMIN_TOKEN: ${{ secrets.BRIEFING_ADMIN_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          JOB_STATUS: ${{ job.status }}
+          OPERATION: ${{ steps.operation.outputs.operation }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [[ -z "$TELEGRAM_BOT_TOKEN" || -z "$TELEGRAM_CHAT_ID" ]]; then
+            echo "Telegram operator report is not configured; add TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID secrets." >&2
+            exit 0
+          fi
+
+          status_json="$(curl --silent --show-error \
+            --retry 2 --retry-all-errors --max-time 30 \
+            "https://morningnews.coders.kr/api/admin/briefings/status" \
+            -H "X-Briefing-Admin-Token: $ADMIN_TOKEN" 2>/dev/null || echo '{}')"
+          metrics_json="$(curl --silent --show-error \
+            --retry 2 --retry-all-errors --max-time 30 \
+            "https://morningnews.coders.kr/api/admin/editorial/metrics" \
+            -H "X-Briefing-Admin-Token: $ADMIN_TOKEN" 2>/dev/null || echo '{}')"
+
+          briefing_date="$(jq -r '.date // "확인 불가"' <<< "$status_json" 2>/dev/null || echo '확인 불가')"
+          production_ready="$(jq -r '.productionReady // false' <<< "$status_json" 2>/dev/null || echo false)"
+          coverage_ready="$(jq -r '.coverageReady // false' <<< "$status_json" 2>/dev/null || echo false)"
+          stories="$(jq -r '.stories // 0' <<< "$status_json" 2>/dev/null || echo 0)"
+          categories="$(jq -r '.categories // 0' <<< "$status_json" 2>/dev/null || echo 0)"
+          minimum_stories="$(jq -r '.minimumStories // 0' <<< "$status_json" 2>/dev/null || echo 0)"
+          minimum_categories="$(jq -r '.minimumCategories // 0' <<< "$status_json" 2>/dev/null || echo 0)"
+          active="$(jq -r '.activeSubscriptions // 0' <<< "$metrics_json" 2>/dev/null || echo 0)"
+          delivered="$(jq -r '.recentDelivered // 0' <<< "$metrics_json" 2>/dev/null || echo 0)"
+          failed="$(jq -r '.recentFailed // 0' <<< "$metrics_json" 2>/dev/null || echo 0)"
+          due=$((delivered + failed))
+          reasons="$(jq -r '.blockReasons // [] | join(", ")' <<< "$status_json" 2>/dev/null || true)"
+
+          if [[ "$JOB_STATUS" == "success" && "$production_ready" == "true" && "$coverage_ready" == "true" && "$failed" == "0" ]]; then
+            headline="✅ 아침결 일일 운영 보고 · 정상"
+          elif [[ "$JOB_STATUS" == "success" && "$production_ready" == "true" ]]; then
+            headline="⚠️ 아침결 일일 운영 보고 · 일부 실패"
+          else
+            headline="🚨 아침결 일일 운영 보고 · 확인 필요"
+          fi
+
+          report="${headline}
+
+          기준일: ${briefing_date}
+          작업 결과: ${JOB_STATUS}
+          생성 뉴스: ${stories}건 / 기준 ${minimum_stories}건
+          포함 분야: ${categories}개 / 기준 ${minimum_categories}개
+          활성 기기: ${active}대
+          발송 대상: ${due}대
+          발송 성공: ${delivered}대
+          발송 실패: ${failed}대"
+
+          if [[ -n "$reasons" ]]; then
+            report="${report}
+          확인 사항: ${reasons}"
+          fi
+
+          report="${report}
+          작업 확인: ${RUN_URL}"
+
+          response="$(curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-all-errors --max-time 30 \
+            -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "text=${report}" \
+            --data-urlencode "disable_web_page_preview=true" \
+            --data-urlencode "protect_content=true")"
+          jq -e '.ok == true' <<< "$response" >/dev/null
+

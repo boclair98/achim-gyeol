@@ -463,6 +463,32 @@ GitHub Actions cron은 UTC를 사용합니다.
 
 GitHub Actions secret과 coders.kr 운영 환경변수에는 동일한 `BRIEFING_ADMIN_TOKEN`을 등록해야 합니다.
 
+### 운영자 전용 텔레그램 일일 보고
+
+오전 7시 30분 발송 작업이 끝나면 `Morning briefing operations`가 운영자 개인 텔레그램 채팅으로 매일 한 번 결과를 보냅니다. 사용자 화면에는 이 기능이나 운영 지표가 표시되지 않습니다.
+
+보고 내용:
+
+- 정상·일부 실패·확인 필요 상태
+- 브리핑 기준일과 GitHub Actions 작업 결과
+- 생성 기사 수와 최소 기준
+- 포함 분야 수와 최소 기준
+- 활성 기기 수
+- 최신 브리핑 발송 성공·실패 기기 수
+- 품질 차단 사유와 운영 작업 확인 링크
+
+설정 순서:
+
+1. 텔레그램에서 `@BotFather`를 열고 `/newbot`으로 개인 운영 봇을 만듭니다.
+2. 생성된 봇과의 개인 채팅을 열어 `/start` 또는 아무 메시지를 한 번 보냅니다.
+3. 봇 토큰으로 Telegram Bot API의 `getUpdates`를 호출해 본인 개인 채팅의 숫자형 `chat.id`를 확인합니다.
+4. GitHub 저장소 `Settings → Secrets and variables → Actions`에서 다음 Repository secret 두 개를 추가합니다.
+   - `TELEGRAM_BOT_TOKEN`: BotFather가 발급한 봇 토큰
+   - `TELEGRAM_CHAT_ID`: 본인 개인 채팅의 `chat.id`
+5. `Actions → Morning briefing operations → Run workflow`에서 `operation=status`를 선택하고 `Send the private operator report after this manual run`을 켜서 테스트합니다.
+
+토큰과 채팅 ID는 코드·로그·README에 실제 값으로 저장하지 않습니다. 보고에는 푸시 endpoint, 익명 기기 ID, IP, 이메일 같은 사용자 식별정보를 포함하지 않고 집계 숫자만 전송합니다. 텔레그램 비밀값이 아직 없으면 정규 뉴스 생성과 푸시 발송은 그대로 진행되고 보고 단계만 건너뜁니다.
+
 ## 관리자 API
 
 모든 관리자 요청에는 다음 헤더가 필요합니다.
