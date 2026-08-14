@@ -7,6 +7,7 @@ import kr.briefly.service.PushDeliverySummary
 import kr.briefly.service.ActiveSubscriptionStatus
 import kr.briefly.service.SubscriptionMetricsService
 import kr.briefly.service.WebPushService
+import kr.briefly.service.WelcomePreviewStatus
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
@@ -23,6 +24,7 @@ import java.time.ZoneId
 data class MorningRunResult(val generationStarted: Boolean, val generationJob: GenerationJobSnapshot, val delivery: PushDeliverySummary?)
 data class MorningStatusResponse(val date: LocalDate?, val coverageReady: Boolean, val productionReady: Boolean, val stories: Int, val categories: Int, val minimumStories: Int, val minimumCategories: Int, val blockReasons: List<String>, val activeSubscriptions: Int, val generationJob: GenerationJobSnapshot)
 data class OperatorTestRequest(val expectedActiveSubscriptions: Int)
+data class WelcomePreviewRequest(val expectedNewSubscriptions: Int, val expectedTotalSubscriptions: Int)
 
 @RestController
 @RequestMapping("/api/admin/briefings")
@@ -55,6 +57,23 @@ class GenerationController(
     ): PushDeliverySummary {
         adminAuthorizer.authorize(suppliedToken)
         return webPushService.sendOperatorTestToActive(request.expectedActiveSubscriptions)
+    }
+
+    @GetMapping("/welcome-preview")
+    fun welcomePreviewStatus(
+        @RequestHeader("X-Briefing-Admin-Token", required = false) suppliedToken: String?,
+    ): WelcomePreviewStatus {
+        adminAuthorizer.authorize(suppliedToken)
+        return webPushService.welcomePreviewStatus()
+    }
+
+    @PostMapping("/welcome-preview")
+    fun welcomePreview(
+        @RequestHeader("X-Briefing-Admin-Token", required = false) suppliedToken: String?,
+        @RequestBody request: WelcomePreviewRequest,
+    ): PushDeliverySummary {
+        adminAuthorizer.authorize(suppliedToken)
+        return webPushService.sendWelcomePreview(request.expectedNewSubscriptions, request.expectedTotalSubscriptions)
     }
 
     @PostMapping("/retry-failed/{editionId}")
