@@ -126,7 +126,7 @@ class GdeltNewsClient(
                 }
                 .distinctBy { publisherFrom(it.originalUrl) }
                 .take(6)
-                .takeIf { it.size >= 2 }
+                .takeIf { it.size >= 3 }
                 .orEmpty()
         }.distinctBy(CollectedArticle::originalUrl)
     }
