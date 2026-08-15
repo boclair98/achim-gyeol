@@ -9,9 +9,9 @@ test("landing page communicates the service without internal operations", async 
   await expect(page.getByText(/오전 1시/)).toHaveCount(0);
 });
 
-test("privacy center exposes server export and complete deletion", async ({ page }) => {
+test("privacy center exposes data download and complete deletion", async ({ page }) => {
   await page.goto("/preferences/");
-  await expect(page.getByRole("button", { name: "서버 포함 내 데이터 받기" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "내 데이터 받기" })).toBeVisible();
   await expect(page.getByRole("button", { name: "전체 데이터 삭제" })).toBeVisible();
 });
 
@@ -41,9 +41,18 @@ test("legal pages identify the operator and correction channel", async ({ page }
 
 test("public trust copy does not expose implementation vendors or models", async ({ page }) => {
   await page.goto("/trust/");
-  await expect(page.getByRole("heading", { name: /근거는 짧아지지 않습니다/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /더 궁금하면 원문까지/ })).toBeVisible();
   await expect(page.locator("body")).not.toContainText(/OpenAI|NAVER|GDELT|gpt-/i);
   await expect(page.locator("body")).not.toContainText(/오전 1시|API 키/);
+});
+
+test("public pages avoid technical implementation copy", async ({ page }) => {
+  const publicPages = ["/", "/briefing/", "/archive/", "/preferences/", "/trust/", "/privacy/", "/terms/"];
+  const technicalCopy = /오전 1시|API 키|OpenAI|NAVER API|GDELT|gpt-|PWA|웹푸시|endpoint|UUID|기기 ID|자동화 도구|자동 품질|AI NEWS SUMMARY|서버 포함|JSON/i;
+  for (const path of publicPages) {
+    await page.goto(path);
+    await expect(page.locator("body")).not.toContainText(technicalCopy);
+  }
 });
 
 test("PWA manifest and service worker assets are deployable", async ({ request }) => {
