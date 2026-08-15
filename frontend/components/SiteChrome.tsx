@@ -36,7 +36,7 @@ export function SiteFooter() {
         <Link href="/terms">이용약관</Link>
         <a href="https://github.com/boclair98/achim-gyeol" target="_blank" rel="noreferrer">GitHub <ArrowUpRight size={12} /></a>
       </nav>
-      <span>회원가입 없이 무료로 이용할 수 있습니다. AI 요약에는 항상 원문 출처와 검증 상태를 함께 표시합니다.</span>
+      <span>회원가입 없이 무료로 이용할 수 있습니다. 모든 요약에는 원문 출처와 확인 상태를 함께 표시합니다.</span>
     </footer>
   );
 }

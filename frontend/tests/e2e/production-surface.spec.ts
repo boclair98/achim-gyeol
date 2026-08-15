@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
 
-test("landing page communicates the production schedule", async ({ page }) => {
+test("landing page communicates the service without internal operations", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: /어제 뉴스를/ })).toBeVisible();
-  await expect(page.getByText("전날 뉴스를 오전 1시부터 종합", { exact: true })).toBeVisible();
+  await expect(page.getByText("꼭 필요한 뉴스를 한눈에", { exact: true })).toBeVisible();
   await expect(page.getByText("오전 7:30", { exact: true })).toBeVisible();
+  await expect(page.getByText(/API 키/)).toHaveCount(0);
+  await expect(page.getByText(/오전 1시/)).toHaveCount(0);
 });
 
 test("privacy center exposes server export and complete deletion", async ({ page }) => {
@@ -35,6 +37,13 @@ test("legal pages identify the operator and correction channel", async ({ page }
   await expect(page.getByRole("heading", { name: "개인정보처리방침" })).toBeVisible();
   await expect(page.getByText(/GitHub 사용자 boclair98/)).toBeVisible();
   await expect(page.getByRole("link", { name: "아침결 GitHub 문의 창구" })).toHaveAttribute("href", "https://github.com/boclair98/achim-gyeol/issues");
+});
+
+test("public trust copy does not expose implementation vendors or models", async ({ page }) => {
+  await page.goto("/trust/");
+  await expect(page.getByRole("heading", { name: /근거는 짧아지지 않습니다/ })).toBeVisible();
+  await expect(page.locator("body")).not.toContainText(/OpenAI|NAVER|GDELT|gpt-/i);
+  await expect(page.locator("body")).not.toContainText(/오전 1시|API 키/);
 });
 
 test("PWA manifest and service worker assets are deployable", async ({ request }) => {

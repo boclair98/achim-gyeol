@@ -60,9 +60,9 @@ export function BriefingApp() {
 
       <section className="landing-hero" id="top">
         <div className="landing-hero-copy">
-          <span className="landing-kicker"><Sparkles size={15} /> 바쁜 사람을 위한 AI 뉴스 브리핑</span>
+          <span className="landing-kicker"><Sparkles size={15} /> 바쁜 사람을 위한 아침 뉴스 브리핑</span>
           <h1>어제 뉴스를,<br /><em>매일 아침 한 번에.</em></h1>
-          <p>하루 종일 뉴스를 따라가지 않아도 괜찮아요. 서로 다른 언론사의 보도를 확인하고, 꼭 알아야 할 흐름을 빠뜨리지 않은 모바일 뉴스 브리핑으로 정리해 드립니다.</p>
+          <p>하루 종일 뉴스를 따라가지 않아도 괜찮아요. 꼭 알아야 할 흐름과 원문 출처를 읽기 편한 모바일 뉴스 브리핑으로 정리해 드립니다.</p>
           <div className="landing-hero-actions">
             <SubscriptionTrigger className="landing-primary"><BellRing size={18} /> 무료 알림 받기</SubscriptionTrigger>
             <Link className="landing-text-link" href="/briefing">오늘의 뉴스 읽기 <ArrowRight size={16} /></Link>
@@ -98,9 +98,9 @@ export function BriefingApp() {
           <p>설정은 한 번만. 그다음부터는 전날의 중요한 흐름을 매일 아침 가볍게 확인하세요.</p>
         </div>
         <div className="how-grid">
-          <article><div className="how-icon mint"><Clock3 /></div><small>01 · 뉴스 종합</small><h3>전날 뉴스를 모아요</h3><p>전날 00:00~23:59에 보도된 주요 뉴스를 분야별로 수집하고 같은 사건끼리 묶습니다.</p></article>
-          <article><div className="how-icon violet"><Sparkles /></div><small>02 · AI 요약</small><h3>핵심과 출처를 정리해요</h3><p>AI가 3줄 요약과 중요성을 작성하고, 서로 다른 출처가 연결됐는지 다시 확인합니다.</p></article>
-          <article><div className="how-icon yellow"><Smartphone /></div><small>03 · 아침 전달</small><h3>오전 7시 30분에 받아요</h3><p>휴대폰 알림을 누르면 큰 글자로 정리된 뉴스 전용 화면이 바로 열립니다.</p></article>
+          <article><div className="how-icon mint"><Clock3 /></div><small>01 · 핵심만</small><h3>중요한 흐름을 골라 드려요</h3><p>정책부터 경제, 사회, 국제, 테크까지 하루를 시작하기 전에 알아야 할 소식을 한곳에 담습니다.</p></article>
+          <article><div className="how-icon violet"><Sparkles /></div><small>02 · 읽기 쉽게</small><h3>결론과 의미를 정리해요</h3><p>각 뉴스의 한 줄 결론, 확인된 핵심, 알아야 할 점과 원문 출처를 읽기 쉽게 보여드립니다.</p></article>
+          <article><div className="how-icon yellow"><Smartphone /></div><small>03 · 매일 아침</small><h3>오전 7시 30분에 받아요</h3><p>휴대폰 알림을 누르면 큰 글자로 정리된 뉴스 전용 화면이 바로 열립니다.</p></article>
         </div>
       </section>
 
@@ -133,9 +133,9 @@ export function BriefingApp() {
         <div className="landing-section-heading"><span>FAQ</span><h2>자주 묻는 질문</h2></div>
         <div className="faq-list">
           <details open><summary>아침결은 무료인가요?</summary><p>네. 현재 회원가입과 결제 없이 무료로 이용할 수 있으며, 도네이트·유료 구독 기능도 사용하지 않습니다.</p></details>
-          <details><summary>어떤 뉴스가 오나요?</summary><p>오늘의 속보가 아니라 전날 하루 동안 보도된 정책·경제·사회·국제·테크·생활·문화·스포츠·e스포츠의 중요한 사건을 AI가 복수 출처로 요약해 다음 날 아침에 보냅니다.</p></details>
+          <details><summary>어떤 뉴스가 오나요?</summary><p>정책·경제·사회·국제·테크·생활·문화·스포츠·e스포츠에서 하루를 시작하기 전에 알아야 할 중요한 소식을 골라 다음 날 아침에 보내드립니다.</p></details>
           <details><summary>아이폰에서도 알림을 받을 수 있나요?</summary><p>네. Safari에서 아침결을 홈 화면에 추가한 뒤 홈 화면 아이콘으로 열고 ‘이 기기에 알림 등록’을 누르면 됩니다.</p></details>
-          <details><summary>API 키를 직접 입력해야 하나요?</summary><p>아니요. 뉴스와 AI API는 운영자가 서버에 안전하게 설정합니다. 사용자는 이 기기에서 알림만 허용하면 매일 받아볼 수 있습니다.</p></details>
+          <details><summary>언제 받아볼 수 있나요?</summary><p>한 번 알림을 등록하면 요일을 따로 고르지 않아도 매일 오전 7시 30분에 받아볼 수 있습니다.</p></details>
         </div>
       </section>
 
