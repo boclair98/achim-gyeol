@@ -135,7 +135,7 @@ export function BriefingApp() {
           <details open><summary>아침결은 무료인가요?</summary><p>네. 현재 회원가입과 결제 없이 무료로 이용할 수 있으며, 도네이트·유료 구독 기능도 사용하지 않습니다.</p></details>
           <details><summary>어떤 뉴스가 오나요?</summary><p>오늘의 속보가 아니라 전날 하루 동안 보도된 정책·경제·사회·국제·테크·생활·문화·스포츠·e스포츠의 중요한 사건을 AI가 복수 출처로 요약해 다음 날 아침에 보냅니다.</p></details>
           <details><summary>아이폰에서도 알림을 받을 수 있나요?</summary><p>네. Safari에서 아침결을 홈 화면에 추가한 뒤 홈 화면 아이콘으로 열고 ‘이 기기에 알림 등록’을 누르면 됩니다.</p></details>
-          <details><summary>API 키를 직접 입력해야 하나요?</summary><p>아니요. 뉴스와 AI API는 운영자가 서버에 설정합니다. 사용자는 받을 요일만 선택하면 됩니다.</p></details>
+          <details><summary>API 키를 직접 입력해야 하나요?</summary><p>아니요. 뉴스와 AI API는 운영자가 서버에 안전하게 설정합니다. 사용자는 이 기기에서 알림만 허용하면 매일 받아볼 수 있습니다.</p></details>
         </div>
       </section>
 

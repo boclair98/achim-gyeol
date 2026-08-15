@@ -3,7 +3,6 @@ package kr.briefly.service
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import nl.martijndwars.webpush.Encoding
-import java.time.DayOfWeek
 import java.time.LocalTime
 
 class WebPushServiceTest {
@@ -24,10 +23,9 @@ class WebPushServiceTest {
     }
 
     @Test
-    fun `delivery weekday indexes follow the frontend Monday-first order`() {
-        assertThat(deliveryWeekdayIndex(DayOfWeek.MONDAY)).isEqualTo(0)
-        assertThat(deliveryWeekdayIndex(DayOfWeek.FRIDAY)).isEqualTo(4)
-        assertThat(deliveryWeekdayIndex(DayOfWeek.SUNDAY)).isEqualTo(6)
+    fun `regular delivery covers every day of the week`() {
+        assertThat(allDeliveryWeekdays).containsExactly(0, 1, 2, 3, 4, 5, 6)
+        assertThat(allDeliveryWeekdaysValue).isEqualTo("0,1,2,3,4,5,6")
     }
 
     @Test

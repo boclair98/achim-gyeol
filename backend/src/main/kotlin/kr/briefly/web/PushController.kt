@@ -18,7 +18,6 @@ data class PushSubscriptionRequest(
     @field:NotBlank @field:Size(max = 64) val timezone: String = "Asia/Seoul",
     @field:Min(0) @field:Max(23) val deliveryHour: Int = 8,
     @field:Min(0) @field:Max(59) val deliveryMinute: Int = 30,
-    @field:Size(min = 1, max = 7) val weekdays: Set<Int> = setOf(0, 1, 2, 3, 4),
 )
 data class PushEndpointRequest(@field:NotBlank @field:Size(max = 3000) val endpoint: String)
 data class PushSubscriptionStatusResponse(val registered: Boolean, val active: Boolean, val needsRenewal: Boolean)
@@ -42,7 +41,6 @@ class PushController(private val webPushService: WebPushService) {
             timezone = request.timezone,
             deliveryHour = request.deliveryHour,
             deliveryMinute = request.deliveryMinute,
-            weekdays = request.weekdays,
             userAgent = userAgent,
         )).let { mapOf("subscribed" to true) }
 

@@ -22,7 +22,6 @@ export const archiveEditions: ArchiveEdition[] = [
 export type ReaderPreferences = {
   categories: string[];
   deliveryTime: string;
-  weekdays: number[];
   digestSize: "compact" | "standard" | "deep";
   channels: string[];
   consent: boolean;
@@ -31,7 +30,6 @@ export type ReaderPreferences = {
 export const defaultReaderPreferences: ReaderPreferences = {
   categories: ["정책", "경제", "사회", "테크"],
   deliveryTime: "07:30",
-  weekdays: [0, 1, 2, 3, 4],
   digestSize: "standard",
   channels: ["PWA"],
   consent: true,

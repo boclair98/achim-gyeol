@@ -184,22 +184,21 @@ class ReaderExperienceService(
     fun preferences(ownerId: String): ReaderPreference = preferenceRepository.findByOwnerId(ownerId) ?: ReaderPreference(ownerId)
 
     @Transactional
-    fun savePreferences(ownerId: String, categories: Set<String>, digestSize: String, weekdays: Set<Int>, consent: Boolean): ReaderPreference {
+    fun savePreferences(ownerId: String, categories: Set<String>, digestSize: String, consent: Boolean): ReaderPreference {
         require(digestSize in setOf("compact", "standard", "deep")) { "브리핑 분량이 올바르지 않습니다" }
         val allowed = setOf("정책", "경제", "사회", "국제", "테크", "생활", "문화", "스포츠", "e스포츠")
         val selected = categories.intersect(allowed)
         require(selected.isNotEmpty()) { "관심 분야를 한 개 이상 선택해 주세요" }
-        require(weekdays.isNotEmpty() && weekdays.all { it in 0..6 }) { "받을 요일을 한 개 이상 선택해 주세요" }
         val preference = preferenceRepository.findByOwnerId(ownerId) ?: ReaderPreference(ownerId)
         preference.categories = selected.sorted().joinToString(",")
         preference.digestSize = digestSize
-        preference.weekdays = weekdays.sorted().joinToString(",")
+        preference.weekdays = allDeliveryWeekdaysValue
         preference.consent = consent
         preference.updatedAt = OffsetDateTime.now()
         val saved = preferenceRepository.save(preference)
         val subscriptions = pushRepository.findAllByOwnerId(ownerId)
         subscriptions.forEach { subscription ->
-            subscription.weekdays = weekdays.sorted().joinToString(",")
+            subscription.weekdays = allDeliveryWeekdaysValue
             subscription.active = consent
             subscription.updatedAt = OffsetDateTime.now()
         }

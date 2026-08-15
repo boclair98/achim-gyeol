@@ -27,7 +27,6 @@ import java.nio.charset.StandardCharsets
 import java.math.BigInteger
 import java.security.MessageDigest
 import java.security.Security
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.OffsetDateTime
@@ -43,7 +42,6 @@ data class PushRegistration(
     val timezone: String,
     val deliveryHour: Int,
     val deliveryMinute: Int,
-    val weekdays: Set<Int>,
     val userAgent: String?,
 )
 data class PushConfigResponse(val enabled: Boolean, val publicKey: String)
@@ -92,7 +90,8 @@ internal fun selectWelcomePreviewTargets(subscriptions: List<PushSubscription>):
     return WelcomePreviewTargets(operator, newSubscribers)
 }
 
-internal fun deliveryWeekdayIndex(dayOfWeek: DayOfWeek): Int = dayOfWeek.value - 1
+internal val allDeliveryWeekdays: Set<Int> = (0..6).toSet()
+internal val allDeliveryWeekdaysValue: String = allDeliveryWeekdays.joinToString(",")
 internal val fixedDeliveryTime: LocalTime = LocalTime.of(7, 30)
 internal val lastDeliveryTime: LocalTime = LocalTime.of(8, 0)
 internal fun pushStatusIsRetryable(status: Int): Boolean = status == 408 || status == 429 || status >= 500
@@ -161,7 +160,6 @@ class WebPushService(
         requireConfigured()
         require(registration.endpoint.startsWith("https://")) { "올바른 푸시 구독 주소가 아닙니다." }
         require(registration.deliveryHour in 0..23 && registration.deliveryMinute in 0..59) { "발송 시간이 올바르지 않습니다." }
-        require(registration.weekdays.isNotEmpty() && registration.weekdays.all { it in 0..6 }) { "발송 요일이 올바르지 않습니다." }
         try { ZoneId.of(registration.timezone) } catch (_: ZoneRulesException) { throw IllegalArgumentException("시간대가 올바르지 않습니다.") }
 
         val hash = endpointHash(registration.endpoint)
@@ -181,7 +179,7 @@ class WebPushService(
         subscription.timezone = "Asia/Seoul"
         subscription.deliveryHour = fixedDeliveryTime.hour
         subscription.deliveryMinute = fixedDeliveryTime.minute
-        subscription.weekdays = registration.weekdays.sorted().joinToString(",")
+        subscription.weekdays = allDeliveryWeekdaysValue
         subscription.userAgent = registration.userAgent?.take(500)
         subscription.active = true
         subscription.updatedAt = OffsetDateTime.now()
@@ -241,8 +239,6 @@ class WebPushService(
         subscriptions.forEach { subscription ->
             val zone = runCatching { ZoneId.of(subscription.timezone) }.getOrDefault(ZoneId.of("Asia/Seoul"))
             val now = OffsetDateTime.now(zone)
-            val weekday = deliveryWeekdayIndex(now.dayOfWeek)
-            val scheduledDays = subscription.weekdays.split(',').mapNotNull(String::toIntOrNull).toSet()
             val editionId = briefing.id
             val subscriptionId = requireNotNull(subscription.id)
             val attempt = deliveryAttemptRepository.findByEditionIdAndSubscriptionId(editionId, subscriptionId)
@@ -250,7 +246,7 @@ class WebPushService(
             val alreadySentToday = attempt.state == DeliveryState.DELIVERED || subscription.lastSentAt?.atZoneSameInstant(zone)?.toLocalDate() == now.toLocalDate()
             val scheduledTime = fixedDeliveryTime
             val retryable = attempt.state in setOf(DeliveryState.PENDING, DeliveryState.FAILED) && attempt.attempts < 3
-            if (deliveryIsDue(now.toLocalTime(), scheduledTime) && weekday in scheduledDays && !alreadySentToday && retryable) {
+            if (deliveryIsDue(now.toLocalTime(), scheduledTime) && !alreadySentToday && retryable) {
                 due += 1
                 val lead = briefing.stories.firstOrNull()
                 val body = lead?.let {
@@ -341,7 +337,7 @@ class WebPushService(
             dueSubscriptions = subscriptions.size,
             delivered = delivered,
             failed = failed,
-            message = "오늘 브리핑을 선택 요일과 기존 발송 여부에 관계없이 전체 활성 기기에 보냈습니다.",
+            message = "오늘 브리핑을 기존 발송 여부에 관계없이 전체 활성 기기에 보냈습니다.",
             failureReasons = failureReasons,
         )
     }
