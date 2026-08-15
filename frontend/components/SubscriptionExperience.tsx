@@ -97,7 +97,7 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
         <div className="device-readiness"><Smartphone size={19} /><div><strong>현재 기기 확인</strong><span>{deviceLabel}</span></div></div>
 
         {!quickSubscribe && <div className="modal-setting-grid">
-          <div className="modal-time-field"><span><Clock3 size={15} /> 매일 고정 도착</span><div className="fixed-delivery-time"><strong>매일 오전 7:30</strong><small>전날 뉴스는 오전 6시부터 종합해요</small></div></div>
+          <div className="modal-time-field"><span><Clock3 size={15} /> 매일 고정 도착</span><div className="fixed-delivery-time"><strong>매일 오전 7:30</strong><small>전날 뉴스는 오전 1시부터 종합해요</small></div></div>
         </div>}
 
         {!quickSubscribe && <div className="modal-arrival-preview">
