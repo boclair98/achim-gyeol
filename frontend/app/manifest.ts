@@ -5,7 +5,7 @@ export const dynamic = "force-static";
 export default function manifest(): MetadataRoute.Manifest {
   const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
   return {
-    name: "아침결 — AI 모닝 뉴스 브리핑",
+    name: "아침결 — 아침 뉴스 브리핑",
     short_name: "아침결",
     description: "매일 오전 7시 30분, 전날의 중요 뉴스를 근거 출처와 함께 읽기 좋은 모바일 브리핑으로 전달합니다.",
     start_url: `${basePath}/briefing/`,
@@ -13,12 +13,12 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: "#f7f7f5",
     theme_color: "#f7f7f5",
     icons: [
-      { src: `${basePath}/icon.svg`, sizes: "any", type: "image/svg+xml", purpose: "any" },
+      { src: `${basePath}/mail-icon.svg`, sizes: "any", type: "image/svg+xml", purpose: "any" },
     ],
     shortcuts: [
-      { name: "어제 뉴스 종합", short_name: "브리핑", url: `${basePath}/briefing/`, icons: [{ src: `${basePath}/icon.svg`, sizes: "any", type: "image/svg+xml" }] },
-      { name: "브리핑 보관함", short_name: "보관함", url: `${basePath}/archive/`, icons: [{ src: `${basePath}/icon.svg`, sizes: "any", type: "image/svg+xml" }] },
-      { name: "내 브리핑 설정", short_name: "설정", url: `${basePath}/preferences/`, icons: [{ src: `${basePath}/icon.svg`, sizes: "any", type: "image/svg+xml" }] },
+      { name: "오늘의 뉴스", short_name: "브리핑", url: `${basePath}/briefing/`, icons: [{ src: `${basePath}/mail-icon.svg`, sizes: "any", type: "image/svg+xml" }] },
+      { name: "브리핑 보관함", short_name: "보관함", url: `${basePath}/archive/`, icons: [{ src: `${basePath}/mail-icon.svg`, sizes: "any", type: "image/svg+xml" }] },
+      { name: "내 브리핑 설정", short_name: "설정", url: `${basePath}/preferences/`, icons: [{ src: `${basePath}/mail-icon.svg`, sizes: "any", type: "image/svg+xml" }] },
     ],
   };
 }

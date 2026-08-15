@@ -49,4 +49,10 @@ test("public trust copy does not expose implementation vendors or models", async
 test("PWA manifest and service worker assets are deployable", async ({ request }) => {
   await expect((await request.get("/manifest.webmanifest")).status()).toBe(200);
   await expect((await request.get("/sw.js")).status()).toBe(200);
+  await expect((await request.get("/mail-icon.svg")).status()).toBe(200);
+});
+
+test("browser tab uses the branded mail icon", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", /mail-icon\.svg$/);
 });
