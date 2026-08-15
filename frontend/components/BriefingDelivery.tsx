@@ -121,7 +121,7 @@ export function BriefingDelivery() {
           <span>오늘의 뉴스</span>
           <ol>{briefing.stories.map((story, index) => <li key={story.id}><a href={`#news-${story.id}`} onClick={(event) => { event.preventDefault(); openStoryDetail(story.id); }}><b>{String(index + 1).padStart(2, "0")}</b><span>{story.title}</span></a></li>)}</ol>
         </div>
-        <div className="reader-trust-note"><FileCheck2 size={20} /><div><strong>어떻게 확인했나요?</strong><p>같은 사건을 보도한 독립 출처를 묶고, 각 핵심 문장에 근거 원문을 연결합니다. 사람의 일일 사전 승인이 아닌 자동 품질검사 방식입니다.</p><Link href="/trust">품질 기준 보기</Link></div></div>
+        <div className="reader-trust-note"><FileCheck2 size={20} /><div><strong>출처까지 함께 확인하세요</strong><p>요약과 함께 관련 원문을 표시합니다. 중요한 판단이 필요할 때는 연결된 원문을 직접 확인해 주세요.</p><Link href="/trust">서비스 원칙 보기</Link></div></div>
         {!subscribed && <Link className="reader-subscribe" href="/#delivery-deck"><BellRing size={17} /> 매일 오전 7:30 받기</Link>}
       </aside>
     </div>
@@ -130,7 +130,7 @@ export function BriefingDelivery() {
 
 function BriefingAvailability({ state, briefing, liveToday, onRetry }: { state: BriefingLoadState; briefing: Briefing; liveToday: boolean; onRetry: () => void }) {
   if (state === "live" && liveToday && briefing.productionReady) return <div className="briefing-availability live" role="status"><CheckCircle2 size={16} /><span><strong>오늘 브리핑 연결됨</strong> · {briefing.dateLabel} 검증본입니다.</span></div>;
-  if (state === "live" && liveToday) return <div className="briefing-availability partial" role="status"><AlertTriangle size={16} /><span><strong>오늘 브리핑 보완 중</strong> · 현재 {briefing.stories.length}건은 발송 최소 기준을 충족하지 않아 다시 수집·검증하고 있습니다.</span><button type="button" onClick={onRetry}><RefreshCw size={14} /> 새로 확인</button></div>;
+  if (state === "live" && liveToday) return <div className="briefing-availability partial" role="status"><AlertTriangle size={16} /><span><strong>오늘 브리핑 보완 중</strong> · 현재 준비된 뉴스 {briefing.stories.length}건을 먼저 보여드리고 있습니다.</span><button type="button" onClick={onRetry}><RefreshCw size={14} /> 새로 확인</button></div>;
   const message = state === "loading"
     ? "오늘 브리핑을 연결하고 있습니다."
     : state === "cached"
@@ -214,7 +214,7 @@ function DailyBriefingSheets({ briefing, loading, reportingEnabled, onOpenStory 
         <span><Clock3 size={16} /><strong>{briefing.readMinutes}분</strong> 예상</span>
         <span><FileCheck2 size={16} /><strong>{briefing.lastVerifiedAt}</strong> 자동 점검</span>
       </div>
-      <details className="reader-disclosure"><summary>{briefing.humanReviewed ? "AI 요약 · 운영자 최종 승인" : "AI 요약 · 자동 품질검사"}</summary><p>확인된 사실, 의미, 아직 불확실한 내용을 나누고 각 문장에 근거 원문을 연결합니다.</p></details>
+      <details className="reader-disclosure"><summary>{briefing.humanReviewed ? "요약 · 운영자 확인" : "뉴스 요약 안내"}</summary><p>요약 작성에는 자동화 도구가 사용될 수 있습니다. 중요한 판단 전에는 함께 제공된 원문을 확인해 주세요.</p></details>
     </div>
 
     <div className="brief-sheet-deck" id="briefing-card-deck">
@@ -333,7 +333,7 @@ function NewsArticle({ story, editionId, index, reportingEnabled, onBackToCard }
 
   return <article className="reader-article" id={`news-${story.id}`} tabIndex={-1}>
     <a className="reader-card-return top" href={`#briefing-card-${story.id}`} onClick={(event) => { event.preventDefault(); onBackToCard(story.id); }}><ChevronLeft size={15} /> 이 뉴스 카드로 돌아가기</a>
-    <div className="reader-article-meta"><b>{String(index).padStart(2, "0")}</b><span>{story.category}</span><em className={verified && evidenceReady ? "confirmed" : "checking"}><CheckCircle2 size={14} /> {evidenceReady ? (verified ? "근거 확인" : "추가 확인 중") : "원문 제공"}</em><small>AI 요약</small></div>
+    <div className="reader-article-meta"><b>{String(index).padStart(2, "0")}</b><span>{story.category}</span><em className={verified && evidenceReady ? "confirmed" : "checking"}><CheckCircle2 size={14} /> {evidenceReady ? (verified ? "근거 확인" : "추가 확인 중") : "원문 제공"}</em><small>핵심 요약</small></div>
     <h2>{story.title}</h2>
     <section className="reader-conclusion"><span>한 줄 결론</span><p>{story.oneLineSummary || confirmedPoints[0]?.statement || story.title}</p></section>
 
