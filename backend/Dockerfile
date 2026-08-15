@@ -7,7 +7,9 @@ RUN mvn -B -q -DskipTests package
 
 FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
-RUN addgroup -S briefly && adduser -S briefly -G briefly
+RUN apk add --no-cache openssl postgresql-client \
+    && addgroup -S briefly \
+    && adduser -S briefly -G briefly
 COPY --from=builder /app/target/briefly-api-0.1.0.jar app.jar
 USER briefly
 EXPOSE 8080

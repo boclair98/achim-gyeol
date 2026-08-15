@@ -9,8 +9,12 @@ spring:
     password: ${DATABASE_PASSWORD:}
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     open-in-view: false
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
   jackson:
     default-property-inclusion: non_null
 management:
@@ -69,4 +73,17 @@ app:
     minimum-delivery-stories: ${NEWS_MINIMUM_DELIVERY_STORIES:8}
     minimum-delivery-categories: ${NEWS_MINIMUM_DELIVERY_CATEGORIES:5}
     admin-token: ${BRIEFING_ADMIN_TOKEN:}
+    previous-admin-token: ${BRIEFING_ADMIN_TOKEN_PREVIOUS:}
     require-human-approval: ${REQUIRE_HUMAN_APPROVAL:false}
+  security:
+    trust-coders-user-header: ${TRUST_CODERS_USER_HEADER:false}
+    public-write-limit-per-minute: ${PUBLIC_WRITE_LIMIT_PER_MINUTE:30}
+    admin-limit-per-minute: ${ADMIN_LIMIT_PER_MINUTE:60}
+  backup:
+    enabled: ${BACKUP_ENABLED:false}
+    cron: ${BACKUP_CRON:0 15 4 * * *}
+    bucket: ${BACKUP_STORAGE_BUCKET:}
+    endpoint: ${BACKUP_STORAGE_ENDPOINT:}
+    access-key: ${BACKUP_STORAGE_ACCESS_KEY:}
+    secret-key: ${BACKUP_STORAGE_SECRET_KEY:}
+    encryption-key: ${BACKUP_ENCRYPTION_KEY:}

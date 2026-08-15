@@ -24,10 +24,10 @@ data class PushSubscriptionStatusResponse(val registered: Boolean, val active: B
 
 @RestController
 @RequestMapping("/api/push")
-class PushController(private val webPushService: WebPushService) {
+class PushController(private val webPushService: WebPushService, private val requesterIdentity: RequesterIdentity) {
     @GetMapping("/session")
     fun session(@RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("X-Achim-Device", required = false) deviceId: String?) =
-        mapOf("identified" to runCatching { RequesterIdentity.resolve(user, deviceId) }.isSuccess)
+        mapOf("identified" to runCatching { requesterIdentity.resolve(user, deviceId) }.isSuccess)
 
     @GetMapping("/public-key")
     fun publicKey() = webPushService.config()
@@ -35,7 +35,7 @@ class PushController(private val webPushService: WebPushService) {
     @PostMapping("/subscriptions")
     @ResponseStatus(HttpStatus.CREATED)
     fun subscribe(@Valid @RequestBody request: PushSubscriptionRequest, @RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("X-Achim-Device", required = false) deviceId: String?, @RequestHeader("User-Agent", required = false) userAgent: String?) =
-        webPushService.subscribe(RequesterIdentity.resolve(user, deviceId), PushRegistration(
+        webPushService.subscribe(requesterIdentity.resolve(user, deviceId), PushRegistration(
             endpoint = request.endpoint,
             keys = PushKeys(request.keys.p256dh, request.keys.auth),
             timezone = request.timezone,
@@ -46,7 +46,7 @@ class PushController(private val webPushService: WebPushService) {
 
     @PostMapping("/subscriptions/status")
     fun subscriptionStatus(@Valid @RequestBody request: PushEndpointRequest, @RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("X-Achim-Device", required = false) deviceId: String?) =
-        webPushService.subscriptionStatus(RequesterIdentity.resolve(user, deviceId), request.endpoint).let { subscription ->
+        webPushService.subscriptionStatus(requesterIdentity.resolve(user, deviceId), request.endpoint).let { subscription ->
             PushSubscriptionStatusResponse(
                 registered = subscription != null,
                 active = subscription?.active == true,
@@ -57,9 +57,9 @@ class PushController(private val webPushService: WebPushService) {
     @DeleteMapping("/subscriptions")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun unsubscribe(@Valid @RequestBody request: PushEndpointRequest, @RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("X-Achim-Device", required = false) deviceId: String?) =
-        webPushService.unsubscribe(RequesterIdentity.resolve(user, deviceId), request.endpoint)
+        webPushService.unsubscribe(requesterIdentity.resolve(user, deviceId), request.endpoint)
 
     @PostMapping("/test")
     fun test(@Valid @RequestBody request: PushEndpointRequest, @RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("X-Achim-Device", required = false) deviceId: String?) =
-        webPushService.sendTest(RequesterIdentity.resolve(user, deviceId), request.endpoint)
+        webPushService.sendTest(requesterIdentity.resolve(user, deviceId), request.endpoint)
 }

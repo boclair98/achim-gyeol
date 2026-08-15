@@ -1,0 +1,48 @@
+name: Production monitor
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-monitor
+  cancel-in-progress: true
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check site, API and backend health
+        run: |
+          set -Eeuo pipefail
+          base="https://morningnews.coders.kr"
+          curl --fail --show-error --silent --retry 2 --retry-all-errors --max-time 90 "$base/" >/dev/null
+          health="$(curl --fail --show-error --silent --retry 2 --retry-all-errors --max-time 90 "$base/actuator/health")"
+          echo "$health" | jq -e '.status == "UP"' >/dev/null
+          briefing="$(curl --fail --show-error --silent --retry 2 --retry-all-errors --max-time 90 "$base/api/briefings/today")"
+          echo "$briefing" | jq -e '.briefingDate and (.stories | type == "array")' >/dev/null
+          echo "### Production probe passed" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Site: HTTP 200" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Backend: UP" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Briefing API: valid response" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Alert operator on Telegram
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [[ -z "$TELEGRAM_BOT_TOKEN" || -z "$TELEGRAM_CHAT_ID" ]]; then
+            echo "Telegram secrets are not configured; workflow failure remains visible in GitHub Actions."
+            exit 0
+          fi
+          message="🚨 아침결 운영 감시 실패%0A사이트·API·DB 상태를 확인해 주세요.%0Ahttps://github.com/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          curl --fail --silent --show-error --max-time 30 \
+            -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "text=${message}"

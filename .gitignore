@@ -5,6 +5,8 @@ target
 data
 .coders/
 frontend-dev.*.log
+frontend/test-results/
+frontend/playwright-report/
 __pycache__
 *.pyc
 .venv

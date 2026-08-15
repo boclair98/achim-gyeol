@@ -135,6 +135,17 @@ class EditorialOperationsService(
     }
 
     @Transactional
+    fun declareIncident(editionId: Long, actor: String, reason: String): EditorialQueue {
+        require(reason.trim().length >= 10) { "사고 내용과 중단 이유를 10자 이상 입력해 주세요" }
+        val edition = editionRepository.findById(editionId).orElseThrow { IllegalStateException("브리핑을 찾을 수 없습니다") }
+        edition.editorialState = EditorialState.HELD
+        edition.stories.forEach { it.editorialState = EditorialState.HELD }
+        editionRepository.save(edition)
+        audit("EDITORIAL_INCIDENT_DECLARED", "EDITION", editionId, actor, reason.trim().take(800))
+        return queue()
+    }
+
+    @Transactional
     fun correct(storyId: Long, input: CorrectionInput, actor: String): StoryCorrection {
         require(input.afterText.isNotBlank() && input.reason.isNotBlank()) { "정정 내용과 이유가 필요합니다" }
         val story = storyRepository.findById(storyId).orElseThrow { IllegalStateException("뉴스를 찾을 수 없습니다") }
@@ -177,9 +188,17 @@ class EditorialOperationsService(
 class ReaderExperienceService(
     private val preferenceRepository: ReaderPreferenceRepository,
     private val eventRepository: ReaderEventRepository,
+    private val feedbackRepository: StoryFeedbackRepository,
     private val pushRepository: PushSubscriptionRepository,
     private val subscriptionMetricsService: SubscriptionMetricsService,
 ) {
+    data class PreferenceExport(val categories: List<String>, val digestSize: String, val consent: Boolean, val updatedAt: OffsetDateTime)
+    data class SubscriptionExport(val active: Boolean, val timezone: String, val deliveryTime: String, val createdAt: OffsetDateTime, val updatedAt: OffsetDateTime, val lastSentAt: OffsetDateTime?)
+    data class FeedbackExport(val storyId: Long, val type: FeedbackType, val detail: String?, val createdAt: OffsetDateTime)
+    data class EventExport(val type: ReaderEventType, val editionId: Long, val storyId: Long?, val createdAt: OffsetDateTime)
+    data class ReaderDataExport(val exportedAt: OffsetDateTime, val preferences: PreferenceExport?, val subscriptions: List<SubscriptionExport>, val feedback: List<FeedbackExport>, val events: List<EventExport>)
+    data class ReaderDataDeletion(val deletedPreferences: Int, val deletedSubscriptions: Int, val deletedFeedback: Int, val deletedEvents: Int)
+
     @Transactional(readOnly = true)
     fun preferences(ownerId: String): ReaderPreference = preferenceRepository.findByOwnerId(ownerId) ?: ReaderPreference(ownerId)
 
@@ -211,8 +230,38 @@ class ReaderExperienceService(
 
     @Transactional
     fun recordEvent(ownerId: String, type: ReaderEventType, editionId: Long, storyId: Long?) {
-        val actorHash = MessageDigest.getInstance("SHA-256").digest(ownerId.toByteArray(StandardCharsets.UTF_8)).joinToString("") { "%02x".format(it) }
+        val actorHash = ownerHash(ownerId)
         if (eventRepository.existsByTypeAndEditionIdAndStoryIdAndActorHash(type, editionId, storyId, actorHash)) return
         eventRepository.save(ReaderEvent(type, editionId, storyId, actorHash))
     }
+
+    @Transactional(readOnly = true)
+    fun exportData(ownerId: String): ReaderDataExport {
+        val preference = preferenceRepository.findByOwnerId(ownerId)?.let {
+            PreferenceExport(it.categories.split(',').filter(String::isNotBlank), it.digestSize, it.consent, it.updatedAt)
+        }
+        val subscriptions = pushRepository.findAllByOwnerId(ownerId).map {
+            SubscriptionExport(it.active, it.timezone, "%02d:%02d".format(it.deliveryHour, it.deliveryMinute), it.createdAt, it.updatedAt, it.lastSentAt)
+        }
+        val feedback = feedbackRepository.findAllByUserId(ownerId).map { FeedbackExport(it.storyId, it.type, it.detail, it.createdAt) }
+        val events = eventRepository.findAllByActorHash(ownerHash(ownerId)).map { EventExport(it.type, it.editionId, it.storyId, it.createdAt) }
+        return ReaderDataExport(OffsetDateTime.now(), preference, subscriptions, feedback, events)
+    }
+
+    @Transactional
+    fun deleteData(ownerId: String): ReaderDataDeletion {
+        val preferences = if (preferenceRepository.findByOwnerId(ownerId) != null) 1 else 0
+        val subscriptions = pushRepository.findAllByOwnerId(ownerId)
+        val feedback = feedbackRepository.findAllByUserId(ownerId)
+        val events = eventRepository.findAllByActorHash(ownerHash(ownerId))
+        if (subscriptions.isNotEmpty()) pushRepository.deleteAllInBatch(subscriptions)
+        if (preferences > 0) preferenceRepository.deleteByOwnerId(ownerId)
+        if (feedback.isNotEmpty()) feedbackRepository.deleteAllByUserId(ownerId)
+        if (events.isNotEmpty()) eventRepository.deleteAllByActorHash(ownerHash(ownerId))
+        if (subscriptions.isNotEmpty()) subscriptionMetricsService.recordIfChanged("READER_DATA_DELETED")
+        return ReaderDataDeletion(preferences, subscriptions.size, feedback.size, events.size)
+    }
+
+    private fun ownerHash(ownerId: String): String = MessageDigest.getInstance("SHA-256")
+        .digest(ownerId.toByteArray(StandardCharsets.UTF_8)).joinToString("") { "%02x".format(it) }
 }

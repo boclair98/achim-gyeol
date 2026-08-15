@@ -19,8 +19,8 @@
 - 실제 브리핑에는 `AI 요약`, 최종 자동 점검 시각, 주장별 원문과 기사별 오류 신고가 표시됩니다.
 - 브리핑 첫 장은 최대 5개의 우선 흐름을 보여 주는 `30초 한눈에 보기`이며, 다음 장부터 뉴스 1건씩 좌우로 넘깁니다.
 - API가 절전 중이거나 일시적으로 끊기면 마지막 정상 브리핑을 `오프라인 안전 모드`로 명확히 표시합니다. 실제 데이터를 받은 적이 없는 기기에서는 예시 뉴스에 `실제 뉴스 아님`을 표시합니다.
-- 푸시 해지 시 해당 서버 구독정보를 삭제하고, 만료 구독은 최대 30일, 오류 신고는 최대 90일 뒤 자동 삭제합니다.
-- 정식 출시 전 운영 주체·법적 문의 창구, 뉴스 사용권과 사람 검수 담당자를 확정해야 합니다. 뉴스 발견 경로는 NAVER API HUB, GDELT Cloud, 국내 공식기관 RSS로 다원화했습니다.
+- 푸시 해지 시 해당 서버 구독정보를 삭제하고, 만료 구독은 최대 30일, 오류 신고는 최대 90일 뒤 자동 삭제합니다. 개인정보 화면에서 서버·기기 데이터를 직접 내려받거나 한 번에 삭제할 수도 있습니다.
+- 운영자와 문의 창구는 GitHub 프로젝트 소유자 및 Issues로 공개했고, 15분 간격 상태 감시·텔레그램 장애 경보·긴급 발행 중단·암호화 백업과 복구 절차를 마련했습니다. 상용 출시 전에는 실제 법적 명칭과 개인정보 보호책임자, 뉴스 사용권과 사람 검수 담당자를 확정해야 합니다.
 
 `/studio`는 관리자 토큰으로 보호되며 실제 PostgreSQL의 브리핑 후보·활성 기기 집계·익명 열람 지표·감사 로그·발송 시도를 조회하고 수정합니다. 공개 화면에서는 관리자 데이터가 노출되지 않습니다.
 
@@ -141,7 +141,7 @@ Chrome 또는 Edge에서 위와 같은 순서로 등록합니다. PC 역시 별�
 ```text
 전날 00:00~23:59 뉴스 수집
               ↓
-오전 6:00 사건 묶기·후보 AI 요약·출처 교차 확인
+오전 1:00 사건 묶기·후보 AI 요약·출처 교차 확인
               ↓
 상위 편집 모델 1회로 중복·중요도·분야 균형 최종 점검
               ↓
@@ -366,7 +366,14 @@ NEWS_MINIMUM_DELIVERY_STORIES=8
 NEWS_MINIMUM_DELIVERY_CATEGORIES=5
 
 BRIEFING_ADMIN_TOKEN=충분히-긴-무작위-문자열
+BRIEFING_ADMIN_TOKEN_PREVIOUS=
+TRUST_CODERS_USER_HEADER=false
+PUBLIC_WRITE_LIMIT_PER_MINUTE=30
+ADMIN_LIMIT_PER_MINUTE=60
 REQUIRE_HUMAN_APPROVAL=false
+
+BACKUP_ENABLED=true
+BACKUP_ENCRYPTION_KEY=32자-이상의-별도-무작위-비밀값
 ```
 
 `NEWS_GENERATE_ON_STARTUP=true`는 로컬 테스트용입니다. 운영에서는 GitHub Actions와 중복 생성을 피하기 위해 `false`를 권장합니다.
@@ -429,6 +436,10 @@ GET https://morningnews.coders.kr/api/push/public-key
 | `NEWS_MINIMUM_DELIVERY_CATEGORIES` | 정규 발송에 필요한 최소 분야 수 | `5` |
 | `DEMO_DATA_ENABLED` | 데모 브리핑 입력 | `true` |
 | `BRIEFING_ADMIN_TOKEN` | 관리자 생성·발송 API 보호 | 빈 값 |
+| `BRIEFING_ADMIN_TOKEN_PREVIOUS` | 무중단 토큰 교체 중 잠시 허용할 이전 관리자 토큰 | 빈 값 |
+| `TRUST_CODERS_USER_HEADER` | 플랫폼이 서명해 보장하는 사용자 헤더만 신뢰. standalone 배포는 반드시 `false` | `false` |
+| `PUBLIC_WRITE_LIMIT_PER_MINUTE` | 기기별 공개 쓰기 API 분당 제한 | `30` |
+| `ADMIN_LIMIT_PER_MINUTE` | 관리자 API 분당 제한 | `60` |
 | `REQUIRE_HUMAN_APPROVAL` | 사람 승인 전 공개·발송을 보류할지 여부 | `false` |
 | `WEB_PUSH_ENABLED` | 실제 웹푸시 활성화 | `false` |
 | `VAPID_PUBLIC_KEY` | 웹푸시 공개키 | 빈 값 |
@@ -439,6 +450,10 @@ GET https://morningnews.coders.kr/api/push/public-key
 | `DATABASE_URL` | JDBC 데이터베이스 주소 | 인메모리 H2 |
 | `DATABASE_USER` | 데이터베이스 사용자 | `sa` |
 | `DATABASE_PASSWORD` | 데이터베이스 비밀번호 | 빈 값 |
+| `BACKUP_ENABLED` | 매일 암호화 DB 백업 활성화 | `false` |
+| `BACKUP_CRON` | 백업 시각(Spring 6필드 cron, 한국 시간) | `0 15 4 * * *` |
+| `BACKUP_ENCRYPTION_KEY` | 백업 AES-256 암호화 전용 비밀값. 저장소에 커밋 금지 | 빈 값 |
+| `BACKUP_STORAGE_*` | coders.kr 오브젝트 저장소 접속값. 배포 시 자동 주입 | 빈 값 |
 | `PORT` | 백엔드 포트 | `8080` |
 
 ## 자동 운영 일정
@@ -462,6 +477,10 @@ GitHub Actions cron은 UTC를 사용합니다.
 ```
 
 GitHub Actions secret과 coders.kr 운영 환경변수에는 동일한 `BRIEFING_ADMIN_TOKEN`을 등록해야 합니다.
+
+운영 DB 스키마는 Hibernate 자동 변경이 아니라 Flyway 버전 마이그레이션으로 관리합니다. 매일 오전 4시 15분에는 PostgreSQL 덤프를 별도 키로 암호화해 비공개 오브젝트 저장소의 `latest`와 14개 순환 슬롯에 보관합니다. 키 설정과 실제 복구 순서는 [`docs/BACKUP_AND_RESTORE.md`](docs/BACKUP_AND_RESTORE.md)를 따릅니다.
+
+별도의 `Production monitor` 워크플로는 15분마다 서비스 화면, `/actuator/health`, 오늘 브리핑 API를 확인하고 실패할 때만 운영자 텔레그램으로 경보를 보냅니다. 사고 시에는 [`docs/INCIDENT_RESPONSE.md`](docs/INCIDENT_RESPONSE.md)의 긴급 보류·정정·복구 순서를 따릅니다.
 
 ### 운영자 전용 텔레그램 일일 보고
 
@@ -509,10 +528,13 @@ X-Briefing-Admin-Token: <BRIEFING_ADMIN_TOKEN>
 | `PATCH` | `/api/admin/editorial/stories/{storyId}` | 제목·요약·중요성·불확실성·승인 상태 수정 |
 | `POST` | `/api/admin/editorial/editions/{editionId}/approve` | 검증 완료 에디션 사람 승인 |
 | `POST` | `/api/admin/editorial/editions/{editionId}/hold` | 에디션 발행 보류 |
+| `POST` | `/api/admin/editorial/editions/{editionId}/incident` | 사고 사유를 감사 로그에 남기고 에디션·뉴스 전체 긴급 보류 |
 | `POST` | `/api/admin/editorial/stories/{storyId}/corrections` | 정정 내용·이유·작업자 기록 및 독자 화면 반영 |
 | `GET` | `/api/admin/editorial/metrics` | 활성 기기·익명 열람·완독·원문 이동·발송 결과 |
 | `GET` | `/api/admin/editorial/audits` | 최근 운영 감사 로그 |
 | `GET` | `/api/admin/editorial/deliveries` | 기기 식별정보를 제외한 최근 발송 시도 |
+
+독자는 `GET /api/reader/data`로 서버에 저장된 설정·신고·익명 이용 기록을 내려받고, `DELETE /api/reader/data`로 이를 구독정보와 함께 삭제할 수 있습니다. 개인정보 화면의 버튼은 브라우저 푸시 구독과 로컬 데이터까지 같이 정리합니다.
 
 ### 운영자가 활성 기기 수를 확인하는 방법
 
@@ -677,7 +699,7 @@ docker compose build
 - 분야별 상위 사건을 번갈아 고르는 AI 후보 균형화, 전체 호출 상한과 동시 처리·타임아웃
 - 서로 다른 출처를 이용한 사건 묶기와 품질 검사
 - PostgreSQL 브리핑 저장
-- 배포 시 현재 9개 뉴스 분야와 PostgreSQL enum 체크 제약 자동 동기화
+- Flyway 버전 마이그레이션과 Hibernate 스키마 검증, 현재 9개 뉴스 분야의 PostgreSQL enum 체크 제약
 - PWA 설치와 실제 Web Push 등록
 - 매일 오전 7시 30분 고정 발송
 - 실제 테스트 푸시
@@ -691,6 +713,11 @@ docker compose build
 - 익명 열람·원문 이동·공유·완독 운영 지표와 90일 보존 제한
 - 실제 뉴스별 오류 신고와 관심·비관심 신호의 90일 자동 삭제
 - 푸시 해지 즉시 서버 구독정보 삭제, 만료 기록 30일 자동 삭제
+- 독자 서버·기기 데이터 내보내기와 전체 삭제
+- 공개 쓰기·관리자 API 요청 속도 제한, 신뢰되지 않은 플랫폼 사용자 헤더 차단, 관리자 토큰 무중단 교체
+- 매일 암호화 DB 백업과 14개 순환 보관, 복구 스크립트·사고 대응 절차
+- 15분 간격 운영 상태 감시와 장애 시 텔레그램 경보, 운영 화면 긴급 발행 중단
+- 데스크톱·Android·iPhone E2E와 제한된 부하 스모크 테스트
 - 카드 이미지 내보내기
 - Donate·유료 구독·후원 배지 비활성화
 
@@ -700,13 +727,13 @@ docker compose build
 - 뉴스 본문 전체를 직접 크롤링하지 않고 검색 메타데이터 중심으로 처리합니다.
 - 카카오톡·이메일 발송은 연결돼 있지 않습니다.
 - GDELT는 기사 본문 전체가 아니라 스토리 제목·다매체 묶음·중요도 메타데이터와 원문 링크를 제공합니다. 해외 사건의 세부 사실은 연결된 여러 원문 제목에서 공통으로 확인되는 범위만 요약합니다.
-- 준비 상태·발송 결과는 기록하지만 외부 호출/SMS와 AI 비용 예산 경보는 아직 연결돼 있지 않습니다.
+- 사이트·API·DB 장애는 텔레그램으로 경보하지만 외부 뉴스·AI 제공자별 지연과 비용 예산 경보는 아직 연결돼 있지 않습니다.
 
 ## 정식 출시·언론사 협업 전에 필요한 것
 
 우선 20~50대 기기의 제한된 공개 베타로 출처 정확성, 신고율과 푸시 도달률을 관찰하는 것이 안전합니다. 아래가 끝나기 전에는 “언론사 수준 검수” 또는 “사람이 승인한 뉴스”라고 홍보하지 않습니다.
 
-1. 운영 주체, 개인정보 보호책임자, 비공개 권리 행사·일반 문의 창구 확정
+1. 실제 사업자·운영 주체의 법적 명칭, 개인정보 보호책임자와 비공개 권리 행사 창구 확정(GitHub Issues는 베타 문의 창구로만 사용)
 2. 실제 편집 담당자 배정과 `REQUIRE_HUMAN_APPROVAL=true` 운영 전환, 휴일·부재 대응 절차
 3. 기사 제목·요약·썸네일·원문 링크 사용 범위에 대한 뉴스 공급자·언론사 계약 검토
 4. NAVER·GDELT·공식기관 RSS의 공급 조건과 기사 제목·요약·원문 링크 사용 범위를 정기적으로 재검토
