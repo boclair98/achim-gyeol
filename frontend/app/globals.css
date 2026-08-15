@@ -169,9 +169,6 @@ button:disabled { cursor: wait; opacity: .55; }
 .control-title svg { color: var(--blue); }
 .time-field { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 20px; border: 1px solid var(--line); border-radius: 14px; background: white; padding: 10px 12px 10px 15px; font-size: 11px; font-weight: 850; }
 .time-field input { border: 0; border-radius: 9px; background: #eef1f4; padding: 9px 11px; color: var(--ink); font-weight: 900; }
-.weekday-list { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 12px; }
-.weekday-list button { aspect-ratio: 1; border: 1px solid var(--line); border-radius: 10px; background: white; color: var(--muted); cursor: pointer; font-size: 10px; font-weight: 900; }
-.weekday-list button.active { border-color: var(--ink); background: var(--blue); color: white; box-shadow: 2px 2px 0 var(--ink); }
 .schedule-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
 .api-note { display: flex; align-items: flex-start; gap: 7px; border-top: 1px solid var(--line); padding-top: 14px; }
 .api-note i { flex: 0 0 auto; width: 7px; height: 7px; margin-top: 5px; border-radius: 50%; background: #ef9e2f; }
@@ -603,7 +600,6 @@ button:disabled { cursor: wait; opacity: .55; }
   .control-actions .primary-button { grid-column: auto; }
   .control-actions .mail-preview { grid-column: auto; }
   .delivery-card { border-radius: 21px; }
-  .weekday-list { gap: 4px; }
   .cover-copy p { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
   .summary-card { padding: 5.2%; }
   .summary-card header { font-size: 6px; }

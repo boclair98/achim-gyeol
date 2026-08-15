@@ -7,7 +7,6 @@ import { deviceHeaders } from "@/lib/device";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 const categories = ["정책", "경제", "사회", "국제", "테크", "생활", "문화", "스포츠", "e스포츠"];
-const weekdays = ["월", "화", "수", "목", "금", "토", "일"];
 const channels = ["PWA"];
 
 export function PreferenceCenter() {
@@ -17,21 +16,29 @@ export function PreferenceCenter() {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const stored = window.localStorage.getItem("achim-gyeol-reader-preferences");
-      if (stored) try { setPreferences({ ...JSON.parse(stored), deliveryTime: "07:30" }); } catch { /* Ignore malformed local data. */ }
+      if (stored) try {
+        const parsed = JSON.parse(stored) as ReaderPreferences & { weekdays?: number[] };
+        setPreferences({
+          categories: parsed.categories,
+          deliveryTime: "07:30",
+          digestSize: parsed.digestSize,
+          channels: parsed.channels,
+          consent: parsed.consent,
+        });
+      } catch { /* Ignore malformed local data. */ }
       fetch(`${apiBase}/api/reader/preferences`, { headers: deviceHeaders(), cache: "no-store" })
         .then((response) => response.ok ? response.json() : Promise.reject())
-        .then((server: { categories: string; digestSize: ReaderPreferences["digestSize"]; weekdays: string; consent: boolean }) => setPreferences((current) => ({ ...current, categories: server.categories.split(",").filter(Boolean), digestSize: server.digestSize, weekdays: server.weekdays.split(",").map(Number).filter((day) => day >= 0 && day <= 6), consent: server.consent })))
+        .then((server: { categories: string; digestSize: ReaderPreferences["digestSize"]; consent: boolean }) => setPreferences((current) => ({ ...current, categories: server.categories.split(",").filter(Boolean), digestSize: server.digestSize, consent: server.consent })))
         .catch(() => undefined);
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
 
   const toggle = (field: "categories" | "channels", value: string) => setPreferences((current) => ({ ...current, [field]: current[field].includes(value) ? current[field].filter((item) => item !== value) : [...current[field], value] }));
-  const toggleDay = (day: number) => setPreferences((current) => ({ ...current, weekdays: current.weekdays.includes(day) ? current.weekdays.filter((item) => item !== day) : [...current.weekdays, day].sort() }));
   const save = async () => {
     window.localStorage.setItem("achim-gyeol-reader-preferences", JSON.stringify({ ...preferences, deliveryTime: "07:30" }));
     try {
-      const response = await fetch(`${apiBase}/api/reader/preferences`, { method: "PUT", headers: deviceHeaders(), body: JSON.stringify({ categories: preferences.categories, digestSize: preferences.digestSize, weekdays: preferences.weekdays, consent: preferences.consent }) });
+      const response = await fetch(`${apiBase}/api/reader/preferences`, { method: "PUT", headers: deviceHeaders(), body: JSON.stringify({ categories: preferences.categories, digestSize: preferences.digestSize, consent: preferences.consent }) });
       if (!response.ok) throw new Error("save failed");
       setNotice("내 관심 분야와 분량을 서버에도 안전하게 저장했습니다.");
     } catch { setNotice("기기에는 저장했지만 서버 저장은 완료하지 못했습니다. 잠시 후 다시 시도해 주세요."); }
@@ -44,14 +51,14 @@ export function PreferenceCenter() {
   const clearData = () => { ["achim-gyeol-reader-preferences", "achim-gyeol-saved-editions", "achim-gyeol-delivery"].forEach((key) => window.localStorage.removeItem(key)); setPreferences(defaultReaderPreferences); setNotice("독자 설정과 저장한 브리핑을 이 기기에서 삭제했습니다."); };
 
   return <>
-    <section className="preference-hero"><span>READER CONTROL CENTER</span><h1>뉴스가 나를 방해하지 않도록,<br /><em>요일과 분량을 직접 정합니다.</em></h1><p>관심 분야, 읽을 분량, 받을 요일과 채널을 한곳에서 관리합니다. 정규 브리핑은 오전 7시 30분에 도착합니다.</p></section>
+    <section className="preference-hero"><span>READER CONTROL CENTER</span><h1>뉴스가 나를 방해하지 않도록,<br /><em>분량과 관심사를 직접 정합니다.</em></h1><p>관심 분야, 읽을 분량과 수신 동의를 한곳에서 관리합니다. 정규 브리핑은 매일 오전 7시 30분에 도착합니다.</p></section>
     <section className="preference-layout">
       <div className="preference-main">
         <PreferenceBlock icon={SlidersHorizontal} title="관심 분야" description="공통 중요 뉴스는 모두 제공하고, 선택한 분야의 카드를 앞쪽에 배치합니다."><div className="choice-grid">{categories.map((item) => <button key={item} className={preferences.categories.includes(item) ? "active" : ""} onClick={() => toggle("categories", item)}><Check size={14} />{item}</button>)}</div></PreferenceBlock>
-        <PreferenceBlock icon={Clock3} title="도착 일정" description="오전 7시 30분 고정이며 받을 요일만 선택할 수 있습니다."><div className="schedule-preference"><input aria-label="고정 도착 시각" type="time" value="07:30" readOnly /><div>{weekdays.map((day, index) => <button key={day} className={preferences.weekdays.includes(index) ? "active" : ""} onClick={() => toggleDay(index)}>{day}</button>)}</div></div></PreferenceBlock>
+        <PreferenceBlock icon={Clock3} title="도착 일정" description="등록된 기기에는 요일 선택 없이 매일 오전 7시 30분에 브리핑을 보냅니다."><div className="schedule-preference"><input aria-label="매일 고정 도착 시각" type="time" value="07:30" readOnly /></div></PreferenceBlock>
         <PreferenceBlock icon={BellRing} title="분량과 채널" description="카드의 설명 밀도와 현재 제공 중인 전달 방식을 정합니다."><div className="digest-options">{(["compact", "standard", "deep"] as const).map((size) => <button key={size} className={preferences.digestSize === size ? "active" : ""} onClick={() => setPreferences({ ...preferences, digestSize: size })}><strong>{size === "compact" ? "빠르게" : size === "standard" ? "기본" : "깊게"}</strong><span>{size === "compact" ? "결론 중심" : size === "standard" ? "핵심 사실 포함" : "근거까지 자세히"}</span></button>)}</div><div className="channel-options">{channels.map((item) => <button key={item} className="active" disabled>{item}<small>운영 연결</small></button>)}</div></PreferenceBlock>
       </div>
-      <aside className="preference-summary"><span>LIVE PREFERENCE</span><h2>나의 아침결</h2><dl><div><dt>관심 분야</dt><dd>{preferences.categories.length}개</dd></div><div><dt>도착 시간</dt><dd>{preferences.deliveryTime}</dd></div><div><dt>요일</dt><dd>{preferences.weekdays.length}일</dd></div><div><dt>브리핑</dt><dd>{preferences.digestSize === "compact" ? "빠르게" : preferences.digestSize === "standard" ? "기본" : "깊게"}</dd></div></dl><label><input type="checkbox" checked={preferences.consent} onChange={(event) => setPreferences({ ...preferences, consent: event.target.checked })} /><span><strong>브리핑 수신에 동의합니다</strong><small>언제든 변경하거나 철회할 수 있습니다.</small></span></label><button className="studio-primary" onClick={() => void save()}><Check size={15} /> 설정 저장</button><div className="privacy-actions"><button onClick={exportData}><Download size={14} /> 내 데이터 받기</button><button onClick={() => setPreferences(defaultReaderPreferences)}><RotateCcw size={14} /> 초기화</button><button className="danger" onClick={clearData}><Trash2 size={14} /> 기기 데이터 삭제</button></div><footer><ShieldCheck size={16} /> 이름·이메일 없이 익명 기기 ID로만 설정을 저장합니다.</footer></aside>
+      <aside className="preference-summary"><span>LIVE PREFERENCE</span><h2>나의 아침결</h2><dl><div><dt>관심 분야</dt><dd>{preferences.categories.length}개</dd></div><div><dt>도착 시간</dt><dd>{preferences.deliveryTime}</dd></div><div><dt>주기</dt><dd>매일</dd></div><div><dt>브리핑</dt><dd>{preferences.digestSize === "compact" ? "빠르게" : preferences.digestSize === "standard" ? "기본" : "깊게"}</dd></div></dl><label><input type="checkbox" checked={preferences.consent} onChange={(event) => setPreferences({ ...preferences, consent: event.target.checked })} /><span><strong>브리핑 수신에 동의합니다</strong><small>언제든 변경하거나 철회할 수 있습니다.</small></span></label><button className="studio-primary" onClick={() => void save()}><Check size={15} /> 설정 저장</button><div className="privacy-actions"><button onClick={exportData}><Download size={14} /> 내 데이터 받기</button><button onClick={() => setPreferences(defaultReaderPreferences)}><RotateCcw size={14} /> 초기화</button><button className="danger" onClick={clearData}><Trash2 size={14} /> 기기 데이터 삭제</button></div><footer><ShieldCheck size={16} /> 이름·이메일 없이 익명 기기 ID로만 설정을 저장합니다.</footer></aside>
     </section>
     {notice && <div className="notice" role="status"><span>{notice}</span><button onClick={() => setNotice("")}>확인</button></div>}
   </>;

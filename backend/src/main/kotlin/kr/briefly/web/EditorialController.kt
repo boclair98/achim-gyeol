@@ -23,7 +23,7 @@ class AdminAuthorizer(@Value("\${app.pipeline.admin-token:}") private val adminT
 data class AdminActorRequest(@field:NotBlank val actor: String, val reason: String = "")
 data class StoryEditRequest(val actor: String, val update: EditorialStoryUpdate)
 data class CorrectionRequest(val actor: String, val afterText: String, val reason: String)
-data class ReaderPreferenceRequest(val categories: Set<String>, val digestSize: String, val weekdays: Set<Int>, val consent: Boolean)
+data class ReaderPreferenceRequest(val categories: Set<String>, val digestSize: String, val consent: Boolean)
 data class ReaderEventRequest(val type: ReaderEventType, val editionId: Long, val storyId: Long? = null)
 
 @RestController
@@ -44,6 +44,6 @@ class EditorialController(private val service: EditorialOperationsService, priva
 @RequestMapping("/api/reader")
 class ReaderExperienceController(private val service: ReaderExperienceService) {
     @GetMapping("/preferences") fun preferences(@RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("X-Achim-Device", required = false) device: String?) = service.preferences(RequesterIdentity.resolve(user, device))
-    @PutMapping("/preferences") fun save(@RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("X-Achim-Device", required = false) device: String?, @Valid @RequestBody request: ReaderPreferenceRequest) = service.savePreferences(RequesterIdentity.resolve(user, device), request.categories, request.digestSize, request.weekdays, request.consent)
+    @PutMapping("/preferences") fun save(@RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("X-Achim-Device", required = false) device: String?, @Valid @RequestBody request: ReaderPreferenceRequest) = service.savePreferences(RequesterIdentity.resolve(user, device), request.categories, request.digestSize, request.consent)
     @PostMapping("/events") fun event(@RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("X-Achim-Device", required = false) device: String?, @RequestBody request: ReaderEventRequest) = service.recordEvent(RequesterIdentity.resolve(user, device), request.type, request.editionId, request.storyId).let { mapOf("recorded" to true) }
 }

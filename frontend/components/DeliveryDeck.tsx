@@ -22,7 +22,7 @@ export function DeliveryDeck({ briefing }: Props) {
     <section className="delivery-studio subscription-studio" id="delivery-deck">
       <div className="landing-section-heading delivery-heading-clean">
         <span>FREE SUBSCRIPTION</span>
-        <h2>받을 요일만 정하면 끝이에요</h2>
+        <h2>한 번 등록하면 매일 도착해요</h2>
         <p>회원가입도, 앱스토어 설치도 필요 없습니다. 이 기기의 브라우저 알림만 한 번 허용해 주세요.</p>
       </div>
 
@@ -49,12 +49,12 @@ export function DeliveryDeck({ briefing }: Props) {
             <div className="subscription-bell"><BellRing /></div>
             <div><span>30초 무료 등록</span><h3>내일부터 받아보세요</h3></div>
           </div>
-          <p className="subscription-description">버튼을 누르면 받을 요일을 고르는 작은 창이 열립니다. 다른 페이지로 이동하거나 회원가입할 필요가 없습니다.</p>
+          <p className="subscription-description">버튼을 누르고 브라우저 알림만 허용하면 됩니다. 다른 페이지로 이동하거나 회원가입할 필요가 없습니다.</p>
           <div className="quick-arrival-card"><span>정규 도착 시간</span><strong>오전 7:30</strong><small>전날 뉴스를 오전 6시부터 종합</small></div>
           <div className="simple-onboarding">
-            <span><b>1</b> 받을 요일 선택</span>
+            <span><b>1</b> 알림 버튼 누르기</span>
             <i />
-            <span><b>2</b> 알림 등록</span>
+            <span><b>2</b> 브라우저에서 허용</span>
             <i />
             <span><b>3</b> 다음 아침부터 수신</span>
           </div>

@@ -9,19 +9,18 @@ const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 const serverSubscriptionKey = "achim-gyeol-server-subscription";
 let reconciliationInFlight: Promise<boolean> | null = null;
 
-type Props = { deliveryTime: string; selectedDays: number[]; onNotice: (message: string) => void; onSubscriptionChange?: (subscribed: boolean) => void };
+type Props = { deliveryTime: string; onNotice: (message: string) => void; onSubscriptionChange?: (subscribed: boolean) => void };
 type PushConfig = { enabled: boolean; publicKey: string };
 type PushResponse = { delivered: boolean; message: string };
 type PushSubscriptionStatus = { registered: boolean; active: boolean; needsRenewal: boolean };
 
-export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscriptionChange }: Props) {
+export function PushControls({ deliveryTime, onNotice, onSubscriptionChange }: Props) {
   const [supported, setSupported] = useState(true);
   const [iosInstallRequired, setIosInstallRequired] = useState(false);
   const [iosSafariBrowser, setIosSafariBrowser] = useState(false);
   const [subscribed, setSubscribed] = useState(false);
   const [working, setWorking] = useState(false);
   const [feedback, setFeedback] = useState("");
-  const selectedDaysKey = selectedDays.join(",");
 
   useEffect(() => {
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
@@ -35,21 +34,19 @@ export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscript
     }
     const available = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
     if (!available) { queueMicrotask(() => setSupported(false)); return; }
-    const days = selectedDaysKey ? selectedDaysKey.split(",").map(Number).filter(Number.isInteger) : [];
-    reconcileExistingSubscription(deliveryTime, days)
+    reconcileExistingSubscription(deliveryTime)
       .then((active) => {
         setSubscribed(active);
         onSubscriptionChange?.(active);
       })
       .catch(() => { setSubscribed(false); onSubscriptionChange?.(false); });
-  }, [deliveryTime, onSubscriptionChange, selectedDaysKey]);
+  }, [deliveryTime, onSubscriptionChange]);
 
   const subscribe = async () => {
     setWorking(true);
     setFeedback("알림 권한을 확인하고 있어요…");
     try {
       if (!supported) throw new Error("이 브라우저는 웹푸시를 지원하지 않습니다.");
-      if (selectedDays.length === 0) throw new Error("발송 요일을 하나 이상 선택해 주세요.");
       if (Notification.permission === "denied") throw new Error(samsungPermissionHelp());
       if (await Notification.requestPermission() !== "granted") throw new Error("휴대폰의 알림 허용을 눌러야 등록할 수 있어요.");
       const configResponse = await fetch(`${apiBase}/api/push/public-key`, { cache: "no-store" });
@@ -66,7 +63,7 @@ export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscript
       }
       let subscription = current ?? await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(config.publicKey) });
       const [hour, minute] = deliveryTime.split(":").map(Number);
-      await saveSubscription(subscription, hour, minute, selectedDays);
+      await saveSubscription(subscription, hour, minute);
 
       // A provider may invalidate an endpoint while the browser still returns it
       // as an apparently valid subscription. Verify once during explicit signup;
@@ -78,7 +75,7 @@ export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscript
           await subscription.unsubscribe().catch(() => false);
           window.localStorage.removeItem(serverSubscriptionKey);
           subscription = await registration.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(config.publicKey) });
-          await saveSubscription(subscription, hour, minute, selectedDays);
+          await saveSubscription(subscription, hour, minute);
           validation = await validateSubscription(subscription.endpoint);
           if (!validation.delivered) {
             await subscription.unsubscribe().catch(() => false);
@@ -87,11 +84,11 @@ export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscript
           }
         }
       }
-      window.localStorage.setItem("achim-gyeol-delivery", JSON.stringify({ time: deliveryTime, days: selectedDays }));
+      window.localStorage.setItem("achim-gyeol-delivery", JSON.stringify({ time: deliveryTime }));
       window.localStorage.setItem(serverSubscriptionKey, subscription.endpoint);
       setSubscribed(true);
       onSubscriptionChange?.(true);
-      const message = `등록 완료! 연결 확인 알림을 보냈어요. 선택한 요일 ${deliveryTime} 이후 어제 뉴스 종합을 보내드려요.`;
+      const message = `등록 완료! 연결 확인 알림을 보냈어요. 매일 ${deliveryTime}에 어제 뉴스 종합을 보내드려요.`;
       setFeedback(message);
       onNotice(message);
     } catch (error) {
@@ -141,7 +138,7 @@ export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscript
     <p className="push-help">현재 브라우저가 Web Push를 지원하지 않습니다. 지원 브라우저에서 열면 이 버튼으로 바로 등록됩니다.</p>
   </div>;
   return <div className="push-controls">
-    <button type="button" className="primary-button" onClick={subscribe} disabled={working}><BellRing size={16} /> {working ? "등록 확인 중…" : subscribed ? "시간·요일 저장" : "이 기기에 알림 등록"}</button>
+    <button type="button" className="primary-button" onClick={subscribe} disabled={working}><BellRing size={16} /> {working ? "등록 확인 중…" : subscribed ? "알림 등록 확인" : "이 기기에 알림 등록"}</button>
     {feedback && <p className="push-feedback" role="status">{feedback}</p>}
     {subscribed && <p className="push-status"><CheckCircle2 size={15} /> 이 기기는 실제 아침 브리핑 수신 등록이 완료됐습니다.</p>}
     {subscribed && <button className="secondary-button blue" onClick={sendTest} disabled={working}><Send size={16} /> 내 기기 실제 푸시 테스트</button>}
@@ -150,7 +147,7 @@ export function PushControls({ deliveryTime, selectedDays, onNotice, onSubscript
   </div>;
 }
 
-async function saveSubscription(subscription: PushSubscription, hour: number, minute: number, selectedDays: number[]) {
+async function saveSubscription(subscription: PushSubscription, hour: number, minute: number) {
   const response = await fetch(`${apiBase}/api/push/subscriptions`, {
     method: "POST",
     headers: deviceHeaders(),
@@ -160,7 +157,6 @@ async function saveSubscription(subscription: PushSubscription, hour: number, mi
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Seoul",
       deliveryHour: hour,
       deliveryMinute: minute,
-      weekdays: selectedDays,
     }),
   });
   if (!response.ok) throw new Error(await errorMessage(response, "알림 설정을 저장하지 못했습니다."));
@@ -243,14 +239,14 @@ function subscriptionUsesKey(subscription: PushSubscription, publicKey: string) 
   return current.length === expected.length && current.every((value, index) => value === expected[index]);
 }
 
-export function reconcileExistingSubscription(deliveryTime: string, selectedDays: number[]) {
+export function reconcileExistingSubscription(deliveryTime: string) {
   if (reconciliationInFlight) return reconciliationInFlight;
-  reconciliationInFlight = reconcileSubscription(deliveryTime, selectedDays)
+  reconciliationInFlight = reconcileSubscription(deliveryTime)
     .finally(() => { reconciliationInFlight = null; });
   return reconciliationInFlight;
 }
 
-async function reconcileSubscription(deliveryTime: string, selectedDays: number[]) {
+async function reconcileSubscription(deliveryTime: string) {
   const registration = await navigator.serviceWorker.ready;
   let subscription = await registration.pushManager.getSubscription();
   const savedEndpoint = window.localStorage.getItem(serverSubscriptionKey);
@@ -298,8 +294,6 @@ async function reconcileSubscription(deliveryTime: string, selectedDays: number[
 
   const savedDelivery = readSavedDelivery();
   const effectiveTime = savedDelivery?.time ?? deliveryTime;
-  const effectiveDays = savedDelivery?.days?.length ? savedDelivery.days : selectedDays;
-  if (!effectiveDays.length) return false;
   const [hour, minute] = effectiveTime.split(":").map(Number);
   const response = await fetch(`${apiBase}/api/push/subscriptions`, {
     method: "POST",
@@ -310,7 +304,6 @@ async function reconcileSubscription(deliveryTime: string, selectedDays: number[
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "Asia/Seoul",
       deliveryHour: hour,
       deliveryMinute: minute,
-      weekdays: effectiveDays,
     }),
   });
   if (!response.ok) {
@@ -323,10 +316,9 @@ async function reconcileSubscription(deliveryTime: string, selectedDays: number[
 
 function readSavedDelivery() {
   try {
-    const value = JSON.parse(window.localStorage.getItem("achim-gyeol-delivery") ?? "null") as { time?: unknown; days?: unknown } | null;
-    if (!value || typeof value.time !== "string" || !Array.isArray(value.days)) return null;
-    const days = value.days.filter((day): day is number => Number.isInteger(day) && day >= 0 && day <= 6);
-    return { time: value.time, days };
+    const value = JSON.parse(window.localStorage.getItem("achim-gyeol-delivery") ?? "null") as { time?: unknown } | null;
+    if (!value || typeof value.time !== "string") return null;
+    return { time: value.time };
   } catch {
     return null;
   }

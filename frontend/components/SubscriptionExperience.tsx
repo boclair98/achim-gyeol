@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { BellRing, CalendarDays, CheckCircle2, Clock3, LockKeyhole, Smartphone, X } from "lucide-react";
+import { BellRing, CheckCircle2, Clock3, LockKeyhole, Smartphone, X } from "lucide-react";
 import { PushControls } from "@/components/PushControls";
 
 const openEvent = "achim:open-subscription";
-const weekdays = ["월", "화", "수", "목", "금", "토", "일"];
 
 export function SubscriptionTrigger({ className, children }: { className?: string; children: ReactNode }) {
   return <button type="button" className={className} onClick={() => window.dispatchEvent(new Event(openEvent))}>{children}</button>;
@@ -14,7 +13,6 @@ export function SubscriptionTrigger({ className, children }: { className?: strin
 export function SubscriptionExperience({ onNotice }: { onNotice: (message: string) => void }) {
   const [open, setOpen] = useState(false);
   const deliveryTime = "07:30";
-  const [selectedDays, setSelectedDays] = useState([0, 1, 2, 3, 4]);
   const [subscribed, setSubscribed] = useState(false);
   const [externalBrowserHref, setExternalBrowserHref] = useState<string | null>(null);
   const [quickSubscribe, setQuickSubscribe] = useState(false);
@@ -24,11 +22,9 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
 
   useEffect(() => {
     const stored = window.localStorage.getItem("achim-gyeol-delivery");
-    let storedDays: number[] | undefined;
     try {
-      const setting = stored ? JSON.parse(stored) as { time?: string; days?: number[] } : {};
-      storedDays = setting.days;
-      if (stored && setting.time !== deliveryTime) window.localStorage.setItem("achim-gyeol-delivery", JSON.stringify({ ...setting, time: deliveryTime }));
+      if (stored) JSON.parse(stored);
+      if (stored) window.localStorage.setItem("achim-gyeol-delivery", JSON.stringify({ time: deliveryTime }));
     } catch {
       window.localStorage.removeItem("achim-gyeol-delivery");
     }
@@ -46,7 +42,6 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
           ? "Safari 또는 최신 Chrome·Edge에서 열어주세요"
           : "이 브라우저에서 바로 등록할 수 있어요";
     queueMicrotask(() => {
-      if (storedDays) setSelectedDays(storedDays);
       setIphoneSafariSetup(ios && !standalone);
       setExternalBrowserHref(androidInAppBrowser ? buildAndroidBrowserHref() : null);
       setDeviceLabel(detectedDeviceLabel);
@@ -81,10 +76,6 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
     };
   }, [open]);
 
-  const toggleDay = (index: number) => {
-    setSelectedDays((days) => days.includes(index) ? days.filter((day) => day !== index) : [...days, index].sort());
-  };
-
   return <>
     {externalBrowserHref ? <a className="mobile-subscribe-bar" href={externalBrowserHref}>
       <BellRing size={17} />
@@ -106,16 +97,15 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
         <div className="device-readiness"><Smartphone size={19} /><div><strong>현재 기기 확인</strong><span>{deviceLabel}</span></div></div>
 
         {!quickSubscribe && <div className="modal-setting-grid">
-          <div className="modal-time-field"><span><Clock3 size={15} /> 고정 도착 시각</span><div className="fixed-delivery-time"><strong>오전 7:30</strong><small>전날 뉴스는 오전 6시부터 종합해요</small></div></div>
-          <div className="modal-day-field"><span><CalendarDays size={15} /> 받을 요일</span><div className="weekday-list">{weekdays.map((day, index) => <button type="button" key={day} className={selectedDays.includes(index) ? "active" : ""} onClick={() => toggleDay(index)}>{day}</button>)}</div></div>
+          <div className="modal-time-field"><span><Clock3 size={15} /> 매일 고정 도착</span><div className="fixed-delivery-time"><strong>매일 오전 7:30</strong><small>전날 뉴스는 오전 6시부터 종합해요</small></div></div>
         </div>}
 
         {!quickSubscribe && <div className="modal-arrival-preview">
           <div className="push-app-icon"><BellRing size={18} /></div>
-          <div><strong>아침결 · 오늘 알아야 할 뉴스가 도착했어요</strong><span>선택한 요일 오전 7:30 · 핵심 내용과 알아야 할 것</span></div>
+          <div><strong>아침결 · 오늘 알아야 할 뉴스가 도착했어요</strong><span>매일 오전 7:30 · 핵심 내용과 알아야 할 것</span></div>
         </div>}
 
-        <PushControls deliveryTime={deliveryTime} selectedDays={selectedDays} onNotice={(message) => { onNotice(message); }} onSubscriptionChange={setSubscribed} />
+        <PushControls deliveryTime={deliveryTime} onNotice={(message) => { onNotice(message); }} onSubscriptionChange={setSubscribed} />
         <p className="modal-privacy"><LockKeyhole size={14} /> 이름·이메일 없이 익명 기기 ID와 알림 시간만 저장합니다.</p>
       </section>
     </div>}
