@@ -14,7 +14,7 @@ export function SiteHeader({ context = "무료 알림 받기" }: { context?: str
         <Link href="/#how-it-works">이용 방법</Link>
         <Link href="/briefing">오늘의 뉴스</Link>
         <Link href="/archive">지난 뉴스</Link>
-        <Link href="/trust">편집 원칙</Link>
+        <Link href="/trust">서비스 원칙</Link>
       </nav>
       <SubscriptionTrigger className="site-context"><BellRing size={14} /> {context}</SubscriptionTrigger>
     </header>
@@ -29,14 +29,14 @@ export function SiteFooter() {
         <p>어제 쏟아진 뉴스에서 오늘 알아야 할 흐름만 골라, 매일 아침 한 번에 전합니다.</p>
       </div>
       <nav aria-label="정책 문서">
-        <Link href="/trust">편집 원칙</Link>
+        <Link href="/trust">서비스 원칙</Link>
         <Link href="/archive">지난 뉴스</Link>
         <Link href="/preferences">알림 설정</Link>
         <Link href="/privacy">개인정보처리방침</Link>
         <Link href="/terms">이용약관</Link>
         <a href="https://github.com/boclair98/achim-gyeol" target="_blank" rel="noreferrer">GitHub <ArrowUpRight size={12} /></a>
       </nav>
-      <span>회원가입 없이 무료로 이용할 수 있습니다. 모든 요약에는 원문 출처와 확인 상태를 함께 표시합니다.</span>
+      <span>회원가입 없이 무료로 이용할 수 있습니다. 모든 뉴스에 관련 원문을 함께 제공합니다.</span>
     </footer>
   );
 }

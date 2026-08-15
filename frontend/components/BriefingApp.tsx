@@ -27,7 +27,7 @@ export function BriefingApp() {
   const [briefing, setBriefing] = useState<Briefing>(demoBriefing);
   const [category, setCategory] = useState("전체");
   const [loading, setLoading] = useState(true);
-  const [notice, setNotice] = useState("어제 뉴스 종합 브리핑을 불러오고 있어요.");
+  const [notice, setNotice] = useState("오늘의 아침 뉴스를 불러오고 있어요.");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -38,7 +38,7 @@ export function BriefingApp() {
       })
       .then((data: Briefing) => {
         setBriefing(data);
-        setNotice(data.productionReady ? "" : "현재는 사용법 확인용 예시 브리핑입니다. 실제 알림은 전날 뉴스 종합이 완료된 뒤에만 발송됩니다.");
+        setNotice(data.productionReady ? "" : "현재는 사용법을 보여드리는 화면 예시입니다. 준비된 뉴스는 매일 오전 7시 30분에 보내드립니다.");
       })
       .catch(() => setNotice("오늘의 브리핑을 불러오지 못해 예시 뉴스 카드를 보여드리고 있어요. 잠시 후 다시 확인해 주세요."))
       .finally(() => setLoading(false));
@@ -86,7 +86,7 @@ export function BriefingApp() {
 
       <section className="landing-proof" aria-label="서비스 핵심 특징">
         <div><strong>07:30</strong><span>매일 아침 정규 도착</span></div>
-        <div><strong>2+</strong><span>서로 다른 출처 확인</span></div>
+        <div><strong>9개</strong><span>폭넓은 뉴스 분야</span></div>
         <div><strong>3줄</strong><span>뉴스별 핵심 요약</span></div>
         <div><strong>0원</strong><span>회원가입 없이 무료</span></div>
       </section>
@@ -99,7 +99,7 @@ export function BriefingApp() {
         </div>
         <div className="how-grid">
           <article><div className="how-icon mint"><Clock3 /></div><small>01 · 핵심만</small><h3>중요한 흐름을 골라 드려요</h3><p>정책부터 경제, 사회, 국제, 테크까지 하루를 시작하기 전에 알아야 할 소식을 한곳에 담습니다.</p></article>
-          <article><div className="how-icon violet"><Sparkles /></div><small>02 · 읽기 쉽게</small><h3>결론과 의미를 정리해요</h3><p>각 뉴스의 한 줄 결론, 확인된 핵심, 알아야 할 점과 원문 출처를 읽기 쉽게 보여드립니다.</p></article>
+          <article><div className="how-icon violet"><Sparkles /></div><small>02 · 읽기 쉽게</small><h3>결론과 의미를 정리해요</h3><p>각 뉴스의 한 줄 결론, 핵심 내용, 알아야 할 점과 관련 원문을 읽기 쉽게 보여드립니다.</p></article>
           <article><div className="how-icon yellow"><Smartphone /></div><small>03 · 매일 아침</small><h3>오전 7시 30분에 받아요</h3><p>휴대폰 알림을 누르면 큰 글자로 정리된 뉴스 전용 화면이 바로 열립니다.</p></article>
         </div>
       </section>
@@ -121,11 +121,11 @@ export function BriefingApp() {
       </section>
 
       <section className="trust-strip">
-        <div><span>WHY ACHIMGYEOL</span><h2>빠른 요약보다<br />믿을 수 있는 요약</h2><p>한 언론사의 시선만 반복하지 않습니다. 출처와 검증 상태를 독자가 직접 확인할 수 있게 남깁니다.</p><Link href="/trust">편집 원칙 자세히 보기 <ArrowRight size={15} /></Link></div>
+        <div><span>WHY ACHIMGYEOL</span><h2>바쁜 아침에도<br />중요한 뉴스는 놓치지 않게</h2><p>핵심은 짧게 읽고, 더 궁금한 내용은 함께 제공되는 원문으로 바로 이어서 확인할 수 있습니다.</p><Link href="/trust">서비스 원칙 보기 <ArrowRight size={15} /></Link></div>
         <ol>
-          <li><ShieldCheck /><div><strong>두 곳 이상 교차 확인</strong><span>같은 사건을 다룬 독립된 출처를 우선 연결합니다.</span></div></li>
+          <li><ShieldCheck /><div><strong>핵심부터 한눈에</strong><span>한 줄 결론과 알아야 할 점을 먼저 보여드립니다.</span></div></li>
           <li><BookOpen /><div><strong>원문을 바로 확인</strong><span>모든 뉴스 카드에 언론사와 원문 링크를 표시합니다.</span></div></li>
-          <li><RefreshCw /><div><strong>수정 이력을 공개</strong><span>오류를 발견하면 수정 시각과 이유를 남깁니다.</span></div></li>
+          <li><RefreshCw /><div><strong>오류는 바로 수정</strong><span>잘못된 내용을 발견하면 알리고 바로잡습니다.</span></div></li>
         </ol>
       </section>
 
@@ -194,7 +194,7 @@ function HeroNewsCarousel({ stories, readMinutes }: { stories: Story[]; readMinu
           const state = index === activeIndex ? "active" : index === previousIndex ? "leaving" : "waiting";
           return (
             <article key={`${story.id}-${index}`} className={`hero-news-card ${state}`} aria-hidden={state !== "active"}>
-              <div><span>{story.category}</span><b>교차 확인</b></div>
+              <div><span>{story.category}</span><b>원문 포함</b></div>
               <h2>{story.title}</h2>
               <p>{story.summary}</p>
               <footer><span>약 {readMinutes}분</span><span>출처 {story.sources.length}개</span></footer>
@@ -213,12 +213,12 @@ function StoryRow({ story, index, onNotice }: { story: Story; index: number; onN
     <article className="story-row">
       <div className="story-index">{String(index).padStart(2, "0")}</div>
       <div className="story-body">
-        <div className="story-kicker"><span className="category">{story.category}</span><span className={verified && evidenceReady ? "verified" : "verified developing"}><CheckCircle2 size={13} />{evidenceReady ? (verified ? "근거 연결" : "추가 확인 중") : "원문 제공"}</span></div>
+        <div className="story-kicker"><span className="category">{story.category}</span><span className={verified && evidenceReady ? "verified" : "verified developing"}><CheckCircle2 size={13} />{evidenceReady ? (verified ? "출처 보기" : "내용 확인 중") : "원문 제공"}</span></div>
         <h3>{story.title}</h3>
         <div className="story-conclusion"><strong>한 줄 결론</strong><p>{story.oneLineSummary || firstSentence(story.summary)}</p></div>
-        <div className="story-summary"><strong>확인된 핵심</strong>{evidenceReady ? <ul>{story.claims!.slice(0, 3).map((claim, claimIndex) => <li key={`${claim.statement}-${claimIndex}`}>{claim.statement} <small>[{claim.sources.map((source) => story.sources.findIndex((item) => item.url === source.url) + 1).filter((number) => number > 0).join("·")}]</small></li>)}</ul> : <p className="summary">{story.summary}</p>}</div>
+        <div className="story-summary"><strong>핵심 내용</strong>{evidenceReady ? <ul>{story.claims!.slice(0, 3).map((claim, claimIndex) => <li key={`${claim.statement}-${claimIndex}`}>{claim.statement} <small>[{claim.sources.map((source) => story.sources.findIndex((item) => item.url === source.url) + 1).filter((number) => number > 0).join("·")}]</small></li>)}</ul> : <p className="summary">{story.summary}</p>}</div>
         <div className="why"><strong>알아야 할 것</strong><span>{story.whyItMatters}</span></div>
-        {story.uncertainty && <div className="story-uncertainty"><strong>아직 확인되지 않은 것</strong><span>{story.uncertainty}</span></div>}
+        {story.uncertainty && <div className="story-uncertainty"><strong>더 지켜볼 내용</strong><span>{story.uncertainty}</span></div>}
         <div className="source-row">
           <span>출처 {story.sources.map((source) => source.publisher).join(" · ")}</span>
           <div className="story-actions">

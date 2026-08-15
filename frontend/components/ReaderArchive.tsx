@@ -42,8 +42,8 @@ export function ReaderArchive() {
 
   return <>
     <section className="archive-hero">
-      <div><span>PERSONAL NEWS LIBRARY</span><h1>읽은 뉴스는 사라지지 않고,<br /><em>내 보관함에 쌓입니다.</em></h1><p>날짜와 분야로 지난 브리핑을 찾고, 다시 볼 에디션은 기기에 저장하세요.</p></div>
-      <aside><CalendarDays /><strong>{archive.length}개</strong><span>최근 브리핑</span><i /><CheckCircle2 /><strong>{archive.reduce((total, edition) => total + edition.verified, 0)}건</strong><span>교차 확인 기사</span></aside>
+      <div><span>지난 뉴스</span><h1>읽은 뉴스는 사라지지 않고,<br /><em>내 보관함에 쌓입니다.</em></h1><p>날짜와 분야로 지난 브리핑을 찾고, 다시 볼 날짜는 이 기기에 저장하세요.</p></div>
+      <aside><CalendarDays /><strong>{archive.length}개</strong><span>최근 브리핑</span><i /><CheckCircle2 /><strong>{archive.reduce((total, edition) => total + edition.storyCount, 0)}건</strong><span>보관된 뉴스</span></aside>
     </section>
     <section className="archive-workspace">
       <header><div className="archive-search"><Search size={17} /><input aria-label="브리핑 검색" placeholder="제목이나 키워드 검색" value={query} onChange={(event) => setQuery(event.target.value)} /></div><Link href="/preferences"><Settings2 size={15} /> 내 브리핑 설정</Link></header>
@@ -52,7 +52,7 @@ export function ReaderArchive() {
         <header><div><time>{edition.date}</time><span>{edition.weekday}</span></div><button aria-label={`${edition.date} 저장`} className={saved.includes(edition.id) ? "active" : ""} onClick={() => toggleSaved(edition.id)}><Bookmark size={17} fill={saved.includes(edition.id) ? "currentColor" : "none"} /></button></header>
         <div className="edition-tags">{edition.categories.map((item) => <span key={item}>{item}</span>)}</div><h2>{edition.lead}</h2>
         <ol>{edition.headlines.map((headline, index) => <li key={headline}><b>0{index + 1}</b><span>{headline}</span></li>)}</ol>
-        <footer><span><Clock3 size={13} /> 약 {edition.readMinutes}분</span><span><CheckCircle2 size={13} /> {edition.verified}/{edition.storyCount} 검증</span><Link href={`/briefing/?date=${edition.id}`}>읽기 <ChevronRight size={14} /></Link></footer>
+        <footer><span><Clock3 size={13} /> 약 {edition.readMinutes}분</span><span><CheckCircle2 size={13} /> 뉴스 {edition.storyCount}건</span><Link href={`/briefing/?date=${edition.id}`}>읽기 <ChevronRight size={14} /></Link></footer>
       </article>) : <div className="archive-empty"><Search /><strong>조건에 맞는 브리핑이 없습니다.</strong><span>검색어나 필터를 바꿔보세요.</span></div>}</div>
     </section>
   </>;

@@ -106,7 +106,7 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
         </div>}
 
         <PushControls deliveryTime={deliveryTime} onNotice={(message) => { onNotice(message); }} onSubscriptionChange={setSubscribed} />
-        <p className="modal-privacy"><LockKeyhole size={14} /> 이름·이메일 없이 익명 기기 ID와 알림 시간만 저장합니다.</p>
+        <p className="modal-privacy"><LockKeyhole size={14} /> 이름·이메일·전화번호 없이 알림에 필요한 정보만 사용합니다.</p>
       </section>
     </div>}
   </>;

@@ -72,7 +72,7 @@ async function drawCover(ctx: CanvasRenderingContext2D, card: Extract<BriefingCa
   ctx.lineTo(1008, 1160);
   ctx.stroke();
   text(ctx, `${card.briefing.stories.length}개 핵심 뉴스`, 72, 1202, 32, 900, card.brand.accent);
-  text(ctx, `교차 확인 ${card.briefing.verifiedCount}건 · 약 ${card.briefing.readMinutes}분`, 545, 1205, 28, 700, "#ffffff");
+  text(ctx, `원문 함께 제공 · 약 ${card.briefing.readMinutes}분`, 545, 1205, 28, 700, "#ffffff");
 }
 
 function drawStory(ctx: CanvasRenderingContext2D, card: Extract<BriefingCard, { kind: "story" }>) {
@@ -82,7 +82,7 @@ function drawStory(ctx: CanvasRenderingContext2D, card: Extract<BriefingCard, { 
   ctx.fillStyle = accent;
   ctx.fillRect(0, 0, CARD_WIDTH, 24);
 
-  text(ctx, `${card.brand.name}  ·  AI NEWS SUMMARY`, 68, 64, 25, 900, "#101722");
+  text(ctx, `${card.brand.name}  ·  MORNING NEWS`, 68, 64, 25, 900, "#101722");
   text(ctx, `${String(card.index).padStart(2, "0")} / ${String(card.briefing.stories.length).padStart(2, "0")}`, 850, 64, 25, 800, "#68707a");
 
   ctx.fillStyle = accent;
@@ -91,7 +91,7 @@ function drawStory(ctx: CanvasRenderingContext2D, card: Extract<BriefingCard, { 
   text(ctx, card.story.category, 104, 156, 27, 900, "#ffffff");
   const evidenceReady = card.story.evidenceAvailable && Boolean(card.story.claims?.length);
   const verified = card.story.verificationStatus === "VERIFIED";
-  text(ctx, evidenceReady ? (verified ? "● 근거 연결 완료" : "● 추가 확인 중") : "● 원문 목록 제공", 242, 158, 25, 800, verified && evidenceReady ? "#147a56" : "#9a6517");
+  text(ctx, evidenceReady ? (verified ? "● 원문 함께 보기" : "● 내용 정리 중") : "● 원문 목록 제공", 242, 158, 25, 800, verified && evidenceReady ? "#147a56" : "#9a6517");
 
   const titleBottom = drawParagraph(ctx, card.story.title, 68, 246, 944, 70, 86, 4, "#101722", 900);
   ctx.fillStyle = accent;
@@ -101,7 +101,7 @@ function drawStory(ctx: CanvasRenderingContext2D, card: Extract<BriefingCard, { 
   text(ctx, "한 줄 결론", 68, conclusionY, 26, 900, accent);
   const conclusionBottom = drawParagraph(ctx, storyConclusion(card.story), 68, conclusionY + 48, 944, 33, 48, 2, "#101722", 800);
   const summaryLabelY = conclusionBottom + 32;
-  text(ctx, "확인된 핵심", 68, summaryLabelY, 28, 900, accent);
+  text(ctx, "핵심 내용", 68, summaryLabelY, 28, 900, accent);
   const claims = evidenceReady ? card.story.claims!.map((claim) => claim.statement) : summaryPoints(card.story.summary);
   const summaryBottom = drawBulletList(ctx, claims.slice(0, 2), 68, summaryLabelY + 56, 944, 31, 45, "#3f4854", 680);
 
@@ -117,8 +117,8 @@ function drawStory(ctx: CanvasRenderingContext2D, card: Extract<BriefingCard, { 
   drawParagraph(ctx, card.story.whyItMatters, 108, boxY + 88, 860, 34, 50, 3, "#101722", 700);
 
   const sourceNames = card.story.sources.map((source) => source.publisher).join(" · ");
-  text(ctx, `${evidenceReady ? "근거" : "원문"}  ${sourceNames}`, 68, 1220, 25, 700, "#68707a");
-  text(ctx, `최종 확인 ${card.briefing.lastVerifiedAt}`, 760, 1220, 25, 700, "#68707a");
+  text(ctx, `원문  ${sourceNames}`, 68, 1220, 25, 700, "#68707a");
+  text(ctx, `약 ${card.briefing.readMinutes}분 브리핑`, 760, 1220, 25, 700, "#68707a");
   text(ctx, "중요한 판단 전에는 원문을 확인하세요.", 68, 1270, 23, 600, "#8a9199");
 }
 

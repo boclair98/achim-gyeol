@@ -31,7 +31,7 @@ export const defaultReaderPreferences: ReaderPreferences = {
   categories: ["정책", "경제", "사회", "테크"],
   deliveryTime: "07:30",
   digestSize: "standard",
-  channels: ["PWA"],
+  channels: ["알림"],
   consent: true,
 };
 

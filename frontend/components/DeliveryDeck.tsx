@@ -23,7 +23,7 @@ export function DeliveryDeck({ briefing }: Props) {
       <div className="landing-section-heading delivery-heading-clean">
         <span>FREE SUBSCRIPTION</span>
         <h2>한 번 등록하면 매일 도착해요</h2>
-        <p>회원가입도, 앱스토어 설치도 필요 없습니다. 이 기기의 브라우저 알림만 한 번 허용해 주세요.</p>
+        <p>회원가입도, 앱스토어 설치도 필요 없습니다. 이 기기의 알림만 한 번 허용해 주세요.</p>
       </div>
 
       <div className="delivery-layout subscription-layout">
@@ -49,17 +49,17 @@ export function DeliveryDeck({ briefing }: Props) {
             <div className="subscription-bell"><BellRing /></div>
             <div><span>30초 무료 등록</span><h3>내일부터 받아보세요</h3></div>
           </div>
-          <p className="subscription-description">버튼을 누르고 브라우저 알림만 허용하면 됩니다. 다른 페이지로 이동하거나 회원가입할 필요가 없습니다.</p>
+          <p className="subscription-description">버튼을 누르고 알림만 허용하면 됩니다. 다른 페이지로 이동하거나 회원가입할 필요가 없습니다.</p>
           <div className="quick-arrival-card"><span>정규 도착 시간</span><strong>오전 7:30</strong><small>꼭 필요한 뉴스를 한눈에</small></div>
           <div className="simple-onboarding">
             <span><b>1</b> 알림 버튼 누르기</span>
             <i />
-            <span><b>2</b> 브라우저에서 허용</span>
+            <span><b>2</b> 알림 허용</span>
             <i />
             <span><b>3</b> 다음 아침부터 수신</span>
           </div>
           <SubscriptionTrigger className="quick-subscribe-button"><BellRing size={17} /> 이 기기에 무료 알림 등록</SubscriptionTrigger>
-          <div className="privacy-note">알림 발송에 필요한 익명 기기 ID만 저장하며, 이름·이메일·전화번호를 받지 않습니다.</div>
+          <div className="privacy-note">알림에 필요한 최소 정보만 사용하며, 이름·이메일·전화번호를 받지 않습니다.</div>
         </div>
       </div>
     </section>
@@ -73,7 +73,7 @@ export function BriefingCardPreview({ card }: { card: BriefingCard }) {
         <span className="delivery-badge">매일 아침 · 어제의 뉴스</span>
         <div className="cover-brand">{card.brand.name}</div>
         <div className="cover-copy"><h3>어제의 소음은 빼고,<br />오늘 필요한 뉴스만.</h3><p>{card.briefing.lead}</p></div>
-        <div className="cover-stats"><strong>{card.briefing.stories.length}개 핵심 뉴스</strong><span>교차 확인 {card.briefing.verifiedCount}건 · 약 {card.briefing.readMinutes}분</span></div>
+        <div className="cover-stats"><strong>{card.briefing.stories.length}개 핵심 뉴스</strong><span>원문 함께 제공 · 약 {card.briefing.readMinutes}분</span></div>
       </article>
     );
   }
@@ -82,7 +82,7 @@ export function BriefingCardPreview({ card }: { card: BriefingCard }) {
       <article className="delivery-card closing-card">
         <span>YESTERDAY IN ONE PAGE</span><h3>어제의 흐름,<br />이렇게 기억하세요.</h3>
         <ol>{card.briefing.stories.map((story, index) => <li key={story.id}><strong>{String(index + 1).padStart(2, "0")}</strong><span>{story.title}</span></li>)}</ol>
-        <footer><strong>{card.brand.name}</strong><span>출처를 확인하고 · 사실과 전망을 나눕니다</span></footer>
+        <footer><strong>{card.brand.name}</strong><span>핵심 요약과 원문을 함께 제공합니다</span></footer>
       </article>
     );
   }
@@ -91,13 +91,13 @@ export function BriefingCardPreview({ card }: { card: BriefingCard }) {
   const claims = evidenceReady ? card.story.claims!.slice(0, 2) : summaryPoints(card.story.summary).slice(0, 2).map((statement) => ({ statement, sources: [] }));
   return (
     <article className="delivery-card summary-card">
-      <header><strong>{card.brand.name} · AI NEWS SUMMARY</strong><span>{String(card.index).padStart(2, "0")} / {String(card.briefing.stories.length).padStart(2, "0")}</span></header>
-      <div className="summary-kicker"><span>{card.story.category}</span><em>{evidenceReady ? (verified ? "● 근거 연결 완료" : "● 추가 확인 중") : "● 원문 목록 제공"}</em></div>
+      <header><strong>{card.brand.name} · MORNING NEWS</strong><span>{String(card.index).padStart(2, "0")} / {String(card.briefing.stories.length).padStart(2, "0")}</span></header>
+      <div className="summary-kicker"><span>{card.story.category}</span><em>{evidenceReady ? (verified ? "● 원문 함께 보기" : "● 내용 정리 중") : "● 원문 목록 제공"}</em></div>
       <h3>{card.story.title}</h3>
       <div className="card-conclusion"><strong>한 줄 결론</strong><p>{storyConclusion(card.story)}</p></div>
-      <div className="ai-summary"><strong>확인된 핵심</strong><ul>{claims.map((claim, index) => <li key={`${claim.statement}-${index}`}><span>{claim.statement}</span>{claim.sources.length > 0 && <small> [{claim.sources.map((source) => card.story.sources.findIndex((item) => item.url === source.url) + 1).filter((number) => number > 0).join("·")}]</small>}</li>)}</ul></div>
+      <div className="ai-summary"><strong>핵심 내용</strong><ul>{claims.map((claim, index) => <li key={`${claim.statement}-${index}`}><span>{claim.statement}</span>{claim.sources.length > 0 && <small> [{claim.sources.map((source) => card.story.sources.findIndex((item) => item.url === source.url) + 1).filter((number) => number > 0).join("·")}]</small>}</li>)}</ul></div>
       <div className="matter-box"><strong>알아야 할 것</strong><p>{card.story.whyItMatters}</p></div>
-      <footer><span>{evidenceReady ? `근거 ${card.story.sources.length}개 연결` : `원문 ${card.story.sources.length}개 제공`}</span><span>최종 확인 {card.briefing.lastVerifiedAt}</span></footer>
+      <footer><span>관련 원문 {card.story.sources.length}개</span><span>약 {card.briefing.readMinutes}분 브리핑</span></footer>
     </article>
   );
 }
