@@ -3,9 +3,9 @@ name: Morning briefing operations
 
 on:
   schedule:
-    # GitHub Actions cron uses UTC. These are 06:00 and 06:45 Asia/Seoul.
+    # GitHub Actions cron uses UTC. These are 01:00 and 06:45 Asia/Seoul.
     # The second job keeps the free service warm and dispatches at 07:30.
-    - cron: "0 21 * * *"
+    - cron: "0 16 * * *"
     - cron: "45 21 * * *"
   workflow_dispatch:
     inputs:
@@ -56,7 +56,7 @@ jobs:
         run: |
           if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
             operation="$REQUESTED_OPERATION"
-          elif [[ "$SCHEDULE" == "0 21 * * *" ]]; then
+          elif [[ "$SCHEDULE" == "0 16 * * *" ]]; then
             operation="generate"
           else
             operation="run"
@@ -196,7 +196,7 @@ jobs:
           ADMIN_TOKEN: ${{ secrets.BRIEFING_ADMIN_TOKEN }}
           OPERATION: ${{ steps.operation.outputs.operation }}
         run: |
-          # The 06:00 generation has ample lead time before the 07:30 dispatch.
+          # The 01:00 generation has ample lead time before the 07:30 dispatch.
           # Candidate count, concurrency and per-request timeouts keep this wait bounded.
           for attempt in $(seq 1 120); do
             status="$(curl --fail-with-body --silent --show-error \

@@ -687,7 +687,7 @@ internal fun newsSourceFamily(url: String): String = runCatching {
 class NewsGenerationScheduler(private val generationJob: MorningGenerationJob) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    @Scheduled(cron = "\${app.pipeline.cron:0 0 6 * * *}", zone = "Asia/Seoul")
+    @Scheduled(cron = "\${app.pipeline.cron:0 0 1 * * *}", zone = "Asia/Seoul")
     fun generateEveryMorning() {
         val briefingDate = LocalDate.now(ZoneId.of("Asia/Seoul"))
         runCatching { generationJob.start(briefingDate) }

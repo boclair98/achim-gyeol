@@ -50,7 +50,7 @@ export function DeliveryDeck({ briefing }: Props) {
             <div><span>30초 무료 등록</span><h3>내일부터 받아보세요</h3></div>
           </div>
           <p className="subscription-description">버튼을 누르고 브라우저 알림만 허용하면 됩니다. 다른 페이지로 이동하거나 회원가입할 필요가 없습니다.</p>
-          <div className="quick-arrival-card"><span>정규 도착 시간</span><strong>오전 7:30</strong><small>전날 뉴스를 오전 6시부터 종합</small></div>
+          <div className="quick-arrival-card"><span>정규 도착 시간</span><strong>오전 7:30</strong><small>전날 뉴스를 오전 1시부터 종합</small></div>
           <div className="simple-onboarding">
             <span><b>1</b> 알림 버튼 누르기</span>
             <i />
