@@ -1,0 +1,30 @@
+name: Production load smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      requests:
+        description: Safe number of GET requests
+        required: true
+        default: "100"
+      concurrency:
+        description: Concurrent workers
+        required: true
+        default: "10"
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run bounded production load smoke
+        env:
+          LOAD_TEST_MAX_P95_MS: "10000"
+        run: node frontend/scripts/load-smoke.mjs https://morningnews.coders.kr "${{ inputs.requests }}" "${{ inputs.concurrency }}"

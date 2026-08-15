@@ -18,6 +18,11 @@ services:
       DATABASE_URL: jdbc:postgresql://${db.host}:${db.port}/${db.name}
       DATABASE_USER: ${db.user}
       DATABASE_PASSWORD: ${db.password}
+      BACKUP_ENABLED: "true"
+      BACKUP_STORAGE_BUCKET: ${backups.bucket}
+      BACKUP_STORAGE_ENDPOINT: ${backups.s3_endpoint}
+      BACKUP_STORAGE_ACCESS_KEY: ${backups.access_key}
+      BACKUP_STORAGE_SECRET_KEY: ${backups.secret_key}
       NEWS_PIPELINE_ENABLED: "true"
       GDELT_NEWS_ENABLED: "true"
       GDELT_MINIMUM_ARTICLE_COUNT: "3"
@@ -44,7 +49,14 @@ services:
       NEWS_MINIMUM_DELIVERY_CATEGORIES: "5"
       WEB_PUSH_ENABLED: "true"
       PUBLIC_APP_URL: "https://morningnews.coders.kr"
+      TRUST_CODERS_USER_HEADER: "false"
+      PUBLIC_WRITE_LIMIT_PER_MINUTE: "30"
+      ADMIN_LIMIT_PER_MINUTE: "60"
 
   db:
     type: postgres
     size: 1Gi
+
+  backups:
+    type: object
+    quota_gb: 1

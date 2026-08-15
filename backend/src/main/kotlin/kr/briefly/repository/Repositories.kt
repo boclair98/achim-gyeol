@@ -31,6 +31,8 @@ interface StoryFeedbackRepository : JpaRepository<StoryFeedback, Long> {
     fun findAllByUserIdAndTypeInAndCreatedAtAfter(userId: String, types: Collection<FeedbackType>, cutoff: OffsetDateTime): List<StoryFeedback>
     fun deleteAllByStoryIdAndUserIdAndTypeIn(storyId: Long, userId: String, types: Collection<FeedbackType>)
     fun findAllByCreatedAtBefore(cutoff: OffsetDateTime): List<StoryFeedback>
+    fun findAllByUserId(userId: String): List<StoryFeedback>
+    fun deleteAllByUserId(userId: String)
 }
 
 interface PushSubscriptionRepository : JpaRepository<PushSubscription, Long> {
@@ -65,10 +67,13 @@ interface PushDeliveryAttemptRepository : JpaRepository<PushDeliveryAttempt, Lon
 
 interface ReaderPreferenceRepository : JpaRepository<ReaderPreference, Long> {
     fun findByOwnerId(ownerId: String): ReaderPreference?
+    fun deleteByOwnerId(ownerId: String)
 }
 
 interface ReaderEventRepository : JpaRepository<ReaderEvent, Long> {
     fun findAllByCreatedAtAfter(createdAt: OffsetDateTime): List<ReaderEvent>
     fun findAllByCreatedAtBefore(createdAt: OffsetDateTime): List<ReaderEvent>
     fun existsByTypeAndEditionIdAndStoryIdAndActorHash(type: kr.briefly.domain.ReaderEventType, editionId: Long, storyId: Long?, actorHash: String): Boolean
+    fun findAllByActorHash(actorHash: String): List<ReaderEvent>
+    fun deleteAllByActorHash(actorHash: String)
 }

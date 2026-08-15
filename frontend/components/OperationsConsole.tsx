@@ -13,7 +13,7 @@ type Delivery = { id: number; editionId: number; subscriptionId: number; state: 
 type BuildStatus = { date?: string; coverageReady: boolean; productionReady: boolean; stories: number; categories: number; minimumStories: number; minimumCategories: number; blockReasons: string[]; generationJob: { state: string; result?: { collectedArticles: number; candidateClusters: number; rejectedCandidates: number; categoryCounts: Record<string, number>; deliveryReady: boolean } } };
 
 export function OperationsConsole() {
-  const [token, setToken] = useState(() => typeof window === "undefined" ? "" : window.sessionStorage.getItem("achim-gyeol-admin-token") ?? "");
+  const [token, setToken] = useState("");
   const [actor, setActor] = useState("운영자");
   const [queue, setQueue] = useState<Queue | null>(null);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
@@ -36,7 +36,6 @@ export function OperationsConsole() {
     if (!token) { setNotice("운영 서버에 설정한 BRIEFING_ADMIN_TOKEN을 입력해 주세요."); return; }
     setBusy(true);
     try {
-      window.sessionStorage.setItem("achim-gyeol-admin-token", token);
       const [nextQueue, nextMetrics, nextAudits, nextDeliveries, nextBuildStatus] = await Promise.all([
         request<Queue>("/api/admin/editorial/queue"), request<Metrics>("/api/admin/editorial/metrics"),
         request<Audit[]>("/api/admin/editorial/audits"), request<Delivery[]>("/api/admin/editorial/deliveries"),
@@ -62,6 +61,15 @@ export function OperationsConsole() {
     setBusy(true);
     try { await request(`/api/admin/editorial/editions/${queue.editionId}/${action}`, { method: "POST", body: JSON.stringify({ actor, reason }) }); await refresh(); }
     catch (error) { setNotice(error instanceof Error ? error.message : "발행 상태를 변경하지 못했습니다."); setBusy(false); }
+  };
+
+  const declareIncident = async () => {
+    if (!queue || !window.confirm("오늘 브리핑 발행과 아직 성공하지 않은 발송을 즉시 중단할까요?")) return;
+    const reason = window.prompt("사고 내용과 중단 이유를 10자 이상 입력해 주세요.");
+    if (!reason || reason.trim().length < 10) { setNotice("사고 내용과 중단 이유를 10자 이상 입력해야 합니다."); return; }
+    setBusy(true);
+    try { await request(`/api/admin/editorial/editions/${queue.editionId}/incident`, { method: "POST", body: JSON.stringify({ actor, reason }) }); setNotice("긴급 발행 중단을 적용하고 감사 로그에 기록했습니다."); await refresh(); }
+    catch (error) { setNotice(error instanceof Error ? error.message : "긴급 중단을 적용하지 못했습니다."); setBusy(false); }
   };
 
   const publishCorrection = async (story: QueueStory) => {
@@ -91,7 +99,7 @@ export function OperationsConsole() {
     <section className="studio-hero ops-hero"><div><span className="studio-kicker"><i /> LIVE OPERATIONS</span><h1>뉴스 품질부터 발송까지<br /><em>실제 운영 데이터로 관리합니다.</em></h1><p>이 화면은 더 이상 시연 데이터가 아닙니다. 관리자 토큰을 가진 운영자만 검수·승인·보류·생성·발송 상태를 조회하고 변경할 수 있습니다.</p></div><aside className="ops-login"><LockKeyhole /><label>관리자 토큰<input type="password" value={token} onChange={(event) => setToken(event.target.value)} placeholder="BRIEFING_ADMIN_TOKEN" /></label><label>작업자 이름<input value={actor} maxLength={80} onChange={(event) => setActor(event.target.value)} /></label><button className="studio-primary" onClick={() => void refresh()} disabled={busy}><RefreshCw size={15} /> 운영 상태 연결</button></aside></section>
 
     {queue && metrics ? <section className="ops-console">
-      <header className="ops-console-head"><div><span>{queue.briefingDate}</span><h2>오늘 브리핑 운영실</h2><p>에디션 상태 <b>{queue.state}</b> · 뉴스 {buildStatus?.stories ?? queue.stories.length}/{buildStatus?.minimumStories ?? "-"}건 · 분야 {buildStatus?.categories ?? new Set(queue.stories.map((story) => story.category)).size}/{buildStatus?.minimumCategories ?? "-"}개</p>{buildStatus && !buildStatus.coverageReady && <p className="ops-coverage-warning"><AlertTriangle size={14} /> 분량·분야 목표 미달(발송은 계속) · {buildStatus.blockReasons.join(" · ")}</p>}</div><div><button className="studio-secondary" onClick={() => void runPipeline("generate")} disabled={busy}><RefreshCw size={14} /> 다시 생성</button><button className="studio-secondary" onClick={() => void editionAction("hold")} disabled={busy}><PauseCircle size={14} /> 발행 보류</button><button className="studio-primary" onClick={() => void editionAction("approve")} disabled={busy}><ShieldCheck size={14} /> 최종 승인</button><button className="studio-primary" onClick={() => void runPipeline("dispatch")} disabled={busy || buildStatus?.productionReady === false}><Send size={14} /> 발송 검사</button><button className="studio-secondary" onClick={() => void retryFailed()} disabled={busy || metrics.recentFailed === 0}><RefreshCw size={14} /> 실패 재전송</button></div></header>
+      <header className="ops-console-head"><div><span>{queue.briefingDate}</span><h2>오늘 브리핑 운영실</h2><p>에디션 상태 <b>{queue.state}</b> · 뉴스 {buildStatus?.stories ?? queue.stories.length}/{buildStatus?.minimumStories ?? "-"}건 · 분야 {buildStatus?.categories ?? new Set(queue.stories.map((story) => story.category)).size}/{buildStatus?.minimumCategories ?? "-"}개</p>{buildStatus && !buildStatus.coverageReady && <p className="ops-coverage-warning"><AlertTriangle size={14} /> 분량·분야 목표 미달(발송은 계속) · {buildStatus.blockReasons.join(" · ")}</p>}</div><div><button className="studio-secondary" onClick={() => void runPipeline("generate")} disabled={busy}><RefreshCw size={14} /> 다시 생성</button><button className="studio-secondary" onClick={() => void editionAction("hold")} disabled={busy}><PauseCircle size={14} /> 발행 보류</button><button className="studio-secondary" onClick={() => void declareIncident()} disabled={busy}><AlertTriangle size={14} /> 긴급 발행 중단</button><button className="studio-primary" onClick={() => void editionAction("approve")} disabled={busy}><ShieldCheck size={14} /> 최종 승인</button><button className="studio-primary" onClick={() => void runPipeline("dispatch")} disabled={busy || buildStatus?.productionReady === false}><Send size={14} /> 발송 검사</button><button className="studio-secondary" onClick={() => void retryFailed()} disabled={busy || metrics.recentFailed === 0}><RefreshCw size={14} /> 실패 재전송</button></div></header>
       <div className="ops-metrics">{[
         ["활성 기기", metrics.activeSubscriptions, Smartphone], ["30일 독자", metrics.uniqueReaders30d, Activity], ["브리핑 열람", metrics.opens30d, BarChart3], ["완독", metrics.completed30d, Check], ["원문 이동", metrics.sourceOpens30d, FileCheck2], ["최근 발송", `${metrics.recentDelivered}/${metrics.recentFailed}`, Send],
       ].map(([label, value, Icon]) => { const MetricIcon = Icon as typeof Activity; return <article key={String(label)}><MetricIcon /><span>{String(label)}</span><strong>{String(value)}</strong></article>; })}</div>

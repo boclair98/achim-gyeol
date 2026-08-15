@@ -24,6 +24,15 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm build
+      - run: pnpm exec playwright install --with-deps chromium webkit
+      - run: pnpm test:e2e
+      - name: Local load smoke test
+        run: |
+          node tests/static-server.mjs &
+          server_pid=$!
+          trap 'kill $server_pid' EXIT
+          for attempt in $(seq 1 20); do curl --silent --fail http://127.0.0.1:4173/ >/dev/null && break; sleep 1; done
+          node scripts/load-smoke.mjs http://127.0.0.1:4173 100 10
 
   backend:
     runs-on: ubuntu-latest

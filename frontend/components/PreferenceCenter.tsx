@@ -12,6 +12,7 @@ const channels = ["PWA"];
 export function PreferenceCenter() {
   const [preferences, setPreferences] = useState<ReaderPreferences>(defaultReaderPreferences);
   const [notice, setNotice] = useState("");
+  const [privacyBusy, setPrivacyBusy] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -43,12 +44,44 @@ export function PreferenceCenter() {
       setNotice("내 관심 분야와 분량을 서버에도 안전하게 저장했습니다.");
     } catch { setNotice("기기에는 저장했지만 서버 저장은 완료하지 못했습니다. 잠시 후 다시 시도해 주세요."); }
   };
-  const exportData = () => {
-    const blob = new Blob([JSON.stringify({ preferences, savedEditions: JSON.parse(window.localStorage.getItem("achim-gyeol-saved-editions") ?? "[]") }, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = "achim-gyeol-my-data.json"; anchor.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-    setNotice("이 기기에 저장된 내 데이터를 내려받았습니다.");
+  const exportData = async () => {
+    setPrivacyBusy(true);
+    try {
+      const response = await fetch(`${apiBase}/api/reader/data`, { headers: deviceHeaders(), cache: "no-store" });
+      if (!response.ok) throw new Error("export failed");
+      const serverData = await response.json();
+      const deviceData = Object.fromEntries(
+        Object.keys(window.localStorage)
+          .filter((key) => key.startsWith("achim-gyeol-"))
+          .map((key) => [key, window.localStorage.getItem(key)]),
+      );
+      const blob = new Blob([JSON.stringify({ server: serverData, device: deviceData }, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = "achim-gyeol-my-data.json"; anchor.click(); window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      setNotice("서버와 이 기기에 저장된 내 데이터를 내려받았습니다.");
+    } catch { setNotice("서버 데이터를 내려받지 못했습니다. 잠시 후 다시 시도해 주세요."); }
+    finally { setPrivacyBusy(false); }
   };
-  const clearData = () => { ["achim-gyeol-reader-preferences", "achim-gyeol-saved-editions", "achim-gyeol-delivery"].forEach((key) => window.localStorage.removeItem(key)); setPreferences(defaultReaderPreferences); setNotice("독자 설정과 저장한 브리핑을 이 기기에서 삭제했습니다."); };
+  const clearData = async () => {
+    if (!window.confirm("서버의 구독·설정·열람 기록과 이 기기의 저장 데이터를 모두 삭제할까요? 이 작업은 되돌릴 수 없습니다.")) return;
+    setPrivacyBusy(true);
+    try {
+      const response = await fetch(`${apiBase}/api/reader/data`, { method: "DELETE", headers: deviceHeaders() });
+      if (!response.ok) throw new Error("delete failed");
+      try {
+        const registration = "serviceWorker" in navigator ? await navigator.serviceWorker.getRegistration() : undefined;
+        const subscription = await registration?.pushManager?.getSubscription();
+        await subscription?.unsubscribe();
+      } catch {
+        // The server record is already gone; unsupported browser APIs must not leave local personal data behind.
+      }
+      Object.keys(window.localStorage)
+        .filter((key) => key.startsWith("achim-gyeol-"))
+        .forEach((key) => window.localStorage.removeItem(key));
+      setPreferences(defaultReaderPreferences);
+      setNotice("서버와 이 기기에 저장된 데이터를 모두 삭제했습니다.");
+    } catch { setNotice("서버 데이터 삭제를 완료하지 못했습니다. 데이터 보호를 위해 기기 데이터도 유지했습니다."); }
+    finally { setPrivacyBusy(false); }
+  };
 
   return <>
     <section className="preference-hero"><span>READER CONTROL CENTER</span><h1>뉴스가 나를 방해하지 않도록,<br /><em>분량과 관심사를 직접 정합니다.</em></h1><p>관심 분야, 읽을 분량과 수신 동의를 한곳에서 관리합니다. 정규 브리핑은 매일 오전 7시 30분에 도착합니다.</p></section>
@@ -58,7 +91,7 @@ export function PreferenceCenter() {
         <PreferenceBlock icon={Clock3} title="도착 일정" description="등록된 기기에는 요일 선택 없이 매일 오전 7시 30분에 브리핑을 보냅니다."><div className="schedule-preference"><input aria-label="매일 고정 도착 시각" type="time" value="07:30" readOnly /></div></PreferenceBlock>
         <PreferenceBlock icon={BellRing} title="분량과 채널" description="카드의 설명 밀도와 현재 제공 중인 전달 방식을 정합니다."><div className="digest-options">{(["compact", "standard", "deep"] as const).map((size) => <button key={size} className={preferences.digestSize === size ? "active" : ""} onClick={() => setPreferences({ ...preferences, digestSize: size })}><strong>{size === "compact" ? "빠르게" : size === "standard" ? "기본" : "깊게"}</strong><span>{size === "compact" ? "결론 중심" : size === "standard" ? "핵심 사실 포함" : "근거까지 자세히"}</span></button>)}</div><div className="channel-options">{channels.map((item) => <button key={item} className="active" disabled>{item}<small>운영 연결</small></button>)}</div></PreferenceBlock>
       </div>
-      <aside className="preference-summary"><span>LIVE PREFERENCE</span><h2>나의 아침결</h2><dl><div><dt>관심 분야</dt><dd>{preferences.categories.length}개</dd></div><div><dt>도착 시간</dt><dd>{preferences.deliveryTime}</dd></div><div><dt>주기</dt><dd>매일</dd></div><div><dt>브리핑</dt><dd>{preferences.digestSize === "compact" ? "빠르게" : preferences.digestSize === "standard" ? "기본" : "깊게"}</dd></div></dl><label><input type="checkbox" checked={preferences.consent} onChange={(event) => setPreferences({ ...preferences, consent: event.target.checked })} /><span><strong>브리핑 수신에 동의합니다</strong><small>언제든 변경하거나 철회할 수 있습니다.</small></span></label><button className="studio-primary" onClick={() => void save()}><Check size={15} /> 설정 저장</button><div className="privacy-actions"><button onClick={exportData}><Download size={14} /> 내 데이터 받기</button><button onClick={() => setPreferences(defaultReaderPreferences)}><RotateCcw size={14} /> 초기화</button><button className="danger" onClick={clearData}><Trash2 size={14} /> 기기 데이터 삭제</button></div><footer><ShieldCheck size={16} /> 이름·이메일 없이 익명 기기 ID로만 설정을 저장합니다.</footer></aside>
+      <aside className="preference-summary"><span>LIVE PREFERENCE</span><h2>나의 아침결</h2><dl><div><dt>관심 분야</dt><dd>{preferences.categories.length}개</dd></div><div><dt>도착 시간</dt><dd>{preferences.deliveryTime}</dd></div><div><dt>주기</dt><dd>매일</dd></div><div><dt>브리핑</dt><dd>{preferences.digestSize === "compact" ? "빠르게" : preferences.digestSize === "standard" ? "기본" : "깊게"}</dd></div></dl><label><input type="checkbox" checked={preferences.consent} onChange={(event) => setPreferences({ ...preferences, consent: event.target.checked })} /><span><strong>브리핑 수신에 동의합니다</strong><small>언제든 변경하거나 철회할 수 있습니다.</small></span></label><button className="studio-primary" onClick={() => void save()} disabled={privacyBusy}><Check size={15} /> 설정 저장</button><div className="privacy-actions"><button onClick={() => void exportData()} disabled={privacyBusy}><Download size={14} /> 서버 포함 내 데이터 받기</button><button onClick={() => setPreferences(defaultReaderPreferences)} disabled={privacyBusy}><RotateCcw size={14} /> 초기화</button><button className="danger" onClick={() => void clearData()} disabled={privacyBusy}><Trash2 size={14} /> 전체 데이터 삭제</button></div><footer><ShieldCheck size={16} /> 이름·이메일 없이 익명 기기 ID로만 설정을 저장합니다.</footer></aside>
     </section>
     {notice && <div className="notice" role="status"><span>{notice}</span><button onClick={() => setNotice("")}>확인</button></div>}
   </>;
