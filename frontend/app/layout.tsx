@@ -15,6 +15,11 @@ export const metadata: Metadata = {
   title: "아침결 — 어제 뉴스를 매일 아침 한 번에",
   description: "전날의 중요한 뉴스를 읽기 쉽게 정리해 매일 오전 7시 30분 알림으로 전하는 무료 뉴스 브리핑.",
   manifest: `${basePath}/manifest.webmanifest`,
+  icons: {
+    icon: [{ url: `${basePath}/mail-icon.svg`, type: "image/svg+xml" }],
+    shortcut: `${basePath}/mail-icon.svg`,
+    apple: `${basePath}/mail-icon.svg`,
+  },
   applicationName: "아침결",
   appleWebApp: { capable: true, title: "아침결", statusBarStyle: "default" },
   openGraph: {

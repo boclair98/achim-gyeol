@@ -1,5 +1,5 @@
-const CACHE = "achim-gyeol-v9";
-const SHELL = ["./", "./briefing/", "./archive/", "./preferences/", "./trust/", "./manifest.webmanifest", "./icon.svg", "./briefing-card-bg.png", "./og-v2.png"];
+const CACHE = "achim-gyeol-v10";
+const SHELL = ["./", "./briefing/", "./archive/", "./preferences/", "./trust/", "./manifest.webmanifest", "./mail-icon.svg", "./briefing-card-bg.png", "./og-v2.png"];
 self.addEventListener("install", (event) => event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting())));
 self.addEventListener("activate", (event) => event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))).then(() => self.clients.claim())));
 self.addEventListener("fetch", (event) => {
@@ -31,7 +31,7 @@ self.addEventListener("fetch", (event) => {
 self.addEventListener("push", (event) => {
   const data = event.data?.json() ?? { title: "아침결 · 어제 핵심 뉴스", body: "30초 한눈에 보기부터 사실·영향·다음 확인 포인트까지 확인하세요." };
   event.waitUntil(self.registration.showNotification(data.title, {
-    body: data.body, icon: "./icon.svg", badge: "./icon.svg",
+    body: data.body, icon: "./mail-icon.svg", badge: "./mail-icon.svg",
     tag: data.tag || "achim-gyeol-daily", renotify: true,
     data: { url: data.url || new URL("./briefing/", self.registration.scope).href },
   }));

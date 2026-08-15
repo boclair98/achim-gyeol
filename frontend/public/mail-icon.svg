@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="아침결 메일 아이콘">
+  <rect x="24" y="24" width="464" height="464" rx="124" fill="#0f7a55"/>
+  <circle cx="256" cy="174" r="74" fill="#ffd166"/>
+  <path d="M256 82v34M164 120l24 24M348 120l-24 24" fill="none" stroke="#fff4c7" stroke-width="22" stroke-linecap="round"/>
+  <rect x="92" y="180" width="328" height="236" rx="48" fill="#ffffff"/>
+  <path d="M112 214l144 112 144-112" fill="#e7f7f0" stroke="#0f7a55" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M112 390l104-94M400 390l-104-94" fill="none" stroke="#8fd8ba" stroke-width="20" stroke-linecap="round"/>
+</svg>
