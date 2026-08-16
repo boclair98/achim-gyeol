@@ -283,11 +283,11 @@ class NewsBriefingGenerator(
         Category.SPORTS to listOf("프로야구 경기 결과", "축구 경기 결과", "농구 배구 경기 결과", "국가대표 경기", "올림픽 월드컵"),
         Category.ESPORTS to listOf("LCK e스포츠", "리그오브레전드 대회", "발로란트 e스포츠", "오버워치 e스포츠", "e스포츠 경기 결과"),
     )
-    @Value("\${app.pipeline.max-candidates-per-category:6}") private var maxCandidatesPerCategory: Int = 6
+    @Value("\${app.pipeline.max-candidates-per-category:7}") private var maxCandidatesPerCategory: Int = 7
     @Value("\${app.pipeline.max-articles-per-category:120}") private var maxArticlesPerCategory: Int = 120
     @Value("\${app.pipeline.search-max-pages:3}") private var searchMaxPages: Int = 3
-    @Value("\${app.pipeline.max-ai-candidates:18}") private var maxAiCandidates: Int = 18
-    @Value("\${app.pipeline.ai-concurrency:1}") private var aiConcurrency: Int = 1
+    @Value("\${app.pipeline.max-ai-candidates:24}") private var maxAiCandidates: Int = 24
+    @Value("\${app.pipeline.ai-concurrency:2}") private var aiConcurrency: Int = 2
     @Value("\${app.pipeline.max-stories-per-category:3}") private var maxStoriesPerCategory: Int = 3
     @Value("\${app.pipeline.max-stories:15}") private var maxStories: Int = 15
     @Value("\${app.pipeline.minimum-importance-score:60}") private var minimumImportanceScore: Int = 60
@@ -687,7 +687,7 @@ internal fun newsSourceFamily(url: String): String = runCatching {
 class NewsGenerationScheduler(private val generationJob: MorningGenerationJob) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    @Scheduled(cron = "\${app.pipeline.cron:0 0 1 * * *}", zone = "Asia/Seoul")
+    @Scheduled(cron = "\${app.pipeline.cron:0 0 0 * * *}", zone = "Asia/Seoul")
     fun generateEveryMorning() {
         val briefingDate = LocalDate.now(ZoneId.of("Asia/Seoul"))
         runCatching { generationJob.start(briefingDate) }

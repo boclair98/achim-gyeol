@@ -15,7 +15,7 @@ data class BriefingCoverageDecision(
 
 @Component
 class BriefingCoveragePolicy(
-    @Value("\${app.pipeline.minimum-delivery-stories:8}") minimumStories: Int,
+    @Value("\${app.pipeline.minimum-delivery-stories:10}") minimumStories: Int,
     @Value("\${app.pipeline.minimum-delivery-categories:5}") minimumCategories: Int,
 ) {
     val minimumStories: Int = minimumStories.coerceAtLeast(1)
