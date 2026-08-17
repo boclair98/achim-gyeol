@@ -100,7 +100,7 @@ export function BriefingApp() {
         </div>
         <div className="how-grid">
           <article><div className="how-icon mint"><Clock3 /></div><small>01 · 핵심만</small><h3>중요한 흐름을 골라 드려요</h3><p>정책부터 경제, 사회, 국제, 테크까지 하루를 시작하기 전에 알아야 할 소식을 한곳에 담습니다.</p></article>
-          <article><div className="how-icon violet"><Sparkles /></div><small>02 · 읽기 쉽게</small><h3>결론과 의미를 정리해요</h3><p>각 뉴스의 한 줄 결론, 핵심 내용, 알아야 할 점과 관련 원문을 읽기 쉽게 보여드립니다.</p></article>
+          <article><div className="how-icon violet"><BookOpen /></div><small>02 · 읽기 쉽게</small><h3>배경부터 의미까지 풀어드려요</h3><p>낯선 용어와 배경은 일상어로 풀고, 무엇이 달라지는지와 관련 원문을 함께 보여드립니다.</p></article>
           <article><div className="how-icon yellow"><Smartphone /></div><small>03 · 매일 아침</small><h3>오전 7시 30분에 받아요</h3><p>휴대폰 알림을 누르면 큰 글자로 정리된 뉴스 전용 화면이 바로 열립니다.</p></article>
         </div>
       </section>
@@ -219,7 +219,7 @@ function StoryRow({ story, index, onNotice }: { story: Story; index: number; onN
         <div className="story-kicker"><span className="category">{story.category}</span><span className={verified && evidenceReady ? "verified" : "verified developing"}><CheckCircle2 size={13} />{evidenceReady ? (verified ? "출처 보기" : "내용 확인 중") : "원문 제공"}</span></div>
         <h3>{story.title}</h3>
         <div className="story-conclusion"><strong>한 줄 결론</strong><p>{story.oneLineSummary || firstSentence(story.summary)}</p></div>
-        <div className="story-easy"><strong>쉽게 이해하기</strong><p>{story.plainExplanation || story.summary}</p></div>
+        <div className="story-easy"><strong>이해 포인트</strong><p>{story.plainExplanation || story.summary}</p></div>
         <div className="story-summary"><strong>핵심 내용</strong>{evidenceReady ? <ul>{story.claims!.slice(0, 3).map((claim, claimIndex) => <li key={`${claim.statement}-${claimIndex}`}>{claim.statement} <small>[{claim.sources.map((source) => story.sources.findIndex((item) => item.url === source.url) + 1).filter((number) => number > 0).join("·")}]</small></li>)}</ul> : <p className="summary">{story.summary}</p>}</div>
         <div className="why"><strong>알아야 할 것</strong><span>{story.whyItMatters}</span></div>
         {story.uncertainty && <div className="story-uncertainty"><strong>더 지켜볼 내용</strong><span>{story.uncertainty}</span></div>}

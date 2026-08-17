@@ -66,7 +66,7 @@ test("browser tab uses the branded mail icon", async ({ page }) => {
   await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", /mail-icon\.svg$/);
 });
 
-test("news reader shows an available article image and beginner-friendly explanation", async ({ page }) => {
+test("news reader shows an available article image and accessible context", async ({ page }) => {
   await page.route("**/api/briefings/today", async (route) => {
     await route.fulfill({
       status: 200,
@@ -87,7 +87,7 @@ test("news reader shows an available article image and beginner-friendly explana
           oneLineSummary: "기준금리는 대출과 예금 금리에 영향을 주는 기준입니다.",
           summary: "기준금리 결정이 발표됐습니다.",
           backgroundContext: "한국은행은 물가와 경기 상황을 살펴 기준금리를 정합니다.",
-          plainExplanation: "쉽게 말하면 돈을 빌리거나 맡길 때 적용되는 이자의 기준이 달라질 수 있다는 뜻입니다.",
+          plainExplanation: "결정 방향에 따라 대출 이자와 예금 금리의 기준이 달라질 수 있습니다.",
           whyItMatters: "대출 이자와 예금 수익에 영향을 줄 수 있습니다.",
           verificationStatus: "VERIFIED",
           qualityScore: 90,
@@ -102,6 +102,6 @@ test("news reader shows an available article image and beginner-friendly explana
   });
   await page.goto("/briefing/");
   await expect(page.getByRole("img", { name: /기준금리 결정이 생활비에 미치는 영향 관련 기사 대표 이미지/ }).first()).toBeVisible();
-  await expect(page.getByText("처음 보는 분을 위한 배경")).toBeVisible();
-  await expect(page.getByText(/돈을 빌리거나 맡길 때 적용되는 이자의 기준/).first()).toBeVisible();
+  await expect(page.getByText("기사 이해를 돕는 배경")).toBeVisible();
+  await expect(page.getByText(/대출 이자와 예금 금리의 기준이 달라질 수 있습니다/).first()).toBeVisible();
 });
