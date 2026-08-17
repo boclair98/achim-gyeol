@@ -407,6 +407,19 @@ button:disabled { cursor: wait; opacity: .55; }
 .brief-sheet-controls span { color: #7a817d; font-size: 11px; }
 .brief-sheet-controls small { margin-left: 8px; color: #7a817d; font-size: 10px; }
 .brief-sheet-controls small { display: inline-flex; align-items: center; gap: 4px; }
+
+/* Focus reader: put the horizontal briefing cards first and let the cards use the available viewport. */
+.focus-reader-shell .brief-sheet-intro { display: none; }
+.focus-reader-shell .brief-sheet-section { display: block; width: 100%; max-width: none; box-sizing: border-box; margin: 0; padding: 24px max(18px, calc((100vw - 1180px) / 2)) 48px; }
+.focus-reader-shell .brief-sheet-deck { width: min(100%, 1180px); margin: 0 auto; }
+.focus-reader-shell .brief-sheet-track { min-height: calc(100svh - 190px); }
+.focus-reader-shell .brief-sheet { min-height: calc(100svh - 230px); }
+
+@media (max-width: 850px) {
+  .focus-reader-shell .brief-sheet-section { padding: 16px 14px 36px; }
+  .focus-reader-shell .brief-sheet-track { min-height: calc(100svh - 148px); }
+  .focus-reader-shell .brief-sheet { min-height: calc(100svh - 188px); }
+}
 .news-reader-hero { max-width: 1180px; margin: 0 auto; padding: 68px 0 54px; }
 .reader-date { display: flex; align-items: center; gap: 12px; color: var(--blue); font-size: 12px; font-weight: 900; }
 .reader-date span { border-radius: 999px; background: #e9efff; padding: 7px 11px; }
