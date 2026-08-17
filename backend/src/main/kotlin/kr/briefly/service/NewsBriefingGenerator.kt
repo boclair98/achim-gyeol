@@ -8,6 +8,7 @@ import kr.briefly.domain.NewsClaim
 import kr.briefly.domain.EditorialState
 import kr.briefly.integration.AiSummarizer
 import kr.briefly.integration.AiEditorialReviewer
+import kr.briefly.integration.ArticleImageResolver
 import kr.briefly.integration.CollectedArticle
 import kr.briefly.integration.EditorialCandidate
 import kr.briefly.integration.NewsProvider
@@ -268,6 +269,7 @@ class NewsBriefingGenerator(
     private val qualityGate: QualityGate,
     private val coveragePolicy: BriefingCoveragePolicy,
     private val editionRepository: BriefingEditionRepository,
+    private val imageResolver: ArticleImageResolver? = null,
 ) {
     private val log = LoggerFactory.getLogger(javaClass)
     private val zone = ZoneId.of("Asia/Seoul")
@@ -487,6 +489,7 @@ class NewsBriefingGenerator(
             "품질 게이트 탈락 sources=$independentSourceCount, factsChecked=$factsChecked, conflict=${summary.sourcesConflict}, reasons=${decision.reasons.joinToString()}"
         }
 
+        val resolvedImage = imageResolver?.resolve(articles)
         val story = NewsStory(
             category = cluster.category,
             title = summary.title.trim().take(300),
@@ -498,6 +501,10 @@ class NewsBriefingGenerator(
             qualityScore = decision.score,
             displayOrder = 0,
             uncertainty = summary.uncertainty?.trim()?.take(600),
+            backgroundContext = summary.backgroundContext.trim().take(600),
+            plainExplanation = summary.plainExplanation.trim().take(800),
+            imageUrl = resolvedImage?.url,
+            imagePublisher = resolvedImage?.publisher,
         )
         articles.forEach { article ->
             story.addSource(

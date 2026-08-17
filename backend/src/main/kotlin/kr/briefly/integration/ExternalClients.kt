@@ -23,6 +23,7 @@ data class CollectedArticle(
     val publishedAt: OffsetDateTime,
     val publisher: String,
     val editorialPriority: Int = 0,
+    val imageUrl: String? = null,
 )
 
 data class AiFact(val statement: String, val sourceIds: List<String>)
@@ -39,6 +40,8 @@ data class AiSummary(
     val importanceScore: Int,
     val recommendedForMorningBriefing: Boolean,
     val importanceReason: String,
+    val backgroundContext: String,
+    val plainExplanation: String,
 )
 
 interface NewsProvider {
@@ -172,7 +175,7 @@ class OpenAiSummarizer(
                     "role" to "developer",
                     "content" to """
                         당신은 한국어 아침 뉴스 브리핑의 팩트 에디터입니다.
-                        국내 기사뿐 아니라 외국어 기사도 다룹니다. title, oneLineSummary, summary, whyItMatters, whatToWatch, keyFacts, uncertainty, importanceReason을 모두 자연스러운 한국어로 작성하세요.
+                        국내 기사뿐 아니라 외국어 기사도 다룹니다. title, oneLineSummary, summary, backgroundContext, plainExplanation, whyItMatters, whatToWatch, keyFacts, uncertainty, importanceReason을 모두 자연스러운 한국어로 작성하세요.
                         외국어 문장을 그대로 남기지 말고 사실관계를 유지해 번역하세요. 기관·인명·지명은 국내에서 널리 쓰는 한국어 표기를 우선하고, 꼭 필요할 때만 첫 등장에 원어를 괄호로 한 번 병기하세요.
                         제공된 기사 제목과 설명에 공통으로 명시된 사실만 사용하세요. 한 출처에만 있는 주장, 추측, 선정적 표현은 제외하세요.
                         설명에 표시된 수집 중요도, 기사 수, 분류값은 후보 선별용 메타데이터일 뿐이므로 독자에게 전달할 핵심 사실이나 keyFacts로 쓰지 마세요.
@@ -181,6 +184,8 @@ class OpenAiSummarizer(
                         title은 한눈에 사건을 이해할 수 있는 중립적인 자체 제목으로 작성하세요.
                         oneLineSummary는 기사에 공통으로 확인된 가장 중요한 결론 하나만 70자 이내의 완결된 문장으로 작성하세요.
                         summary는 '무슨 일이 있었는지 → 확인된 핵심 수치·대상·시점 → 현재 확정된 상태' 순서로 2~4문장을 작성하고, 문장마다 하나의 핵심 사실만 담으세요.
+                        backgroundContext는 이 뉴스를 처음 접한 독자가 등장 기관·제도·사건의 관계를 이해하도록, 제공된 근거 안에서 필요한 배경을 1~2문장으로 설명하세요. 전문용어는 바로 풀어 쓰고 배경지식을 전제하지 마세요.
+                        plainExplanation은 초등 고학년 독자도 핵심 구조를 파악할 수 있도록 '쉽게 말하면 무엇이 어떻게 달라졌는지'를 2문장 이내로 다시 설명하세요. 비유가 사실을 왜곡할 수 있으면 비유하지 마세요.
                         whyItMatters는 독자가 오늘 알아야 할 영향, 적용 시점, 확인하거나 행동할 사항을 1~2문장으로 구체적으로 작성하세요. 실질적인 행동 사항이 없으면 억지로 만들지 마세요.
                         whatToWatch는 이 사건에서 다음으로 확인할 결정·발표·시점이 있을 때만 1문장으로 작성하세요. 후속 확인 포인트가 없으면 빈 문자열로 두고 전망을 만들어내지 마세요.
                         keyFacts에는 독자가 원문을 읽지 않아도 사건의 확정된 골격을 이해할 수 있도록 중요한 사실을 빠뜨리지 말고 2~5개 담으세요. 각 사실에는 그 사실을 직접 뒷받침하는 sourceIds를 두 개 이상 넣으세요.
@@ -226,6 +231,8 @@ class OpenAiSummarizer(
             importanceScore = json.path("importanceScore").asInt(0).coerceIn(0, 100),
             recommendedForMorningBriefing = json.path("recommendedForMorningBriefing").asBoolean(false),
             importanceReason = json.path("importanceReason").asText(),
+            backgroundContext = json.path("backgroundContext").asText(),
+            plainExplanation = json.path("plainExplanation").asText(),
         ).also(::requireKoreanBriefing)
     }
 
@@ -262,6 +269,8 @@ class OpenAiSummarizer(
             "title" to mapOf("type" to "string"),
             "oneLineSummary" to mapOf("type" to "string", "description" to "공통으로 확인된 가장 중요한 결론 한 문장, 70자 이내"),
             "summary" to mapOf("type" to "string", "description" to "무슨 일, 확인된 핵심 수치·대상·시점, 현재 상태를 담은 2~4문장"),
+            "backgroundContext" to mapOf("type" to "string", "description" to "배경지식이 없는 독자를 위한 기관·제도·사건 관계 설명 1~2문장"),
+            "plainExplanation" to mapOf("type" to "string", "description" to "쉽게 말하면 무엇이 어떻게 달라졌는지 설명하는 2문장 이내의 쉬운 풀이"),
             "whyItMatters" to mapOf("type" to "string", "description" to "독자가 알아야 할 영향·적용 시점·행동 사항 1~2문장"),
             "whatToWatch" to mapOf("type" to "string", "description" to "다음으로 확인할 결정·발표·시점 1문장, 없으면 빈 문자열"),
             "keyFacts" to mapOf(
@@ -288,7 +297,7 @@ class OpenAiSummarizer(
             "recommendedForMorningBriefing" to mapOf("type" to "boolean"),
             "importanceReason" to mapOf("type" to "string"),
         ),
-        "required" to listOf("title", "oneLineSummary", "summary", "whyItMatters", "whatToWatch", "keyFacts", "uncertainty", "sourcesConflict", "importanceScore", "recommendedForMorningBriefing", "importanceReason"),
+        "required" to listOf("title", "oneLineSummary", "summary", "backgroundContext", "plainExplanation", "whyItMatters", "whatToWatch", "keyFacts", "uncertainty", "sourcesConflict", "importanceScore", "recommendedForMorningBriefing", "importanceReason"),
     )
 }
 
@@ -297,6 +306,8 @@ internal fun requireKoreanBriefing(summary: AiSummary) {
         add(summary.title)
         add(summary.oneLineSummary)
         add(summary.summary)
+        add(summary.backgroundContext)
+        add(summary.plainExplanation)
         add(summary.whyItMatters)
         add(summary.importanceReason)
         addAll(summary.keyFacts.map(AiFact::statement))
