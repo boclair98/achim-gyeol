@@ -274,7 +274,7 @@ function DailyBriefingSheets({ briefing, loading, reportingEnabled, onOpenStory 
                 <StoryVisual story={story} variant="card" />
                 <h2><a href={`#news-${story.id}`} onClick={(event) => { event.preventDefault(); openDetail(story, pageIndex); }}>{story.title}</a></h2>
                 <p className="brief-sheet-conclusion"><strong>한 줄 결론</strong>{story.oneLineSummary || facts[0] || story.title}</p>
-                <div className="brief-sheet-easy"><strong>처음 보는 분께</strong><p>{story.plainExplanation || story.summary}</p></div>
+                <div className="brief-sheet-easy"><strong>이해 포인트</strong><p>{story.plainExplanation || story.summary}</p></div>
                 <strong className="brief-sheet-facts-label">핵심 내용</strong>
                 <ul>{facts.map((fact, factIndex) => <li key={`${story.id}-fact-${factIndex}`}>{fact}</li>)}</ul>
                 <div className="brief-sheet-matter"><strong>왜 중요한가</strong><p>{story.whyItMatters}</p></div>
@@ -340,9 +340,9 @@ function NewsArticle({ story, editionId, index, reportingEnabled, onBackToCard }
     <h2>{story.title}</h2>
     <StoryVisual story={story} variant="article" />
     <section className="reader-context">
-      <h3><Sparkles size={18} /> 처음 보는 분을 위한 배경</h3>
+      <h3><BookOpen size={18} /> 기사 이해를 돕는 배경</h3>
       <p>{story.backgroundContext || story.oneLineSummary || story.summary}</p>
-      <div><strong>쉽게 말하면</strong><p>{story.plainExplanation || story.summary}</p></div>
+      <div><strong>이해 포인트</strong><p>{story.plainExplanation || story.summary}</p></div>
     </section>
     <section className="reader-conclusion"><span>한 줄 결론</span><p>{story.oneLineSummary || confirmedPoints[0]?.statement || story.title}</p></section>
 

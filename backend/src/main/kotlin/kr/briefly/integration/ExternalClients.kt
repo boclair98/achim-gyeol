@@ -184,8 +184,9 @@ class OpenAiSummarizer(
                         title은 한눈에 사건을 이해할 수 있는 중립적인 자체 제목으로 작성하세요.
                         oneLineSummary는 기사에 공통으로 확인된 가장 중요한 결론 하나만 70자 이내의 완결된 문장으로 작성하세요.
                         summary는 '무슨 일이 있었는지 → 확인된 핵심 수치·대상·시점 → 현재 확정된 상태' 순서로 2~4문장을 작성하고, 문장마다 하나의 핵심 사실만 담으세요.
-                        backgroundContext는 이 뉴스를 처음 접한 독자가 등장 기관·제도·사건의 관계를 이해하도록, 제공된 근거 안에서 필요한 배경을 1~2문장으로 설명하세요. 전문용어는 바로 풀어 쓰고 배경지식을 전제하지 마세요.
-                        plainExplanation은 초등 고학년 독자도 핵심 구조를 파악할 수 있도록 '쉽게 말하면 무엇이 어떻게 달라졌는지'를 2문장 이내로 다시 설명하세요. 비유가 사실을 왜곡할 수 있으면 비유하지 마세요.
+                        backgroundContext는 배경지식이 없는 독자가 기사를 이해하는 데 꼭 필요한 기관·제도·사건의 관계와 낯선 용어를 1~2문장으로 풀어 쓰세요. 제공된 근거 밖의 상식을 보태지 말고, 이미 summary에 나온 사실을 반복하지 마세요.
+                        plainExplanation은 독자가 이 분야를 처음 접한다고 가정하고 '누가 무엇을 했는지 → 무엇이 달라지는지 → 나와 사회에 어떤 의미인지'를 1~2문장의 쉬운 일상어로 연결하세요. 핵심 사실과 조건을 생략하지 말고, 영향이 아직 불확실하면 그 상태를 그대로 밝히세요.
+                        모든 문장은 신뢰할 수 있는 뉴스 편집자가 쓴 것처럼 담백하게 작성하세요. '쉽게 말하면', '초등학생도', '독자 여러분', '한마디로' 같은 상투적인 안내 표현을 쓰지 말고, 같은 내용을 제목·요약·배경·의미에서 반복하지 마세요.
                         whyItMatters는 독자가 오늘 알아야 할 영향, 적용 시점, 확인하거나 행동할 사항을 1~2문장으로 구체적으로 작성하세요. 실질적인 행동 사항이 없으면 억지로 만들지 마세요.
                         whatToWatch는 이 사건에서 다음으로 확인할 결정·발표·시점이 있을 때만 1문장으로 작성하세요. 후속 확인 포인트가 없으면 빈 문자열로 두고 전망을 만들어내지 마세요.
                         keyFacts에는 독자가 원문을 읽지 않아도 사건의 확정된 골격을 이해할 수 있도록 중요한 사실을 빠뜨리지 말고 2~5개 담으세요. 각 사실에는 그 사실을 직접 뒷받침하는 sourceIds를 두 개 이상 넣으세요.
@@ -269,8 +270,8 @@ class OpenAiSummarizer(
             "title" to mapOf("type" to "string"),
             "oneLineSummary" to mapOf("type" to "string", "description" to "공통으로 확인된 가장 중요한 결론 한 문장, 70자 이내"),
             "summary" to mapOf("type" to "string", "description" to "무슨 일, 확인된 핵심 수치·대상·시점, 현재 상태를 담은 2~4문장"),
-            "backgroundContext" to mapOf("type" to "string", "description" to "배경지식이 없는 독자를 위한 기관·제도·사건 관계 설명 1~2문장"),
-            "plainExplanation" to mapOf("type" to "string", "description" to "쉽게 말하면 무엇이 어떻게 달라졌는지 설명하는 2문장 이내의 쉬운 풀이"),
+            "backgroundContext" to mapOf("type" to "string", "description" to "배경지식이 없는 독자에게 필요한 기관·제도·사건의 관계와 낯선 용어를 푼 1~2문장"),
+            "plainExplanation" to mapOf("type" to "string", "description" to "누가 무엇을 했고 무엇이 달라지며 어떤 의미인지 쉬운 일상어로 연결한 1~2문장"),
             "whyItMatters" to mapOf("type" to "string", "description" to "독자가 알아야 할 영향·적용 시점·행동 사항 1~2문장"),
             "whatToWatch" to mapOf("type" to "string", "description" to "다음으로 확인할 결정·발표·시점 1문장, 없으면 빈 문자열"),
             "keyFacts" to mapOf(
