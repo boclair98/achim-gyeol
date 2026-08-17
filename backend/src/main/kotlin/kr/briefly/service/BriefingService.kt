@@ -16,7 +16,7 @@ import java.util.Locale
 data class SourceResponse(val publisher: String, val url: String, val publishedAt: String, val primarySource: Boolean)
 data class ClaimResponse(val statement: String, val sources: List<SourceResponse>)
 data class CorrectionResponse(val correctedAt: String, val reason: String)
-data class StoryResponse(val id: Long, val category: String, val title: String, val oneLineSummary: String, val summary: String, val whyItMatters: String, val whatToWatch: String?, val verificationStatus: VerificationStatus, val qualityScore: Int, val uncertainty: String?, val evidenceAvailable: Boolean, val claims: List<ClaimResponse>, val sources: List<SourceResponse>, val corrections: List<CorrectionResponse> = emptyList(), val viewerInterest: StoryInterest? = null)
+data class StoryResponse(val id: Long, val category: String, val title: String, val oneLineSummary: String, val summary: String, val whyItMatters: String, val whatToWatch: String?, val verificationStatus: VerificationStatus, val qualityScore: Int, val uncertainty: String?, val evidenceAvailable: Boolean, val claims: List<ClaimResponse>, val sources: List<SourceResponse>, val corrections: List<CorrectionResponse> = emptyList(), val viewerInterest: StoryInterest? = null, val backgroundContext: String, val plainExplanation: String, val imageUrl: String? = null, val imagePublisher: String? = null)
 data class BriefingResponse(val id: Long, val briefingDate: LocalDate, val productionReady: Boolean, val editorialState: EditorialState, val humanReviewed: Boolean, val dateLabel: String, val lead: String, val readMinutes: Int, val verifiedCount: Int, val lastVerifiedAt: String, val stories: List<StoryResponse>, val personalized: Boolean = false)
 data class ArchiveEditionResponse(val id: Long, val briefingDate: LocalDate, val dateLabel: String, val lead: String, val readMinutes: Int, val verifiedCount: Int, val storyCount: Int, val categories: List<String>, val headlines: List<String>)
 data class BriefingBuildStatus(val briefingDate: LocalDate, val coverageReady: Boolean, val productionReady: Boolean, val stories: Int, val categories: Int, val minimumStories: Int, val minimumCategories: Int, val blockReasons: List<String>)
@@ -136,7 +136,12 @@ class BriefingService(
                     story.summary, story.whyItMatters, story.whatToWatch, story.verificationStatus, story.qualityScore,
                     story.uncertainty, claims.isNotEmpty(), claims, sources,
                     correctionRepository.findAllByStoryIdOrderByCreatedAtDesc(requireNotNull(story.id)).map { CorrectionResponse(it.createdAt.toString(), it.reason) },
-                    signals[requireNotNull(story.id)]?.type?.toStoryInterest(),
+                    viewerInterest = signals[requireNotNull(story.id)]?.type?.toStoryInterest(),
+                    backgroundContext = story.backgroundContext?.takeIf(String::isNotBlank)
+                        ?: story.oneLineSummary?.takeIf(String::isNotBlank) ?: firstSentence(story.summary),
+                    plainExplanation = story.plainExplanation?.takeIf(String::isNotBlank) ?: story.summary,
+                    imageUrl = story.imageUrl?.takeIf(String::isNotBlank),
+                    imagePublisher = story.imagePublisher?.takeIf(String::isNotBlank),
                 )
             },
             personalized = categoryScores.values.any { it != 0 },

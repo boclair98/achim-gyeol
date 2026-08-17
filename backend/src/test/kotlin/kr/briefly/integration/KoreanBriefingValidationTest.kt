@@ -38,5 +38,7 @@ class KoreanBriefingValidationTest {
         importanceScore = 80,
         recommendedForMorningBriefing = true,
         importanceReason = "많은 사람의 생활에 영향을 줄 수 있는 변화입니다.",
+        backgroundContext = "이 정책을 담당하는 기관과 적용 대상의 관계를 먼저 이해하면 됩니다.",
+        plainExplanation = "쉽게 말하면 지원을 받는 방식이 달라질 수 있다는 뜻입니다.",
     )
 }

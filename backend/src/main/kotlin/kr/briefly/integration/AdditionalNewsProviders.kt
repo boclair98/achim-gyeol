@@ -115,6 +115,10 @@ class GdeltNewsClient(
                     val url = article.path("url").asText().trim()
                     val domain = article.path("domain").asText().trim().ifBlank { publisherFrom(url) }
                     val articleTitle = article.path("title").asText().trim()
+                    val imageUrl = sequenceOf(
+                        article.path("image_url").asText(), article.path("image").asText(),
+                        story.path("image_url").asText(), story.path("social_image").asText(),
+                    ).map { it.trim() }.firstOrNull { it.isNotBlank() }
                     if (url.isBlank() || articleTitle.isBlank()) null else CollectedArticle(
                         title = storyTitle,
                         description = "$descriptionPrefix | 개별 보도 제목: $articleTitle",
@@ -122,6 +126,7 @@ class GdeltNewsClient(
                         publishedAt = publishedAt,
                         publisher = domain,
                         editorialPriority = (significance * 100).toInt().coerceIn(0, 100),
+                        imageUrl = imageUrl,
                     )
                 }
                 .distinctBy { publisherFrom(it.originalUrl) }
@@ -230,6 +235,7 @@ class OfficialRssNewsClient(
                 publishedAt = publishedAt,
                 publisher = feed.publisher,
                 editorialPriority = 95,
+                imageUrl = item.representativeImageUrl(feed.url),
             )
         }
     }.getOrDefault(emptyList())
@@ -261,6 +267,24 @@ class OfficialRssNewsClient(
 
     private fun Element.childTexts(localName: String): List<String> = (0 until childNodes.length).mapNotNull { index ->
         childNodes.item(index).takeIf { it.localName == localName || it.nodeName.substringAfter(':') == localName }?.textContent
+    }
+
+    private fun Element.representativeImageUrl(feedUrl: String): String? {
+        val mediaCandidates = listOf("content", "thumbnail").flatMap { localName ->
+            val nodes = getElementsByTagNameNS("*", localName)
+            (0 until nodes.length).mapNotNull { index ->
+                (nodes.item(index) as? Element)?.getAttribute("url")?.trim()?.takeIf(String::isNotBlank)
+            }
+        }
+        val enclosures = getElementsByTagName("enclosure")
+        val enclosureCandidates = (0 until enclosures.length).mapNotNull { index ->
+            val enclosure = enclosures.item(index) as? Element ?: return@mapNotNull null
+            val type = enclosure.getAttribute("type").lowercase()
+            enclosure.getAttribute("url").trim().takeIf { it.isNotBlank() && type.startsWith("image/") }
+        }
+        return (mediaCandidates + enclosureCandidates).firstNotNullOfOrNull { candidate ->
+            runCatching { URI(feedUrl).resolve(candidate).toString() }.getOrNull()
+        }
     }
 
     private fun String.cleanHtml(): String = HtmlUtils.htmlUnescape(replace(Regex("<[^>]+>"), " "))

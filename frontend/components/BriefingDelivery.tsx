@@ -6,6 +6,7 @@ import { AlertTriangle, BellRing, BookOpen, Check, CheckCircle2, ChevronLeft, Ch
 import { briefingCategoryOrder, demoBriefing, type Briefing, type Story, type StoryInterest } from "@/lib/briefing";
 import { deviceHeaders } from "@/lib/device";
 import { defaultBrand, type BriefingBrand } from "@/lib/product";
+import { StoryVisual } from "@/components/StoryVisual";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 const lastBriefingKey = "achim-gyeol-last-live-briefing";
@@ -270,8 +271,10 @@ function DailyBriefingSheets({ briefing, loading, reportingEnabled, onOpenStory 
           <div className="brief-sheet-stories">
               <section className="brief-sheet-story">
                 <div className="brief-sheet-meta"><b>{String(storyIndex).padStart(2, "0")}</b><span>{story.category}</span>{storyIndex <= 3 && <i className="priority">먼저 보기</i>}{preferredCategories.includes(story.category) && <i>내 관심</i>}{story.viewerInterest === "INTERESTED" && <i>관심 반영</i>}<em className={story.verificationStatus === "VERIFIED" && evidenceReady ? "confirmed" : "checking"}>{readStories.includes(story.id) ? "읽음" : evidenceReady ? (story.verificationStatus === "VERIFIED" ? "원문 함께" : "내용 정리 중") : "원문 제공"}</em></div>
+                <StoryVisual story={story} variant="card" />
                 <h2><a href={`#news-${story.id}`} onClick={(event) => { event.preventDefault(); openDetail(story, pageIndex); }}>{story.title}</a></h2>
                 <p className="brief-sheet-conclusion"><strong>한 줄 결론</strong>{story.oneLineSummary || facts[0] || story.title}</p>
+                <div className="brief-sheet-easy"><strong>처음 보는 분께</strong><p>{story.plainExplanation || story.summary}</p></div>
                 <strong className="brief-sheet-facts-label">핵심 내용</strong>
                 <ul>{facts.map((fact, factIndex) => <li key={`${story.id}-fact-${factIndex}`}>{fact}</li>)}</ul>
                 <div className="brief-sheet-matter"><strong>왜 중요한가</strong><p>{story.whyItMatters}</p></div>
@@ -335,6 +338,12 @@ function NewsArticle({ story, editionId, index, reportingEnabled, onBackToCard }
     <a className="reader-card-return top" href={`#briefing-card-${story.id}`} onClick={(event) => { event.preventDefault(); onBackToCard(story.id); }}><ChevronLeft size={15} /> 이 뉴스 카드로 돌아가기</a>
     <div className="reader-article-meta"><b>{String(index).padStart(2, "0")}</b><span>{story.category}</span><em className={verified && evidenceReady ? "confirmed" : "checking"}><CheckCircle2 size={14} /> {evidenceReady ? (verified ? "원문 함께" : "내용 정리 중") : "원문 제공"}</em><small>핵심 요약</small></div>
     <h2>{story.title}</h2>
+    <StoryVisual story={story} variant="article" />
+    <section className="reader-context">
+      <h3><Sparkles size={18} /> 처음 보는 분을 위한 배경</h3>
+      <p>{story.backgroundContext || story.oneLineSummary || story.summary}</p>
+      <div><strong>쉽게 말하면</strong><p>{story.plainExplanation || story.summary}</p></div>
+    </section>
     <section className="reader-conclusion"><span>한 줄 결론</span><p>{story.oneLineSummary || confirmedPoints[0]?.statement || story.title}</p></section>
 
     <section className="reader-confirmed">

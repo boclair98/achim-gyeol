@@ -17,6 +17,10 @@ export type Story = {
   checkedClaims: number;
   totalClaims: number;
   uncertainty?: string | null;
+  backgroundContext?: string;
+  plainExplanation?: string;
+  imageUrl?: string | null;
+  imagePublisher?: string | null;
   evidenceAvailable?: boolean;
   claims?: EvidenceClaim[];
   sources: Source[];

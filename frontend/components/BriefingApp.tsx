@@ -17,6 +17,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { DeliveryDeck } from "@/components/DeliveryDeck";
+import { StoryVisual } from "@/components/StoryVisual";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 import { SubscriptionExperience, SubscriptionTrigger } from "@/components/SubscriptionExperience";
 import { briefingCategoryOrder, demoBriefing, type Briefing, type Story } from "@/lib/briefing";
@@ -194,6 +195,7 @@ function HeroNewsCarousel({ stories, readMinutes }: { stories: Story[]; readMinu
           const state = index === activeIndex ? "active" : index === previousIndex ? "leaving" : "waiting";
           return (
             <article key={`${story.id}-${index}`} className={`hero-news-card ${state}`} aria-hidden={state !== "active"}>
+              <StoryVisual story={story} variant="hero" />
               <div><span>{story.category}</span><b>원문 포함</b></div>
               <h2>{story.title}</h2>
               <p>{story.summary}</p>
@@ -213,9 +215,11 @@ function StoryRow({ story, index, onNotice }: { story: Story; index: number; onN
     <article className="story-row">
       <div className="story-index">{String(index).padStart(2, "0")}</div>
       <div className="story-body">
+        <StoryVisual story={story} variant="row" />
         <div className="story-kicker"><span className="category">{story.category}</span><span className={verified && evidenceReady ? "verified" : "verified developing"}><CheckCircle2 size={13} />{evidenceReady ? (verified ? "출처 보기" : "내용 확인 중") : "원문 제공"}</span></div>
         <h3>{story.title}</h3>
         <div className="story-conclusion"><strong>한 줄 결론</strong><p>{story.oneLineSummary || firstSentence(story.summary)}</p></div>
+        <div className="story-easy"><strong>쉽게 이해하기</strong><p>{story.plainExplanation || story.summary}</p></div>
         <div className="story-summary"><strong>핵심 내용</strong>{evidenceReady ? <ul>{story.claims!.slice(0, 3).map((claim, claimIndex) => <li key={`${claim.statement}-${claimIndex}`}>{claim.statement} <small>[{claim.sources.map((source) => story.sources.findIndex((item) => item.url === source.url) + 1).filter((number) => number > 0).join("·")}]</small></li>)}</ul> : <p className="summary">{story.summary}</p>}</div>
         <div className="why"><strong>알아야 할 것</strong><span>{story.whyItMatters}</span></div>
         {story.uncertainty && <div className="story-uncertainty"><strong>더 지켜볼 내용</strong><span>{story.uncertainty}</span></div>}

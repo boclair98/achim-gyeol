@@ -50,6 +50,10 @@ class NewsStory(
     @Column(nullable = false) var displayOrder: Int,
     @Column(length = 600) var uncertainty: String? = null,
     @Enumerated(EnumType.STRING) @Column var editorialState: EditorialState? = EditorialState.AUTO_APPROVED,
+    @Column(length = 600) var backgroundContext: String? = null,
+    @Column(length = 800) var plainExplanation: String? = null,
+    @Column(length = 1200) var imageUrl: String? = null,
+    @Column(length = 255) var imagePublisher: String? = null,
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) var id: Long? = null,
 ) {
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "edition_id", nullable = false)

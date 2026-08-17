@@ -65,3 +65,43 @@ test("browser tab uses the branded mail icon", async ({ page }) => {
   await page.goto("/");
   await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", /mail-icon\.svg$/);
 });
+
+test("news reader shows an available article image and beginner-friendly explanation", async ({ page }) => {
+  await page.route("**/api/briefings/today", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        id: 77,
+        briefingDate: new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Seoul" }).format(new Date()),
+        productionReady: true,
+        dateLabel: "8월 17일 월요일",
+        lead: "오늘의 중요한 흐름을 쉽게 정리했습니다.",
+        readMinutes: 3,
+        verifiedCount: 1,
+        lastVerifiedAt: "오전 6:40",
+        stories: [{
+          id: 701,
+          category: "경제",
+          title: "기준금리 결정이 생활비에 미치는 영향",
+          oneLineSummary: "기준금리는 대출과 예금 금리에 영향을 주는 기준입니다.",
+          summary: "기준금리 결정이 발표됐습니다.",
+          backgroundContext: "한국은행은 물가와 경기 상황을 살펴 기준금리를 정합니다.",
+          plainExplanation: "쉽게 말하면 돈을 빌리거나 맡길 때 적용되는 이자의 기준이 달라질 수 있다는 뜻입니다.",
+          whyItMatters: "대출 이자와 예금 수익에 영향을 줄 수 있습니다.",
+          verificationStatus: "VERIFIED",
+          qualityScore: 90,
+          evidenceAvailable: true,
+          claims: [{ statement: "기준금리 결정이 발표됐습니다.", sources: [{ publisher: "한국은행", url: "https://www.bok.or.kr", publishedAt: "2026-08-16T09:00:00+09:00" }] }],
+          sources: [{ publisher: "한국은행", url: "https://www.bok.or.kr", publishedAt: "2026-08-16T09:00:00+09:00", primarySource: true }],
+          imageUrl: "/og-v2.png",
+          imagePublisher: "한국은행",
+        }],
+      }),
+    });
+  });
+  await page.goto("/briefing/");
+  await expect(page.getByRole("img", { name: /기준금리 결정이 생활비에 미치는 영향 관련 기사 대표 이미지/ }).first()).toBeVisible();
+  await expect(page.getByText("처음 보는 분을 위한 배경")).toBeVisible();
+  await expect(page.getByText(/돈을 빌리거나 맡길 때 적용되는 이자의 기준/).first()).toBeVisible();
+});
