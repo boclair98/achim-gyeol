@@ -389,7 +389,7 @@ function buildDetailedSourceDigest(story: Story, topClaims: string[]) {
     seen.add(normalized);
     paragraphs.push(text);
   }
-  return (paragraphs.length ? paragraphs : [story.summary]).slice(0, 8);
+  return paragraphs.length ? paragraphs : [story.summary];
 }
 
 function buildCommonSourceDigest(story: Story, claims: string[]) {
