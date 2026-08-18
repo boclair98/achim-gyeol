@@ -305,14 +305,23 @@ button:disabled { cursor: wait; opacity: .55; }
 .font-large .brief-sheet-matter p { font-size: 13px; }
 .font-large .reader-article li > p,.font-large .reader-why p { font-size: 19px; }
 .brief-sheet-section { display: grid; grid-template-columns: minmax(280px, .78fr) minmax(520px, 1.22fr); gap: clamp(36px, 6vw, 88px); max-width: 1280px; margin: 0 auto; padding: 58px 32px 72px; }
+.briefing-history-bar { display: flex; align-items: center; justify-content: space-between; gap: 18px; width: min(1180px, calc(100% - 40px)); margin: 18px auto 0; border: 1px solid #c8dfd4; border-radius: 16px; background: #f4fbf7; padding: 12px 14px; color: #164d3e; }
+.briefing-history-bar > div { display: flex; align-items: center; gap: 9px; min-width: 0; }
+.briefing-history-bar > div > svg { flex: 0 0 auto; color: #16805e; }
+.briefing-history-bar > div > span { display: grid; gap: 2px; }
+.briefing-history-bar strong { font-size: 12px; }
+.briefing-history-bar small { color: #68746f; font-size: 10px; }
+.briefing-history-bar label { flex: 0 0 auto; }
+.briefing-history-bar input { border: 1px solid #b9d9ca; border-radius: 9px; background: white; padding: 9px 10px; color: #22312b; font: inherit; font-size: 12px; }
+.briefing-history-bar button { flex: 0 0 auto; border: 0; border-radius: 999px; background: #16372e; padding: 9px 12px; color: white; cursor: pointer; font: inherit; font-size: 11px; font-weight: 900; }
 .brief-sheet-intro { align-self: center; }
 .brief-sheet-intro h1 { margin: 23px 0 0; font-size: clamp(47px, 5.6vw, 74px); line-height: 1.02; letter-spacing: -.07em; font-weight: 950; word-break: keep-all; }
 .brief-sheet-intro h1 em { color: #116d51; font-style: normal; }
 .brief-sheet-intro > p { margin: 22px 0 0; color: #4f5964; font-size: 16px; line-height: 1.78; }
 .brief-sheet-deck { min-width: 0; scroll-margin-top: 82px; }
-.brief-sheet-track { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; overflow-x: auto; overflow-y: hidden; overscroll-behavior-inline: contain; overscroll-behavior-block: auto; scroll-behavior: smooth; scroll-snap-type: x mandatory; scrollbar-width: none; touch-action: pan-x pan-y pinch-zoom; }
+.brief-sheet-track { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; overflow-x: auto; overflow-y: visible; overscroll-behavior-inline: contain; overscroll-behavior-block: auto; scroll-behavior: smooth; scroll-snap-type: x mandatory; scrollbar-width: none; touch-action: pan-x pan-y pinch-zoom; align-items: start; }
 .brief-sheet-track::-webkit-scrollbar { display: none; }
-.brief-sheet { position: relative; box-sizing: border-box; width: 100%; min-height: 790px; overflow: hidden; scroll-snap-align: start; border: 1px solid #d9d0bf; border-radius: 6px 28px 28px 6px; background: #fffaf0; padding: 33px 38px 37px 51px; box-shadow: 0 28px 70px rgba(36,43,57,.16); }
+.brief-sheet { position: relative; box-sizing: border-box; width: 100%; min-height: 790px; overflow: visible; scroll-snap-align: start; border: 1px solid #d9d0bf; border-radius: 6px 28px 28px 6px; background: #fffaf0; padding: 33px 38px 37px 51px; box-shadow: 0 28px 70px rgba(36,43,57,.16); }
 .brief-sheet:target { box-shadow: 0 28px 70px rgba(36,43,57,.16), inset 0 0 0 4px #18a872; }
 .brief-sheet:focus { outline: none; }
 .brief-sheet::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 8px; background: linear-gradient(#19af78 0 34%, #d3ef6c 34% 67%, #16372e 67%); }
@@ -382,6 +391,13 @@ button:disabled { cursor: wait; opacity: .55; }
 .brief-sheet-story footer a { flex: 0 0 auto; color: #116d51; font-weight: 900; text-decoration: none; }
 .brief-sheet-story footer > div { display: flex; align-items: center; gap: 10px; }
 .brief-sheet-story footer button { display: inline-flex; align-items: center; gap: 4px; border: 0; background: transparent; padding: 0; color: #59635e; cursor: pointer; font: inherit; font-weight: 850; }
+.brief-sheet-embedded-article { margin: 0 -18px; border: 0; background: transparent; padding: 26px 18px 8px; box-shadow: none; }
+.brief-sheet-embedded-article > h2 { font-size: clamp(29px, 3.4vw, 43px); }
+.brief-sheet-embedded-article .reader-source-actions { margin-bottom: 8px; }
+.reader-source-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-top: 18px; }
+.reader-source-actions a { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 42px; border: 1px solid #b9d9ca; border-radius: 11px; background: #edf8f2; padding: 9px 11px; color: #116d51; text-align: center; text-decoration: none; font-size: 11px; font-weight: 900; }
+.reader-source-actions a:first-child { border-color: #16372e; background: #16372e; color: white; }
+.reader-source-actions a:hover { filter: brightness(.98); transform: translateY(-1px); }
 .brief-sheet-overview { background: linear-gradient(145deg,#f8fff9 0%,#fffaf0 64%); }
 .brief-overview-copy { padding: 27px 0 18px; }
 .brief-overview-copy > span { color: #16805e; font-size: 9px; font-weight: 950; letter-spacing: .16em; }
@@ -416,6 +432,11 @@ button:disabled { cursor: wait; opacity: .55; }
 .focus-reader-shell .brief-sheet { min-height: calc(100svh - 230px); }
 
 @media (max-width: 850px) {
+  .briefing-history-bar { align-items: stretch; flex-wrap: wrap; width: calc(100% - 28px); margin-top: 12px; padding: 12px; }
+  .briefing-history-bar > div { flex: 1 1 100%; }
+  .briefing-history-bar label { flex: 1 1 auto; }
+  .briefing-history-bar input { box-sizing: border-box; width: 100%; }
+  .briefing-history-bar button { align-self: center; }
   .focus-reader-shell .brief-sheet-section { padding: 16px 14px 36px; }
   .focus-reader-shell .brief-sheet-track { min-height: calc(100svh - 148px); }
   .focus-reader-shell .brief-sheet { min-height: calc(100svh - 188px); }
@@ -600,6 +621,8 @@ button:disabled { cursor: wait; opacity: .55; }
   .reader-uncertainty p { font-size: 14px; }
   .reader-sources > div { grid-template-columns: 1fr; }
   .reader-sources a { padding: 13px; font-size: 12px; }
+  .brief-sheet-embedded-article { margin: 0 -8px; padding: 22px 8px 4px; }
+  .reader-source-actions { grid-template-columns: 1fr; }
   .news-reader-aside { position: static; margin: 20px; }
   .reader-toc { display: none; }
   .delivered-shell { padding: 18px 14px 48px; }
