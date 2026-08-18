@@ -417,6 +417,7 @@ button:disabled { cursor: wait; opacity: .55; }
 .brief-sheet-original-lead p { margin: 9px 0 0; font-size: 14px; line-height: 1.78; }
 .brief-sheet-original-body { display: block; margin-top: 16px; border-top: 1px solid #ddd4c3; padding-top: 15px; }
 .brief-sheet-original-paragraph { margin: 0 0 18px; color: #38424a; font-family: Georgia, "Noto Serif KR", serif; font-size: 16px; line-height: 1.9; letter-spacing: -.015em; }
+.brief-sheet-original-paragraph.lead { color: #17212a; font-size: 18px; font-weight: 850; line-height: 1.75; }
 .brief-sheet-original-paragraph:last-child { margin-bottom: 0; }
 .brief-sheet-original-item { display: grid; grid-template-columns: 38px 1fr; gap: 10px; padding: 13px 0; border-top: 1px solid #ddd4c3; }
 .brief-sheet-original-item:first-child { border-top: 0; padding-top: 0; }
@@ -631,6 +632,7 @@ button:disabled { cursor: wait; opacity: .55; }
   .brief-sheet-original-item { grid-template-columns: 32px 1fr; gap: 8px; padding: 11px 0; }
   .brief-sheet-original-item > b { font-size: 19px; }
   .brief-sheet-original-body p { font-size: 14px; line-height: 1.75; }
+  .brief-sheet-original-paragraph.lead { font-size: 16px; line-height: 1.7; }
   .brief-sheet-original-sources { grid-template-columns: 1fr; gap: 6px; }
   .brief-sheet-meta > b { font-size: 20px; }
   .brief-sheet-story h2 { font-size: 25px; line-height: 1.26; }

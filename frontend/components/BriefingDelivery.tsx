@@ -282,18 +282,13 @@ function CoreStoryCard({ story, index, digestSize }: { story: Story; index: numb
 function OriginalStoryCard({ story, index, reportingEnabled, onBackToCard }: { story: Story; index: number; reportingEnabled: boolean; onBackToCard: (storyId: number) => void }) {
   const evidenceReady = story.evidenceAvailable && Boolean(story.claims?.length);
   const claims = evidenceReady ? story.claims!.map((claim) => claim.statement) : summaryPoints(story.summary);
-  const paragraphs = buildDetailedSourceDigest(story, claims);
-  const uncertaintyInBody = Boolean(story.uncertainty?.trim() && paragraphs.some((paragraph) => normalizeStoryPoint(paragraph) === normalizeStoryPoint(story.uncertainty!.trim())));
-  const leadParagraph = paragraphs[0];
-  const detailParagraphs = paragraphs.slice(1);
+  const paragraphs = buildFullSourceArticle(story, claims);
   return <article className="brief-sheet-original-card" id={`news-${story.id}`} tabIndex={-1} aria-label={`${index}번째 뉴스 원문 정리`}>
     <header><span>원문 통합 정리</span><time>출처 {story.sources.length}개</time></header>
     <div className="brief-sheet-original-rule"><i /></div>
     <div className="brief-sheet-original-kicker"><b>{story.category}</b><span>여러 기사에서 공통으로 확인된 내용</span></div>
     <h3>{story.title}</h3>
-    {leadParagraph && <section className="brief-sheet-original-lead"><strong>핵심만 콕콕</strong><p>{leadParagraph}</p></section>}
-    <div className="brief-sheet-original-body">{detailParagraphs.map((paragraph, paragraphIndex) => <p className="brief-sheet-original-paragraph" key={`${story.id}-original-${paragraphIndex}`}>{paragraph}</p>)}</div>
-    {story.uncertainty && !uncertaintyInBody && <div className="brief-sheet-original-note"><strong>확인되지 않은 부분</strong><p>{story.uncertainty}</p></div>}
+    <div className="brief-sheet-original-body">{paragraphs.map((paragraph, paragraphIndex) => <p className={`brief-sheet-original-paragraph${paragraphIndex === 0 ? " lead" : ""}`} key={`${story.id}-original-${paragraphIndex}`}>{paragraph}</p>)}</div>
     <footer className="brief-sheet-original-sources"><strong>출처</strong><div>{story.sources.map((source, sourceIndex) => <span key={`${source.publisher}-${sourceIndex}`}>[{sourceIndex + 1}] {source.publisher}</span>)}</div></footer>
     {reportingEnabled && <StoryFeedbackPanel storyId={story.id} />}
     <a className="reader-card-return bottom" href={`#briefing-card-${story.id}`} onClick={(event) => { event.preventDefault(); onBackToCard(story.id); }}><ChevronLeft size={16} /> 카드로 돌아가기</a>
@@ -369,13 +364,10 @@ function buildSourceDigest(story: Story, claims: string[]) {
   return paragraphs.slice(0, 7);
 }
 
-function buildDetailedSourceDigest(story: Story, topClaims: string[]) {
-  const topFacts = [story.oneLineSummary, story.plainExplanation, ...topClaims, story.whyItMatters, story.whatToWatch]
-    .map((value) => normalizeStoryPoint(value ?? ""))
-    .filter(Boolean);
+function buildFullSourceArticle(story: Story, claims: string[]) {
   const candidates = [
     story.summary,
-    ...((story.claims ?? []).map((claim) => claim.statement)),
+    ...claims,
     story.backgroundContext,
     story.plainExplanation,
     story.whyItMatters,
@@ -388,7 +380,7 @@ function buildDetailedSourceDigest(story: Story, topClaims: string[]) {
   for (const candidate of candidates) {
     const text = candidate?.replace(/\s+/g, " ").trim();
     const normalized = normalizeStoryPoint(text ?? "");
-    if (!text || !normalized || seen.has(normalized) || topFacts.includes(normalized)) continue;
+    if (!text || !normalized || seen.has(normalized)) continue;
     seen.add(normalized);
     paragraphs.push(text);
   }
