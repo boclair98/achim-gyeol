@@ -284,12 +284,16 @@ function OriginalStoryCard({ story, index, reportingEnabled, onBackToCard }: { s
   const claims = evidenceReady ? story.claims!.map((claim) => claim.statement) : summaryPoints(story.summary);
   const paragraphs = buildDetailedSourceDigest(story, claims);
   const uncertaintyInBody = Boolean(story.uncertainty?.trim() && paragraphs.some((paragraph) => normalizeStoryPoint(paragraph) === normalizeStoryPoint(story.uncertainty!.trim())));
+  const leadParagraph = paragraphs[0];
+  const detailParagraphs = paragraphs.slice(1);
   return <article className="brief-sheet-original-card" id={`news-${story.id}`} tabIndex={-1} aria-label={`${index}번째 뉴스 원문 정리`}>
     <header><span>원문 통합 정리</span><time>출처 {story.sources.length}개</time></header>
     <div className="brief-sheet-original-rule"><i /></div>
     <div className="brief-sheet-original-kicker"><b>{story.category}</b><span>여러 기사에서 공통으로 확인된 내용</span></div>
     <h3>{story.title}</h3>
-    <div className="brief-sheet-original-body">{paragraphs.map((paragraph, paragraphIndex) => <section className="brief-sheet-original-item" key={`${story.id}-original-${paragraphIndex}`}><b>{String(paragraphIndex + 1).padStart(2, "0")}</b><p>{paragraph}</p></section>)}</div>
+    <StoryVisual story={story} variant="article" />
+    {leadParagraph && <section className="brief-sheet-original-lead"><strong>핵심만 콕콕</strong><p>{leadParagraph}</p></section>}
+    <div className="brief-sheet-original-body">{detailParagraphs.map((paragraph, paragraphIndex) => <section className="brief-sheet-original-item" key={`${story.id}-original-${paragraphIndex}`}><b>{String(paragraphIndex + 2).padStart(2, "0")}</b><p>{paragraph}</p></section>)}</div>
     {story.uncertainty && !uncertaintyInBody && <div className="brief-sheet-original-note"><strong>확인되지 않은 부분</strong><p>{story.uncertainty}</p></div>}
     <footer className="brief-sheet-original-sources"><strong>출처</strong><div>{story.sources.map((source, sourceIndex) => <span key={`${source.publisher}-${sourceIndex}`}>[{sourceIndex + 1}] {source.publisher}</span>)}</div></footer>
     {reportingEnabled && <StoryFeedbackPanel storyId={story.id} />}
