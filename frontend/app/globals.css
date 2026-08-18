@@ -342,7 +342,7 @@ button:disabled { cursor: wait; opacity: .55; }
 .brief-sheet-conclusion strong { margin-right: 8px; border-bottom: 4px solid #c9f36d; font-size: 10px; font-weight: 950; }
 .brief-sheet-easy { display: grid; grid-template-columns: 78px 1fr; gap: 10px; margin-top: 10px; border-radius: 11px; background: #e9f8f1; padding: 10px 12px; }
 .brief-sheet-easy strong { color: #126d52; font-size: 10px; }
-.brief-sheet-easy p { display: -webkit-box; overflow: hidden; margin: 0; color: #35423d; font-size: 11px; line-height: 1.58; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+.brief-sheet-easy p { margin: 0; color: #35423d; font-size: 11px; line-height: 1.58; overflow-wrap: anywhere; }
 .brief-sheet-facts-label { display: block; margin-top: 15px; color: #126d52; font-size: 10px; }
 .brief-sheet-story ul { display: grid; gap: 5px; margin: 12px 0 0; padding-left: 0; color: #4a535a; font-size: 12px; line-height: 1.58; list-style: none; }
 .brief-sheet-story li { position: relative; display: block; padding-left: 16px; overflow-wrap: anywhere; }
