@@ -291,9 +291,8 @@ function OriginalStoryCard({ story, index, reportingEnabled, onBackToCard }: { s
     <div className="brief-sheet-original-rule"><i /></div>
     <div className="brief-sheet-original-kicker"><b>{story.category}</b><span>여러 기사에서 공통으로 확인된 내용</span></div>
     <h3>{story.title}</h3>
-    <StoryVisual story={story} variant="article" />
     {leadParagraph && <section className="brief-sheet-original-lead"><strong>핵심만 콕콕</strong><p>{leadParagraph}</p></section>}
-    <div className="brief-sheet-original-body">{detailParagraphs.map((paragraph, paragraphIndex) => <section className="brief-sheet-original-item" key={`${story.id}-original-${paragraphIndex}`}><b>{String(paragraphIndex + 2).padStart(2, "0")}</b><p>{paragraph}</p></section>)}</div>
+    <div className="brief-sheet-original-body">{detailParagraphs.map((paragraph, paragraphIndex) => <p className="brief-sheet-original-paragraph" key={`${story.id}-original-${paragraphIndex}`}>{paragraph}</p>)}</div>
     {story.uncertainty && !uncertaintyInBody && <div className="brief-sheet-original-note"><strong>확인되지 않은 부분</strong><p>{story.uncertainty}</p></div>}
     <footer className="brief-sheet-original-sources"><strong>출처</strong><div>{story.sources.map((source, sourceIndex) => <span key={`${source.publisher}-${sourceIndex}`}>[{sourceIndex + 1}] {source.publisher}</span>)}</div></footer>
     {reportingEnabled && <StoryFeedbackPanel storyId={story.id} />}

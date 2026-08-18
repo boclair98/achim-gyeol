@@ -415,12 +415,13 @@ button:disabled { cursor: wait; opacity: .55; }
 .brief-sheet-original-lead { margin-top: 18px; border-left: 5px solid #4f86ff; background: #dff2ff; padding: 16px 17px 17px; color: #27333d; }
 .brief-sheet-original-lead strong { display: block; color: #17212a; font-size: 13px; letter-spacing: -.03em; }
 .brief-sheet-original-lead p { margin: 9px 0 0; font-size: 14px; line-height: 1.78; }
-.brief-sheet-original-body { display: grid; gap: 11px; margin-top: 16px; border-top: 1px solid #ddd4c3; padding-top: 15px; }
+.brief-sheet-original-body { display: block; margin-top: 16px; border-top: 1px solid #ddd4c3; padding-top: 15px; }
+.brief-sheet-original-paragraph { margin: 0 0 18px; color: #38424a; font-family: Georgia, "Noto Serif KR", serif; font-size: 16px; line-height: 1.9; letter-spacing: -.015em; }
+.brief-sheet-original-paragraph:last-child { margin-bottom: 0; }
 .brief-sheet-original-item { display: grid; grid-template-columns: 38px 1fr; gap: 10px; padding: 13px 0; border-top: 1px solid #ddd4c3; }
 .brief-sheet-original-item:first-child { border-top: 0; padding-top: 0; }
 .brief-sheet-original-item > b { color: #17212a; font-size: 22px; line-height: 1.2; letter-spacing: -.04em; }
 .brief-sheet-original-item p { margin: 0; color: #38424a; font-family: Georgia, "Noto Serif KR", serif; font-size: 15px; line-height: 1.78; }
-.brief-sheet-original-body p { margin: 0; color: #38424a; font-family: Georgia, "Noto Serif KR", serif; font-size: 15px; line-height: 1.78; }
 .brief-sheet-original-note { margin-top: 15px; border-left: 3px solid #d2a64c; background: #fff8e8; padding: 11px 13px; color: #654710; }
 .brief-sheet-original-note strong { font-size: 10px; }
 .brief-sheet-original-note p { margin: 5px 0 0; font-size: 11px; line-height: 1.6; }
