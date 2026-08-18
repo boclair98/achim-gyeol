@@ -282,13 +282,13 @@ function CoreStoryCard({ story, index, digestSize }: { story: Story; index: numb
 function OriginalStoryCard({ story, index, reportingEnabled, onBackToCard }: { story: Story; index: number; reportingEnabled: boolean; onBackToCard: (storyId: number) => void }) {
   const evidenceReady = story.evidenceAvailable && Boolean(story.claims?.length);
   const claims = evidenceReady ? story.claims!.map((claim) => claim.statement) : summaryPoints(story.summary);
-  const paragraphs = buildCommonSourceDigest(story, claims);
+  const paragraphs = buildSourceDigest(story, claims);
   return <article className="brief-sheet-original-card" id={`news-${story.id}`} tabIndex={-1} aria-label={`${index}번째 뉴스 원문 정리`}>
     <header><span>원문 통합 정리</span><time>출처 {story.sources.length}개</time></header>
     <div className="brief-sheet-original-rule"><i /></div>
     <div className="brief-sheet-original-kicker"><b>{story.category}</b><span>여러 기사에서 공통으로 확인된 내용</span></div>
     <h3>{story.title}</h3>
-    <div className="brief-sheet-original-body">{paragraphs.map((paragraph, paragraphIndex) => <p key={`${story.id}-original-${paragraphIndex}`}>{paragraph}</p>)}</div>
+    <div className="brief-sheet-original-body">{paragraphs.map((paragraph, paragraphIndex) => <section className="brief-sheet-original-item" key={`${story.id}-original-${paragraphIndex}`}><b>{String(paragraphIndex + 1).padStart(2, "0")}</b><p>{paragraph}</p></section>)}</div>
     {story.uncertainty && <div className="brief-sheet-original-note"><strong>확인되지 않은 부분</strong><p>{story.uncertainty}</p></div>}
     <footer className="brief-sheet-original-sources"><strong>출처</strong><div>{story.sources.map((source, sourceIndex) => <span key={`${source.publisher}-${sourceIndex}`}>[{sourceIndex + 1}] {source.publisher}</span>)}</div></footer>
     {reportingEnabled && <StoryFeedbackPanel storyId={story.id} />}
@@ -302,7 +302,7 @@ function NewsArticle({ story, index, reportingEnabled, onBackToCard, embedded = 
   const confirmedPoints = evidenceReady ? story.claims! : summaryPoints(story.summary).map((statement) => ({ statement, sources: [] }));
   const sourceDigest = buildSourceDigest(story, confirmedPoints.map((claim) => claim.statement));
 
-  return <article className={`reader-article${embedded ? " brief-sheet-embedded-article" : ""}`} id={`news-${story.id}`} tabIndex={-1}>
+  return <article className={`reader-article${embedded ? " brief-sheet-embedded-article" : ""}`} id={embedded ? undefined : `news-${story.id}`} tabIndex={-1}>
     {!embedded && <a className="reader-card-return top" href={`#briefing-card-${story.id}`} onClick={(event) => { event.preventDefault(); onBackToCard(story.id); }}><ChevronLeft size={15} /> 이 뉴스 카드로 돌아가기</a>}
     <div className="reader-article-meta"><b>{String(index).padStart(2, "0")}</b><span>{story.category}</span><em className={verified && evidenceReady ? "confirmed" : "checking"}><CheckCircle2 size={14} /> {evidenceReady ? (verified ? "원문 함께" : "내용 정리 중") : "원문 제공"}</em><small>핵심 요약</small></div>
     <h2>{story.title}</h2>
@@ -340,7 +340,7 @@ function NewsArticle({ story, index, reportingEnabled, onBackToCard, embedded = 
       <summary><BookOpen size={17} /> 출처 {story.sources.length}개</summary>
       <div>{story.sources.map((source, sourceIndex) => <div className="reader-source-item" key={`${source.publisher}-${source.url}`}><span><b>[{sourceIndex + 1}]</b>{source.publisher}<time>{source.publishedAt}</time>{source.primarySource && <small>1차 자료</small>}</span></div>)}</div>
     </details>
-    {reportingEnabled && <StoryFeedbackPanel storyId={story.id} />}
+    {reportingEnabled && !embedded && <StoryFeedbackPanel storyId={story.id} />}
     <a className="reader-card-return bottom" href={`#briefing-card-${story.id}`} onClick={(event) => { event.preventDefault(); onBackToCard(story.id); }}><ChevronLeft size={16} /> 이 뉴스 카드로 돌아가기</a>
   </article>;
 }
@@ -362,7 +362,7 @@ function buildSourceDigest(story: Story, claims: string[]) {
   add(story.plainExplanation);
   add(story.whyItMatters);
   add(story.whatToWatch);
-  return paragraphs.slice(0, 5);
+  return paragraphs.slice(0, 7);
 }
 
 function buildCommonSourceDigest(story: Story, claims: string[]) {
