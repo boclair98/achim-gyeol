@@ -282,7 +282,7 @@ function CoreStoryCard({ story, index, digestSize }: { story: Story; index: numb
 function OriginalStoryCard({ story, index, reportingEnabled, onBackToCard }: { story: Story; index: number; reportingEnabled: boolean; onBackToCard: (storyId: number) => void }) {
   const evidenceReady = story.evidenceAvailable && Boolean(story.claims?.length);
   const claims = evidenceReady ? story.claims!.map((claim) => claim.statement) : summaryPoints(story.summary);
-  const paragraphs = buildSourceDigest(story, claims);
+  const paragraphs = buildDetailedSourceDigest(story, claims);
   return <article className="brief-sheet-original-card" id={`news-${story.id}`} tabIndex={-1} aria-label={`${index}번째 뉴스 원문 정리`}>
     <header><span>원문 통합 정리</span><time>출처 {story.sources.length}개</time></header>
     <div className="brief-sheet-original-rule"><i /></div>
@@ -363,6 +363,32 @@ function buildSourceDigest(story: Story, claims: string[]) {
   add(story.whyItMatters);
   add(story.whatToWatch);
   return paragraphs.slice(0, 7);
+}
+
+function buildDetailedSourceDigest(story: Story, topClaims: string[]) {
+  const topFacts = [story.oneLineSummary, story.plainExplanation, ...topClaims, story.whyItMatters, story.whatToWatch]
+    .map((value) => normalizeStoryPoint(value ?? ""))
+    .filter(Boolean);
+  const candidates = [
+    story.summary,
+    ...((story.claims ?? []).map((claim) => claim.statement)),
+    story.backgroundContext,
+    story.plainExplanation,
+    story.whyItMatters,
+    story.whatToWatch,
+    story.uncertainty,
+    ...((story.corrections ?? []).map((correction) => correction.reason)),
+  ];
+  const seen = new Set<string>();
+  const paragraphs: string[] = [];
+  for (const candidate of candidates) {
+    const text = candidate?.replace(/\s+/g, " ").trim();
+    const normalized = normalizeStoryPoint(text ?? "");
+    if (!text || !normalized || seen.has(normalized) || topFacts.includes(normalized)) continue;
+    seen.add(normalized);
+    paragraphs.push(text);
+  }
+  return (paragraphs.length ? paragraphs : [story.summary]).slice(0, 8);
 }
 
 function buildCommonSourceDigest(story: Story, claims: string[]) {
