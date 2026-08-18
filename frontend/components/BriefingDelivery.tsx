@@ -259,7 +259,7 @@ function DailyBriefingSheets({ briefing, loading, reportingEnabled, onOpenStory 
           const pageIndex = storyPageIndex + 1;
           const storyIndex = briefing.stories.findIndex((item) => item.id === story.id) + 1;
           const evidenceReady = story.evidenceAvailable && Boolean(story.claims?.length);
-          const factLimit = digestSize === "compact" ? 2 : digestSize === "deep" ? 5 : 4;
+          const factLimit = digestSize === "compact" ? 2 : digestSize === "deep" ? 8 : 5;
           const rawFacts = evidenceReady ? story.claims!.map((claim) => claim.statement) : summaryPoints(story.summary);
           const facts = uniqueStoryPoints(rawFacts, [story.oneLineSummary ?? "", story.plainExplanation ?? ""]).slice(0, factLimit);
           const watchPoint = story.whatToWatch || story.uncertainty;
@@ -345,6 +345,10 @@ function NewsArticle({ story, editionId, index, reportingEnabled, onBackToCard }
       <p>{story.backgroundContext || story.oneLineSummary || story.summary}</p>
       <div><strong>이해 포인트</strong><p>{story.plainExplanation || story.summary}</p></div>
     </section>
+    <section className="reader-summary">
+      <div><BookOpen size={17} /><strong>기사 전체 흐름</strong><span>핵심 사실을 빠짐없이 이어서 정리했습니다.</span></div>
+      <p>{story.summary}</p>
+    </section>
     <section className="reader-conclusion"><span>한 줄 결론</span><p>{story.oneLineSummary || confirmedPoints[0]?.statement || story.title}</p></section>
 
     <section className="reader-confirmed">
@@ -364,9 +368,10 @@ function NewsArticle({ story, editionId, index, reportingEnabled, onBackToCard }
     {story.uncertainty && <section className="reader-uncertainty"><h3><AlertTriangle size={17} /> 더 지켜볼 내용</h3><p>{story.uncertainty}</p></section>}
     {Boolean(story.corrections?.length) && <section className="reader-corrections"><h3>정정 이력</h3>{story.corrections!.map((correction) => <p key={correction.correctedAt}><time>{new Date(correction.correctedAt).toLocaleString("ko-KR")}</time>{correction.reason}</p>)}</section>}
 
-    <details className="reader-sources">
+    <div className="reader-source-note"><BookOpen size={16} /><p>원문 전체를 복제하지 않고, 이 브리핑에 사용한 출처와 핵심 사실을 함께 보여드립니다. 출처를 누르면 해당 언론사의 원문으로 이동합니다.</p></div>
+    <details open className="reader-sources">
       <summary><BookOpen size={17} /> 관련 원문 {story.sources.length}개 보기</summary>
-      <div>{story.sources.map((source, sourceIndex) => <a href={source.url} target="_blank" rel="noreferrer" onClick={() => { if (reportingEnabled) void trackReaderEvent("SOURCE_OPEN", editionId, story.id); }} key={`${source.publisher}-${source.url}`}><span><b>[{sourceIndex + 1}]</b>{source.publisher}{source.primarySource && <small>1차 자료</small>}</span><ExternalLink size={14} /></a>)}</div>
+      <div>{story.sources.map((source, sourceIndex) => <a href={source.url} target="_blank" rel="noreferrer" onClick={() => { if (reportingEnabled) void trackReaderEvent("SOURCE_OPEN", editionId, story.id); }} key={`${source.publisher}-${source.url}`}><span><b>[{sourceIndex + 1}]</b>{source.publisher}<time>{source.publishedAt}</time>{source.primarySource && <small>1차 자료</small>}</span><ExternalLink size={14} /></a>)}</div>
     </details>
     {reportingEnabled && <StoryFeedbackPanel storyId={story.id} />}
     <a className="reader-card-return bottom" href={`#briefing-card-${story.id}`} onClick={(event) => { event.preventDefault(); onBackToCard(story.id); }}><ChevronLeft size={16} /> 이 뉴스 카드로 돌아가기</a>
