@@ -259,8 +259,9 @@ function DailyBriefingSheets({ briefing, loading, reportingEnabled, onOpenStory 
           const pageIndex = storyPageIndex + 1;
           const storyIndex = briefing.stories.findIndex((item) => item.id === story.id) + 1;
           const evidenceReady = story.evidenceAvailable && Boolean(story.claims?.length);
-          const factLimit = digestSize === "compact" ? 1 : digestSize === "deep" ? 5 : 3;
-          const facts = evidenceReady ? story.claims!.slice(0, factLimit).map((claim) => claim.statement) : summaryPoints(story.summary).slice(0, factLimit);
+          const factLimit = digestSize === "compact" ? 2 : digestSize === "deep" ? 5 : 4;
+          const rawFacts = evidenceReady ? story.claims!.map((claim) => claim.statement) : summaryPoints(story.summary);
+          const facts = uniqueStoryPoints(rawFacts, [story.oneLineSummary ?? "", story.plainExplanation ?? ""]).slice(0, factLimit);
           const watchPoint = story.whatToWatch || story.uncertainty;
           return <article className={`brief-sheet ${digestSize}`} id={`briefing-card-${story.id}`} data-page-index={pageIndex} aria-label={`${storyPageIndex + 1}번째 뉴스, ${story.title}`} tabIndex={-1} key={`sheet-${story.id}`}>
           <header>
@@ -274,7 +275,7 @@ function DailyBriefingSheets({ briefing, loading, reportingEnabled, onOpenStory 
                 <StoryVisual story={story} variant="card" />
                 <h2><a href={`#news-${story.id}`} onClick={(event) => { event.preventDefault(); openDetail(story, pageIndex); }}>{story.title}</a></h2>
                 <p className="brief-sheet-conclusion"><strong>한 줄 결론</strong>{story.oneLineSummary || facts[0] || story.title}</p>
-                <div className="brief-sheet-easy"><strong>이해 포인트</strong><p>{story.plainExplanation || story.summary}</p></div>
+                <div className="brief-sheet-easy"><strong>이해 포인트</strong><p>{story.summary}</p></div>
                 <strong className="brief-sheet-facts-label">핵심 내용</strong>
                 <ul>{facts.map((fact, factIndex) => <li key={`${story.id}-fact-${factIndex}`}>{fact}</li>)}</ul>
                 <div className="brief-sheet-matter"><strong>왜 중요한가</strong><p>{story.whyItMatters}</p></div>
@@ -408,6 +409,33 @@ function StoryFeedbackPanel({ storyId }: { storyId: number }) {
 function summaryPoints(summary: string) {
   const points = summary.trim().split(/(?<=[.!?])\s+/).filter(Boolean);
   return points.length ? points : [summary];
+}
+
+function uniqueStoryPoints(points: string[], excluded: string[] = []) {
+  const seen = excluded.filter(Boolean);
+  const unique: string[] = [];
+  for (const point of points.map((value) => value.trim()).filter(Boolean)) {
+    if (seen.some((previous) => pointsAreEquivalent(previous, point))) continue;
+    unique.push(point);
+    seen.push(point);
+  }
+  return unique;
+}
+
+function pointsAreEquivalent(left: string, right: string) {
+  const a = normalizeStoryPoint(left);
+  const b = normalizeStoryPoint(right);
+  if (!a || !b) return false;
+  if (a === b || a.includes(b) || b.includes(a)) return true;
+  const leftTokens = new Set(left.toLocaleLowerCase("ko-KR").split(/[^\p{L}\p{N}]+/u).filter((token) => token.length >= 2));
+  const rightTokens = new Set(right.toLocaleLowerCase("ko-KR").split(/[^\p{L}\p{N}]+/u).filter((token) => token.length >= 2));
+  if (leftTokens.size < 2 || rightTokens.size < 2) return false;
+  const overlap = [...leftTokens].filter((token) => rightTokens.has(token)).length;
+  return overlap >= 2 && overlap / Math.min(leftTokens.size, rightTokens.size) >= 0.72;
+}
+
+function normalizeStoryPoint(value: string) {
+  return value.toLocaleLowerCase("ko-KR").replace(/\s+/g, "").replace(/[^\p{L}\p{N}]/gu, "");
 }
 
 function safeJsonParse<T>(value: string | null, fallback: T): T {
