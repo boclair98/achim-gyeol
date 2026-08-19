@@ -143,7 +143,9 @@ class GdeltNewsClient(
             "POLITICAL,ECONOMIC,CORPORATE,TECHNOLOGY,INFRASTRUCTURE,ENVIRONMENT,HEALTH,INFORMATION," +
                 "Battles,Protests,Riots,Explosions/Remote violence,Violence against civilians,Strategic developments",
         )
-        listOf("금리", "물가", "환율", "증시", "금융", "부동산", "가계대출", "기업", "실적", "수출", "고용", "소비")
+        listOf("금융", "금융위원회", "금융감독원", "한국은행", "은행", "대출", "가계부채", "증시", "환율", "보험", "연금")
+            .any(query::contains) -> GdeltSearchProfile("finance", "ECONOMIC,CORPORATE")
+        listOf("금리", "물가", "환율", "증시", "금융", "금융위원회", "금융감독원", "한국은행", "은행", "대출", "가계부채", "부동산", "기업", "실적", "수출", "고용", "소비")
             .any(query::contains) -> GdeltSearchProfile("economy", "ECONOMIC,CORPORATE")
         listOf("AI", "인공지능", "반도체", "배터리", "보안", "해킹", "과학", "우주", "바이오", "플랫폼", "모빌리티")
             .any(query::contains) -> GdeltSearchProfile("technology", "TECHNOLOGY,INFORMATION,INFRASTRUCTURE")
@@ -154,6 +156,12 @@ class GdeltNewsClient(
         )
         listOf("날씨", "식품", "리콜", "건강", "질병", "주거", "요금", "환경", "기후", "여행")
             .any(query::contains) -> GdeltSearchProfile("life", "HEALTH,ENVIRONMENT,INFRASTRUCTURE,DEMOGRAPHIC")
+        listOf("프로야구", "축구", "농구", "배구", "국가대표", "올림픽", "월드컵", "스포츠", "경기 결과", "이적", "부상")
+            .any(query::contains) -> GdeltSearchProfile("sports", "SPORTS")
+        listOf("LCK", "e스포츠", "리그오브레전드", "발로란트", "오버워치")
+            .any(query::contains) -> GdeltSearchProfile("esports", "SPORTS,TECHNOLOGY")
+        listOf("영화", "드라마", "음악", "공연", "출판", "전시", "방송", "콘텐츠", "문화재")
+            .any(query::contains) -> GdeltSearchProfile("culture", "ENTERTAINMENT,CULTURE")
         listOf("정부", "정책", "국회", "법안", "복지", "대통령", "국무회의")
             .any(query::contains) -> GdeltSearchProfile("policy", "POLITICAL,ECONOMIC,DEMOGRAPHIC")
         else -> null
@@ -179,8 +187,8 @@ class OfficialRssNewsClient(
         .build()
     private val cache = ConcurrentHashMap<LocalDate, List<Pair<OfficialFeed, CollectedArticle>>>()
     private val feeds = listOf(
-        OfficialFeed("한국은행", "https://www.bok.or.kr/portal/bbs/B0000552/news.rss?menuNo=200690", setOf("economy")),
-        OfficialFeed("금융위원회", "https://www.fsc.go.kr/about/fsc_bbs_rss/?fid=0111", setOf("policy", "economy")),
+        OfficialFeed("한국은행", "https://www.bok.or.kr/portal/bbs/B0000552/news.rss?menuNo=200690", setOf("economy", "finance")),
+        OfficialFeed("금융위원회", "https://www.fsc.go.kr/about/fsc_bbs_rss/?fid=0111", setOf("policy", "economy", "finance")),
         OfficialFeed("질병관리청", "https://www.kdca.go.kr/bbs/kdca/41/rssList.do?row=50", setOf("society", "life")),
     )
 
@@ -241,6 +249,8 @@ class OfficialRssNewsClient(
     }.getOrDefault(emptyList())
 
     private fun profileFor(query: String): String? = when {
+        listOf("금융", "금융위원회", "금융감독원", "한국은행", "은행", "대출", "가계부채", "증시", "환율", "보험", "연금")
+            .any(query::contains) -> "finance"
         listOf("금리", "물가", "환율", "증시", "금융", "부동산", "가계대출", "기업", "실적", "수출", "고용", "소비")
             .any(query::contains) -> "economy"
         listOf("의료", "보건", "건강", "질병", "감염", "식품", "리콜")

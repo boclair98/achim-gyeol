@@ -1,7 +1,7 @@
 export type Source = { publisher: string; url: string; publishedAt: string; primarySource?: boolean };
 export type EvidenceClaim = { statement: string; sources: Source[] };
 export type StoryInterest = "INTERESTED" | "NOT_INTERESTED";
-export const briefingCategoryOrder = ["정책", "경제", "사회", "국제", "테크", "생활", "문화", "스포츠", "e스포츠"] as const;
+export const briefingCategoryOrder = ["정책", "경제", "금융", "사회", "국제", "테크", "생활", "문화", "스포츠", "e스포츠"] as const;
 export type BriefingCategory = (typeof briefingCategoryOrder)[number];
 export type Story = {
   id: number;

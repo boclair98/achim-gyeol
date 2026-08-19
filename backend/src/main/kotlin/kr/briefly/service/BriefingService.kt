@@ -156,6 +156,7 @@ class BriefingService(
     private fun categoryLabel(category: Category) = when (category) {
         Category.POLICY -> "정책"
         Category.ECONOMY -> "경제"
+        Category.FINANCE -> "금융"
         Category.SOCIETY -> "사회"
         Category.INTERNATIONAL -> "국제"
         Category.TECH -> "테크"

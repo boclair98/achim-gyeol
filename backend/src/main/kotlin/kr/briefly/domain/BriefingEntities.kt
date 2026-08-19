@@ -4,7 +4,7 @@ import jakarta.persistence.*
 import java.time.LocalDate
 import java.time.OffsetDateTime
 
-enum class Category { POLICY, ECONOMY, SOCIETY, INTERNATIONAL, TECH, LIFE, CULTURE, SPORTS, ESPORTS }
+enum class Category { POLICY, ECONOMY, FINANCE, SOCIETY, INTERNATIONAL, TECH, LIFE, CULTURE, SPORTS, ESPORTS }
 enum class VerificationStatus { VERIFIED, DEVELOPING, CONFLICTING, SINGLE_SOURCE }
 enum class FeedbackType { INCORRECT, BIASED, UNCLEAR, HELPFUL, INTERESTED, NOT_INTERESTED }
 enum class StoryInterest { INTERESTED, NOT_INTERESTED }
@@ -180,7 +180,7 @@ class PushDeliveryAttempt(
 @Table(name = "reader_preferences", indexes = [Index(name = "idx_reader_owner", columnList = "ownerId", unique = true)])
 class ReaderPreference(
     @Column(nullable = false, length = 80) var ownerId: String,
-    @Column(nullable = false, length = 300) var categories: String = "정책,경제,사회,국제,테크,생활,문화,스포츠,e스포츠",
+    @Column(nullable = false, length = 300) var categories: String = "정책,경제,금융,사회,국제,테크,생활,문화,스포츠,e스포츠",
     @Column(nullable = false, length = 16) var digestSize: String = "standard",
     @Column(nullable = false, length = 32) var weekdays: String = "0,1,2,3,4,5,6",
     @Column(nullable = false) var consent: Boolean = true,

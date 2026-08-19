@@ -140,7 +140,7 @@ class NaverNewsClient(
 @ConditionalOnExpression("T(org.springframework.util.StringUtils).hasText('\${app.ai.openai.api-key:}')")
 class OpenAiSummarizer(
     @Value("\${app.ai.openai.api-key}") private val apiKey: String,
-    @Value("\${app.ai.openai.candidate-model:\${app.ai.openai.model:gpt-5.6-terra}}") private val model: String,
+    @Value("\${app.ai.openai.candidate-model:\${app.ai.openai.model:gpt-5.6-sol}}") private val model: String,
     @Value("\${app.ai.openai.connect-timeout-seconds:10}") connectTimeoutSeconds: Long,
     @Value("\${app.ai.openai.read-timeout-seconds:90}") readTimeoutSeconds: Long,
 ) : AiSummarizer {

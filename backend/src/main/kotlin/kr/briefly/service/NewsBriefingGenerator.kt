@@ -276,22 +276,23 @@ class NewsBriefingGenerator(
     private val coverageHoldMarker = "COVERAGE_GATE"
     private val queries = linkedMapOf(
         Category.POLICY to listOf("정부 정책", "국회 법안", "복지 노동", "주거 교육 정책", "대통령 국무회의"),
-        Category.ECONOMY to listOf("금리 물가 환율", "증시 금융 시장", "부동산 가계대출", "기업 실적 수출", "고용 소비"),
-        Category.SOCIETY to listOf("사건 사고 재난", "법원 판결 수사", "의료 보건", "교육 노동", "교통 안전"),
-        Category.INTERNATIONAL to listOf("국제 외교 안보", "미국 중국", "일본 유럽", "전쟁 휴전 제재", "정상회담 선거"),
-        Category.TECH to listOf("AI 인공지능", "반도체 배터리", "개인정보 보안 해킹", "과학 우주 바이오", "플랫폼 모빌리티"),
-        Category.LIFE to listOf("날씨 재난 생활", "식품 리콜 소비자", "건강 질병", "주거 교통 요금", "환경 기후 여행"),
+        Category.ECONOMY to listOf("물가 소비 경기", "기업 실적 수출", "고용 산업 생산", "부동산 주택 공급", "유통 자영업 매출", "경제 성장 전망"),
+        Category.FINANCE to listOf("금융위원회 금융감독원", "한국은행 금리", "증시 주식 투자", "환율 외환 시장", "은행 대출 가계부채", "보험 연금 금융상품"),
+        Category.SOCIETY to listOf("사건 사고 재난", "법원 판결 수사", "의료 보건 질병관리청", "교육 노동", "경찰 소방 안전", "교통 안전"),
+        Category.INTERNATIONAL to listOf("국제 외교 안보", "미국 중국", "일본 유럽", "전쟁 휴전 제재", "정상회담 선거", "세계 경제 무역"),
+        Category.TECH to listOf("AI 인공지능", "반도체 배터리", "개인정보 보안 해킹", "과학 우주 바이오", "플랫폼 모빌리티", "로봇 양자컴퓨팅"),
+        Category.LIFE to listOf("날씨 재난 생활", "식품 리콜 소비자", "건강 질병", "주거 교통 요금", "환경 기후 여행", "재난 안전 행정"),
         Category.CULTURE to listOf("영화 드라마", "음악 공연", "출판 전시", "방송 콘텐츠", "문화재 수상"),
-        Category.SPORTS to listOf("프로야구 경기 결과", "축구 경기 결과", "농구 배구 경기 결과", "국가대표 경기", "올림픽 월드컵"),
+        Category.SPORTS to listOf("프로야구 경기 결과", "축구 경기 결과", "농구 배구 경기 결과", "국가대표 경기", "올림픽 월드컵", "스포츠 이적 부상"),
         Category.ESPORTS to listOf("LCK e스포츠", "리그오브레전드 대회", "발로란트 e스포츠", "오버워치 e스포츠", "e스포츠 경기 결과"),
     )
-    @Value("\${app.pipeline.max-candidates-per-category:7}") private var maxCandidatesPerCategory: Int = 7
+    @Value("\${app.pipeline.max-candidates-per-category:9}") private var maxCandidatesPerCategory: Int = 9
     @Value("\${app.pipeline.max-articles-per-category:120}") private var maxArticlesPerCategory: Int = 120
-    @Value("\${app.pipeline.search-max-pages:3}") private var searchMaxPages: Int = 3
-    @Value("\${app.pipeline.max-ai-candidates:24}") private var maxAiCandidates: Int = 24
-    @Value("\${app.pipeline.ai-concurrency:2}") private var aiConcurrency: Int = 2
+    @Value("\${app.pipeline.search-max-pages:5}") private var searchMaxPages: Int = 5
+    @Value("\${app.pipeline.max-ai-candidates:36}") private var maxAiCandidates: Int = 36
+    @Value("\${app.pipeline.ai-concurrency:3}") private var aiConcurrency: Int = 3
     @Value("\${app.pipeline.max-stories-per-category:3}") private var maxStoriesPerCategory: Int = 3
-    @Value("\${app.pipeline.max-stories:15}") private var maxStories: Int = 15
+    @Value("\${app.pipeline.max-stories:24}") private var maxStories: Int = 24
     @Value("\${app.pipeline.minimum-importance-score:60}") private var minimumImportanceScore: Int = 60
     @Value("\${app.pipeline.require-human-approval:false}") private var requireHumanApproval: Boolean = false
     @Synchronized
