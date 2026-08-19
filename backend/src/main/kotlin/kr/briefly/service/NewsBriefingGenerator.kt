@@ -528,6 +528,10 @@ class NewsBriefingGenerator(
 
     private fun shouldReuseExistingEdition(edition: BriefingEdition): Boolean {
         if (edition.pipelineGenerated != true || edition.stories.isEmpty()) return false
+        // A publishable edition that missed the breadth target is a recoverable
+        // partial result. Let the next scheduled generate call collect again
+        // with the expanded source/category pool instead of silently reusing it.
+        if (!coveragePolicy.evaluate(edition.stories).ready) return false
         val state = edition.editorialState ?: EditorialState.AUTO_APPROVED
         if (state in setOf(EditorialState.AUTO_APPROVED, EditorialState.REVIEW, EditorialState.APPROVED, EditorialState.PUBLISHED)) return true
         if (state == EditorialState.HELD && edition.approvedBy != coverageHoldMarker) return true
