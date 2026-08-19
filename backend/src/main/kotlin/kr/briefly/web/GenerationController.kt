@@ -43,7 +43,8 @@ class GenerationController(
         adminAuthorizer.authorize(suppliedToken)
         val today = LocalDate.now(ZoneId.of("Asia/Seoul"))
         val current = briefingService.buildStatus(today)
-        return if (current?.productionReady == true) generationJob.status() else generationJob.start(today)
+        return if (current?.productionReady == true && current.coverageReady) generationJob.status()
+        else generationJob.start(today)
     }
 
     @PostMapping("/regenerate")
@@ -115,7 +116,7 @@ class GenerationController(
         adminAuthorizer.authorize(suppliedToken)
         val today = LocalDate.now(ZoneId.of("Asia/Seoul"))
         val current = briefingService.buildStatus(today)
-        return if (current?.productionReady == true) {
+        return if (current?.productionReady == true && current.coverageReady) {
             MorningRunResult(false, generationJob.status(), webPushService.deliverDueBriefings())
         } else {
             MorningRunResult(true, generationJob.start(today), null)
