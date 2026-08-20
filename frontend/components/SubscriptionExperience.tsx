@@ -10,6 +10,31 @@ const interestCategories = ["정책", "경제", "금융", "사회", "국제", "�
 const defaultInterestCategories = [...interestCategories];
 type DigestSize = "compact" | "standard" | "deep";
 
+function readStoredCategories(): string[] {
+  if (typeof window === "undefined") return defaultInterestCategories;
+  try {
+    const stored = JSON.parse(window.localStorage.getItem("achim-gyeol-reader-preferences") ?? "null") as { categories?: unknown } | null;
+    const categories = Array.isArray(stored?.categories)
+      ? stored.categories.filter((item): item is string => typeof item === "string" && interestCategories.includes(item))
+      : [];
+    return categories.length > 0 ? categories : defaultInterestCategories;
+  } catch {
+    return defaultInterestCategories;
+  }
+}
+
+function readStoredDigestSize(): DigestSize {
+  if (typeof window === "undefined") return "standard";
+  try {
+    const stored = JSON.parse(window.localStorage.getItem("achim-gyeol-reader-preferences") ?? "null") as { digestSize?: unknown } | null;
+    return stored?.digestSize === "compact" || stored?.digestSize === "standard" || stored?.digestSize === "deep"
+      ? stored.digestSize
+      : "standard";
+  } catch {
+    return "standard";
+  }
+}
+
 export function SubscriptionTrigger({ className, children }: { className?: string; children: ReactNode }) {
   return <button type="button" className={className} onClick={() => window.dispatchEvent(new Event(openEvent))}>{children}</button>;
 }
@@ -22,8 +47,8 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
   const [quickSubscribe, setQuickSubscribe] = useState(false);
   const [iphoneSafariSetup, setIphoneSafariSetup] = useState(false);
   const [deviceLabel, setDeviceLabel] = useState("이 브라우저에서 바로 등록할 수 있어요");
-  const [selectedCategories, setSelectedCategories] = useState<string[]>(defaultInterestCategories);
-  const [digestSize, setDigestSize] = useState<DigestSize>("standard");
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(readStoredCategories);
+  const [digestSize, setDigestSize] = useState<DigestSize>(readStoredDigestSize);
   const closeButton = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -33,17 +58,6 @@ export function SubscriptionExperience({ onNotice }: { onNotice: (message: strin
       if (stored) window.localStorage.setItem("achim-gyeol-delivery", JSON.stringify({ time: deliveryTime }));
     } catch {
       window.localStorage.removeItem("achim-gyeol-delivery");
-    }
-    try {
-      const storedPreferences = JSON.parse(window.localStorage.getItem("achim-gyeol-reader-preferences") ?? "null") as { categories?: unknown; digestSize?: unknown } | null;
-      if (Array.isArray(storedPreferences?.categories) && storedPreferences.categories.length > 0) {
-        setSelectedCategories(storedPreferences.categories.filter((item): item is string => typeof item === "string" && interestCategories.includes(item)));
-      }
-      if (storedPreferences?.digestSize === "compact" || storedPreferences?.digestSize === "standard" || storedPreferences?.digestSize === "deep") {
-        setDigestSize(storedPreferences.digestSize);
-      }
-    } catch {
-      window.localStorage.removeItem("achim-gyeol-reader-preferences");
     }
     fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL ?? ""}/api/reader/preferences`, { headers: deviceHeaders(), cache: "no-store" })
       .then((response) => response.ok ? response.json() : Promise.reject())
