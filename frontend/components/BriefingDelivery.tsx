@@ -85,7 +85,7 @@ export function BriefingDelivery() {
   return <main className={`news-reader-shell focus-reader-shell font-${readerFont}`}>
     <header className="news-reader-topbar">
       <Link href="/" className="delivered-brand"><i /><strong>{brand.name}</strong><span>MORNING NEWS</span></Link>
-      <div className="reader-top-actions"><div aria-label="글자 크기"><button className={readerFont === "small" ? "active" : ""} onClick={() => changeFont("small")}>가</button><button className={readerFont === "normal" ? "active" : ""} onClick={() => changeFont("normal")}>가</button><button className={readerFont === "large" ? "active" : ""} onClick={() => changeFont("large")}>가</button></div><Link href="/#delivery-deck" className="delivered-settings"><Settings2 size={16} /> 알림 설정</Link></div>
+      <div className="reader-top-actions"><div className="reader-font-controls" role="group" aria-label="글자 크기"><button type="button" className={readerFont === "small" ? "active" : ""} aria-label="작은 글자" title="작은 글자" aria-pressed={readerFont === "small"} onClick={() => changeFont("small")}>가</button><button type="button" className={readerFont === "normal" ? "active" : ""} aria-label="기본 글자" title="기본 글자" aria-pressed={readerFont === "normal"} onClick={() => changeFont("normal")}>가</button><button type="button" className={readerFont === "large" ? "active" : ""} aria-label="큰 글자" title="큰 글자" aria-pressed={readerFont === "large"} onClick={() => changeFont("large")}>가</button></div><Link href="/#delivery-deck" className="delivered-settings"><Settings2 size={16} /> 알림 설정</Link></div>
     </header>
 
     <BriefingAvailability state={loadState} briefing={briefing} liveToday={liveToday} selectedDate={selectedDate} onRetry={retryBriefing} />
@@ -377,6 +377,11 @@ function OriginalStoryCard({ story, index, reportingEnabled, onBackToCard }: { s
     <div className="brief-sheet-original-rule"><i /></div>
     <div className="brief-sheet-original-kicker"><b>{story.category}</b><span>여러 기사에서 공통으로 확인된 내용</span></div>
     <h3>{story.title}</h3>
+    <section className="reader-context" aria-label="기사 이해를 돕는 배경">
+      <h3><BookOpen size={18} /> 기사 이해를 돕는 배경</h3>
+      <p>{story.backgroundContext || story.oneLineSummary || story.summary}</p>
+      <div><strong>이해 포인트</strong><p>{story.plainExplanation || story.summary}</p></div>
+    </section>
     <div className="brief-sheet-original-body">{paragraphs.map((paragraph, paragraphIndex) => <p className={`brief-sheet-original-paragraph${paragraphIndex === 0 ? " lead" : ""}`} key={`${story.id}-original-${paragraphIndex}`}>{paragraph}</p>)}</div>
     <footer className="brief-sheet-original-sources"><strong>출처</strong><div>{story.sources.map((source, sourceIndex) => <span key={`${source.publisher}-${sourceIndex}`}>[{sourceIndex + 1}] {source.publisher}</span>)}</div></footer>
     {reportingEnabled && <StoryFeedbackPanel storyId={story.id} />}
