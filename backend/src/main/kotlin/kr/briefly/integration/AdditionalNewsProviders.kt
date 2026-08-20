@@ -191,6 +191,8 @@ class OfficialRssNewsClient(
         OfficialFeed("한국은행", "https://www.bok.or.kr/portal/bbs/B0000552/news.rss?menuNo=200690", setOf("economy", "finance")),
         OfficialFeed("금융위원회", "https://www.fsc.go.kr/about/fsc_bbs_rss/?fid=0111", setOf("policy", "economy", "finance")),
         OfficialFeed("질병관리청", "https://www.kdca.go.kr/bbs/kdca/41/rssList.do?row=50", setOf("society", "life")),
+        OfficialFeed("행정안전부", "https://www.mois.go.kr/gpms/view/jsp/rss/rss.jsp?ctxCd=1012", setOf("policy", "society", "life")),
+        OfficialFeed("보건복지부", "https://www.mohw.go.kr/rss/board.es?mid=a10503000000&bid=0027", setOf("policy", "society", "life")),
         // 경찰청 보도자료는 사건·안전·수사 분야의 1차 발표를 보강한다.
         OfficialFeed("경찰청", "https://www.police.go.kr/portal/bbs/rss.do?bbsId=B0000011&menuNo=200067", setOf("policy", "society", "life")),
     ) + parseExtraFeeds(extraFeeds)
