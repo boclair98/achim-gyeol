@@ -320,7 +320,8 @@ button:disabled { cursor: wait; opacity: .55; }
 .brief-sheet-intro h1 em { color: #116d51; font-style: normal; }
 .brief-sheet-intro > p { margin: 22px 0 0; color: #4f5964; font-size: 16px; line-height: 1.78; }
 .brief-sheet-deck { min-width: 0; scroll-margin-top: 82px; }
-.brief-sheet-track { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; overflow-x: auto; overflow-y: visible; overscroll-behavior-inline: contain; overscroll-behavior-block: auto; scroll-behavior: smooth; scroll-snap-type: x mandatory; scrollbar-width: none; touch-action: pan-x pan-y pinch-zoom; align-items: start; }
+.brief-sheet-track { display: grid; grid-auto-flow: column; grid-auto-columns: 100%; overflow-x: auto; overflow-y: visible; overscroll-behavior-inline: contain; overscroll-behavior-block: auto; scroll-behavior: smooth; scroll-snap-type: x mandatory; scrollbar-width: none; touch-action: pan-x pan-y pinch-zoom; align-items: start; cursor: grab; }
+.brief-sheet-track:active { cursor: grabbing; }
 .brief-sheet-track::-webkit-scrollbar { display: none; }
 .brief-sheet { position: relative; box-sizing: border-box; width: 100%; min-height: 790px; overflow: visible; scroll-snap-align: start; border: 1px solid #d9d0bf; border-radius: 6px 28px 28px 6px; background: #fffaf0; padding: 33px 38px 37px 51px; box-shadow: 0 28px 70px rgba(36,43,57,.16); }
 .brief-sheet:target { box-shadow: 0 28px 70px rgba(36,43,57,.16), inset 0 0 0 4px #18a872; }
@@ -329,6 +330,11 @@ button:disabled { cursor: wait; opacity: .55; }
 .brief-sheet > header { display: flex; align-items: end; justify-content: space-between; gap: 20px; }
 .brief-sheet > header > div { display: grid; gap: 4px; }
 .brief-sheet > header > div:last-child { justify-items: end; color: #5e625d; }
+.brief-sheet-card-tools { display: flex !important; align-items: center; justify-items: initial !important; gap: 8px !important; }
+.brief-sheet-card-tools > button { display: grid; width: 32px; height: 32px; place-items: center; border: 1px solid #cbd4ce; border-radius: 10px; background: #fff; color: #18372e; cursor: pointer; }
+.brief-sheet-card-tools > button:disabled { cursor: default; opacity: .3; }
+.brief-sheet-card-tools > button:focus-visible { outline: 3px solid #1679ff; outline-offset: 2px; }
+.brief-sheet-card-page { display: grid; justify-items: end; gap: 3px; min-width: 66px; }
 .brief-sheet > header span { color: #17775b; font-size: 10px; font-weight: 950; letter-spacing: .18em; }
 .brief-sheet > header strong { font-size: 16px; letter-spacing: -.02em; }
 .brief-sheet > header b { font-size: 12px; }
@@ -450,14 +456,8 @@ button:disabled { cursor: wait; opacity: .55; }
 .brief-overview-footer button { display: inline-flex; align-items: center; gap: 3px; border: 0; background: transparent; padding: 0; color: #d3ef6c; cursor: pointer; font: inherit; font-weight: 900; }
 .brief-sheet-progress { height: 4px; margin-top: 16px; overflow: hidden; border-radius: 999px; background: #dce1dd; }
 .brief-sheet-progress i { display: block; height: 100%; border-radius: inherit; background: #18a872; transition: width .2s ease; }
-.brief-sheet-controls { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 12px; margin-top: 18px; }
-.brief-sheet-controls button { display: grid; width: 44px; height: 44px; place-items: center; border: 1px solid #d7dad6; border-radius: 50%; background: white; color: var(--ink); cursor: pointer; }
-.brief-sheet-controls button:disabled { cursor: default; opacity: .35; }
-.brief-sheet-controls > div { display: flex; align-items: baseline; justify-content: center; gap: 4px; }
-.brief-sheet-controls strong { color: #116d51; font-size: 18px; }
-.brief-sheet-controls span { color: #7a817d; font-size: 11px; }
-.brief-sheet-controls small { margin-left: 8px; color: #7a817d; font-size: 10px; }
-.brief-sheet-controls small { display: inline-flex; align-items: center; gap: 4px; }
+.brief-sheet-swipe-hint { display: flex; align-items: center; justify-content: center; gap: 5px; margin: 13px 0 0; color: #718079; font-size: 10px; font-weight: 750; text-align: center; }
+.brief-sheet-swipe-hint svg { flex: 0 0 auto; color: #148660; }
 
 /* Focus reader: put the horizontal briefing cards first and let the cards use the available viewport. */
 .focus-reader-shell .brief-sheet-intro { display: none; }
@@ -476,6 +476,10 @@ button:disabled { cursor: wait; opacity: .55; }
   .focus-reader-shell .brief-sheet-section { padding: 16px 14px 36px; }
   .focus-reader-shell .brief-sheet-track { min-height: calc(100svh - 148px); }
   .focus-reader-shell .brief-sheet { min-height: calc(100svh - 188px); }
+  .brief-sheet-card-tools { gap: 4px !important; }
+  .brief-sheet-card-tools > button { width: 28px; height: 28px; border-radius: 8px; }
+  .brief-sheet-card-page { min-width: 54px; }
+  .brief-sheet-card-page b { font-size: 10px; }
 }
 .news-reader-hero { max-width: 1180px; margin: 0 auto; padding: 68px 0 54px; }
 .reader-date { display: flex; align-items: center; gap: 12px; color: var(--blue); font-size: 12px; font-weight: 900; }
@@ -647,7 +651,6 @@ button:disabled { cursor: wait; opacity: .55; }
   .brief-sheet-detail-jump { margin-top: 13px; padding: 10px 11px; }
   .brief-sheet-detail-jump strong { font-size: 11px; }
   .brief-sheet-detail-jump small { font-size: 8px; }
-  .brief-sheet-controls { padding: 0 20px; }
   .brief-overview-copy { padding: 21px 0 13px; }
   .brief-overview-copy h2 { font-size: 29px; }
   .brief-overview-list button { padding: 11px 0; }
