@@ -14,7 +14,7 @@ type PushConfig = { enabled: boolean; publicKey: string };
 type PushResponse = { delivered: boolean; message: string };
 type PushSubscriptionStatus = { registered: boolean; active: boolean; needsRenewal: boolean };
 
-export function PushControls({ deliveryTime, onNotice, onSubscriptionChange }: Props) {
+export function PushControls({ deliveryTime, onNotice, onSubscriptionChange, onBeforeSubscribe }: Props) {
   const [supported, setSupported] = useState(true);
   const [iosInstallRequired, setIosInstallRequired] = useState(false);
   const [iosSafariBrowser, setIosSafariBrowser] = useState(false);
