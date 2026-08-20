@@ -5,6 +5,7 @@ import kr.briefly.repository.BriefingEditionRepository
 import kr.briefly.repository.NewsStoryRepository
 import kr.briefly.repository.StoryFeedbackRepository
 import kr.briefly.repository.StoryCorrectionRepository
+import kr.briefly.repository.ReaderPreferenceRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -28,6 +29,7 @@ class BriefingService(
     private val feedbackRepository: StoryFeedbackRepository,
     private val correctionRepository: StoryCorrectionRepository,
     private val coveragePolicy: BriefingCoveragePolicy,
+    private val preferenceRepository: ReaderPreferenceRepository? = null,
 ) {
     @Transactional(readOnly = true)
     fun latest(viewerId: String? = null): BriefingResponse {
@@ -113,7 +115,13 @@ class BriefingService(
             .mapNotNull { signal: StoryFeedback -> categoryByStory[signal.storyId]?.let { it to signal.type.interestWeight() } }
             .groupBy(keySelector = { it.first }, valueTransform = { it.second })
             .mapValues { (_, weights) -> weights.sum() }
-        val orderedStories = BriefingStoryPersonalizer.order(currentStories, categoryScores)
+        val preferredCategories = viewerId
+            ?.let { preferenceRepository?.findByOwnerId(it)?.categories.orEmpty() }
+            ?.split(",")
+            ?.mapNotNull(::categoryFromLabel)
+            ?.toSet()
+            .orEmpty()
+        val orderedStories = BriefingStoryPersonalizer.order(currentStories, categoryScores, preferredCategories)
         return BriefingResponse(
             id = requireNotNull(id),
             briefingDate = briefingDate,
@@ -144,8 +152,22 @@ class BriefingService(
                     imagePublisher = story.imagePublisher?.takeIf(String::isNotBlank),
                 )
             },
-            personalized = categoryScores.values.any { it != 0 },
+            personalized = preferredCategories.isNotEmpty() || categoryScores.values.any { it != 0 },
         )
+    }
+
+    private fun categoryFromLabel(value: String): Category? = when (value.trim()) {
+        "정책" -> Category.POLICY
+        "경제" -> Category.ECONOMY
+        "금융" -> Category.FINANCE
+        "사회" -> Category.SOCIETY
+        "국제" -> Category.INTERNATIONAL
+        "테크" -> Category.TECH
+        "생활" -> Category.LIFE
+        "문화" -> Category.CULTURE
+        "스포츠" -> Category.SPORTS
+        "e스포츠" -> Category.ESPORTS
+        else -> null
     }
 
     private fun firstSentence(summary: String): String = summary.split(Regex("(?<=[.!?])\\s+")).firstOrNull()?.trim().orEmpty().ifBlank { summary.take(120) }
@@ -186,10 +208,18 @@ class BriefingService(
 internal object BriefingStoryPersonalizer {
     private const val CORE_STORY_COUNT = 3
 
-    fun order(stories: List<NewsStory>, categoryScores: Map<Category, Int>): List<NewsStory> {
+    fun order(
+        stories: List<NewsStory>,
+        categoryScores: Map<Category, Int>,
+        preferredCategories: Set<Category> = emptySet(),
+    ): List<NewsStory> {
         val editorialOrder = stories.sortedBy(NewsStory::displayOrder)
-        if (editorialOrder.size <= CORE_STORY_COUNT || categoryScores.isEmpty()) return editorialOrder
+        if (editorialOrder.size <= CORE_STORY_COUNT || (categoryScores.isEmpty() && preferredCategories.isEmpty())) return editorialOrder
         return editorialOrder.take(CORE_STORY_COUNT) + editorialOrder.drop(CORE_STORY_COUNT)
-            .sortedWith(compareByDescending<NewsStory> { categoryScores[it.category] ?: 0 }.thenBy(NewsStory::displayOrder))
+            .sortedWith(
+                compareByDescending<NewsStory> { if (it.category in preferredCategories) 1 else 0 }
+                    .thenByDescending { categoryScores[it.category] ?: 0 }
+                    .thenBy(NewsStory::displayOrder),
+            )
     }
 }
