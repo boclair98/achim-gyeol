@@ -1,12 +1,12 @@
 import Link from "next/link";
-import { ArrowUpRight, BellRing, Leaf } from "lucide-react";
+import { ArrowUpRight, BellRing, Mail } from "lucide-react";
 import { SubscriptionTrigger } from "@/components/SubscriptionExperience";
 
 export function SiteHeader({ context = "무료 알림 받기" }: { context?: string }) {
   return (
     <header className="site-header">
       <Link className="site-brand" href="/">
-        <i aria-hidden="true"><Leaf size={15} /></i>
+        <i aria-hidden="true"><Mail size={15} strokeWidth={2.4} /></i>
         <strong>아침결</strong>
         <span>매일 아침, 어제의 뉴스</span>
       </Link>
