@@ -40,6 +40,7 @@ app:
     official-rss:
       enabled: ${OFFICIAL_NEWS_RSS_ENABLED:true}
       read-timeout-seconds: ${OFFICIAL_NEWS_RSS_READ_TIMEOUT_SECONDS:20}
+      extra-feeds: ${OFFICIAL_NEWS_EXTRA_RSS_FEEDS:}
   ai:
     openai:
       api-key: ${OPENAI_API_KEY:}
@@ -70,6 +71,7 @@ app:
     max-ai-candidates: ${NEWS_MAX_AI_CANDIDATES:36}
     ai-concurrency: ${NEWS_AI_CONCURRENCY:3}
     max-stories-per-category: ${NEWS_MAX_STORIES_PER_CATEGORY:3}
+    economy-finance-max-stories-per-category: ${NEWS_ECONOMY_FINANCE_MAX_STORIES_PER_CATEGORY:2}
     max-stories: ${NEWS_MAX_STORIES:24}
     minimum-importance-score: ${NEWS_MINIMUM_IMPORTANCE_SCORE:60}
     minimum-delivery-stories: ${NEWS_MINIMUM_DELIVERY_STORIES:10}
@@ -89,3 +91,4 @@ app:
     access-key: ${BACKUP_STORAGE_ACCESS_KEY:}
     secret-key: ${BACKUP_STORAGE_SECRET_KEY:}
     encryption-key: ${BACKUP_ENCRYPTION_KEY:}
+
