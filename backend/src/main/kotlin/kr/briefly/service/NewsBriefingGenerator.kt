@@ -292,6 +292,7 @@ class NewsBriefingGenerator(
     @Value("\${app.pipeline.max-ai-candidates:36}") private var maxAiCandidates: Int = 36
     @Value("\${app.pipeline.ai-concurrency:3}") private var aiConcurrency: Int = 3
     @Value("\${app.pipeline.max-stories-per-category:3}") private var maxStoriesPerCategory: Int = 3
+    @Value("\${app.pipeline.economy-finance-max-stories-per-category:2}") private var economyFinanceMaxStoriesPerCategory: Int = 2
     @Value("\${app.pipeline.max-stories:24}") private var maxStories: Int = 24
     @Value("\${app.pipeline.minimum-importance-score:60}") private var minimumImportanceScore: Int = 60
     @Value("\${app.pipeline.require-human-approval:false}") private var requireHumanApproval: Boolean = false
@@ -350,7 +351,7 @@ class NewsBriefingGenerator(
         val acceptedByCategory = mutableMapOf<Category, Int>()
         evaluations.forEach { evaluation ->
             val cluster = evaluation.cluster
-            if ((acceptedByCategory[cluster.category] ?: 0) >= maxStoriesPerCategory.coerceAtLeast(1)) return@forEach
+            if ((acceptedByCategory[cluster.category] ?: 0) >= categoryStoryCap(cluster.category)) return@forEach
             evaluation.failure?.let(failures::add)
             val candidate = evaluation.candidate ?: return@forEach
             if (editorialStories.any { existing -> sameEditorialEvent(existing, candidate) }) {
@@ -550,7 +551,7 @@ class NewsBriefingGenerator(
         val comparator = compareByDescending<EditorialStory> { it.importanceScore }
             .thenByDescending { it.clusterRank }
         val sortedByCategory = candidates.groupBy { it.story.category }
-            .mapValues { (_, stories) -> stories.sortedWith(comparator) }
+            .mapValues { (category, stories) -> stories.sortedWith(comparator).take(categoryStoryCap(category)) }
         val categoryLeads = Category.entries.mapNotNull { category -> sortedByCategory[category]?.firstOrNull() }
         val leadStories = categoryLeads.map { it.story }.toSet()
         val remaining = candidates.filterNot { it.story in leadStories }.sortedWith(comparator)
@@ -571,7 +572,9 @@ class NewsBriefingGenerator(
 
         val comparator = compareByDescending<EditorialStory> { it.importanceScore }
             .thenByDescending { it.clusterRank }
-        val pool = (baseline + candidates.filterNot(baseline::contains).sortedWith(comparator)).distinct()
+        val pool = (baseline + candidates.filterNot(baseline::contains).sortedWith(comparator))
+            .let(::limitEditorialCandidatesByCategory)
+            .distinct()
         val byRef = pool.mapIndexed { index, candidate -> "N${index + 1}" to candidate }.toMap()
         val reviewCandidates = byRef.map { (ref, candidate) ->
             EditorialCandidate(
@@ -635,6 +638,21 @@ class NewsBriefingGenerator(
         val rightConclusion = right.story.oneLineSummary.orEmpty()
         return leftConclusion.isNotBlank() && rightConclusion.isNotBlank() &&
             clusterer.similarity(leftConclusion, rightConclusion) >= if (sameCategory) 0.44 else 0.58
+    }
+
+    private fun categoryStoryCap(category: Category): Int = when (category) {
+        Category.ECONOMY, Category.FINANCE -> minOf(
+            maxStoriesPerCategory.coerceAtLeast(1),
+            economyFinanceMaxStoriesPerCategory.coerceAtLeast(1),
+        )
+        else -> maxStoriesPerCategory.coerceAtLeast(1)
+    }
+
+    private fun limitEditorialCandidatesByCategory(candidates: List<EditorialStory>): List<EditorialStory> {
+        val comparator = compareByDescending<EditorialStory> { it.importanceScore }
+            .thenByDescending { it.clusterRank }
+        return candidates.groupBy { it.story.category }
+            .flatMap { (category, stories) -> stories.sortedWith(comparator).take(categoryStoryCap(category)) }
     }
 
     private fun generationResult(
@@ -715,3 +733,4 @@ class StartupNewsGeneration(private val generator: NewsBriefingGenerator) : Appl
         generator.generate()
     }
 }
+
