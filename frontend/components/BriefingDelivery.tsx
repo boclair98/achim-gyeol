@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type UIEvent as ReactUIEvent, type WheelEvent as ReactWheelEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type UIEvent as ReactUIEvent, type WheelEvent as ReactWheelEvent } from "react";
 import Link from "next/link";
 import { AlertTriangle, BookOpen, CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight, FileCheck2, Flag, Radar, RefreshCw, Share2, Sparkles, Settings2, ThumbsDown, ThumbsUp, WifiOff } from "lucide-react";
 import { demoBriefing, type Briefing, type Story, type StoryInterest } from "@/lib/briefing";
@@ -122,7 +122,7 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
   const [preferredCategories, setPreferredCategories] = useState<string[]>([]);
   const [digestSize, setDigestSize] = useState<"compact" | "standard" | "deep">("standard");
   const trackRef = useRef<HTMLDivElement>(null);
-  const pointerDragRef = useRef<{ pointerId: number; startX: number; startScrollLeft: number; moved: boolean } | null>(null);
+  const mouseDragRef = useRef<{ startX: number; startScrollLeft: number; moved: boolean } | null>(null);
   const suppressClickRef = useRef(false);
   const orderedStories = useMemo(() => {
     const coreStories = briefing.stories.slice(0, 3);
@@ -164,6 +164,44 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
     }, 0);
   };
 
+  const updateMouseDrag = (clientX: number) => {
+    const drag = mouseDragRef.current;
+    const track = trackRef.current;
+    if (!drag || !track) return false;
+    const distance = clientX - drag.startX;
+    if (Math.abs(distance) < 5 && !drag.moved) return false;
+    drag.moved = true;
+    track.scrollLeft = drag.startScrollLeft - distance;
+    return true;
+  };
+
+  const finishMouseDrag = () => {
+    const drag = mouseDragRef.current;
+    const track = trackRef.current;
+    if (!drag || !track) return;
+    mouseDragRef.current = null;
+    if (drag.moved) {
+      suppressClickRef.current = true;
+      moveTo(pageForTrackScroll(track));
+    }
+  };
+
+  useEffect(() => {
+    // Keep the drag alive even when the pointer leaves the visible track. This
+    // is especially important on desktop where a long card can be wider than
+    // the viewport and the browser otherwise stops dispatching track events.
+    const handleWindowMouseMove = (event: MouseEvent) => {
+      updateMouseDrag(event.clientX);
+    };
+    const handleWindowMouseUp = () => finishMouseDrag();
+    window.addEventListener("mousemove", handleWindowMouseMove);
+    window.addEventListener("mouseup", handleWindowMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleWindowMouseMove);
+      window.removeEventListener("mouseup", handleWindowMouseUp);
+    };
+  }, [deckPages.length]);
+
   const handleTrackScroll = (event: ReactUIEvent<HTMLDivElement>) => {
     const track = event.currentTarget;
     if (!track.clientWidth) return;
@@ -180,37 +218,20 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
     event.currentTarget.scrollLeft += event.deltaX;
   };
 
-  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.pointerType !== "mouse" || event.button !== 0) return;
-    pointerDragRef.current = {
-      pointerId: event.pointerId,
+  const handleMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    mouseDragRef.current = {
       startX: event.clientX,
       startScrollLeft: event.currentTarget.scrollLeft,
       moved: false,
     };
-    event.currentTarget.setPointerCapture(event.pointerId);
   };
 
-  const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const drag = pointerDragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    const distance = event.clientX - drag.startX;
-    if (Math.abs(distance) < 5 && !drag.moved) return;
-    drag.moved = true;
-    event.preventDefault();
-    event.currentTarget.scrollLeft = drag.startScrollLeft - distance;
+  const handleMouseMove = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (updateMouseDrag(event.clientX)) event.preventDefault();
   };
 
-  const handlePointerEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const drag = pointerDragRef.current;
-    if (!drag || drag.pointerId !== event.pointerId) return;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-    pointerDragRef.current = null;
-    if (drag.moved) {
-      suppressClickRef.current = true;
-      moveTo(pageForTrackScroll(event.currentTarget));
-    }
-  };
+  const handleMouseEnd = () => finishMouseDrag();
 
   const handleTrackClick = (event: ReactMouseEvent<HTMLDivElement>) => {
     if (!suppressClickRef.current) return;
@@ -262,10 +283,10 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
         aria-label="뉴스 카드 목록"
         onScroll={handleTrackScroll}
         onWheel={handleTrackWheel}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerEnd}
-        onPointerCancel={handlePointerEnd}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseEnd}
+        onDragStart={(event) => event.preventDefault()}
         onClick={handleTrackClick}
       >
         {orderedStories.map((story, storyPageIndex) => {
