@@ -9,7 +9,7 @@ const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 const serverSubscriptionKey = "achim-gyeol-server-subscription";
 let reconciliationInFlight: Promise<boolean> | null = null;
 
-type Props = { deliveryTime: string; onNotice: (message: string) => void; onSubscriptionChange?: (subscribed: boolean) => void };
+type Props = { deliveryTime: string; onNotice: (message: string) => void; onSubscriptionChange?: (subscribed: boolean) => void; onBeforeSubscribe?: () => Promise<void> };
 type PushConfig = { enabled: boolean; publicKey: string };
 type PushResponse = { delivered: boolean; message: string };
 type PushSubscriptionStatus = { registered: boolean; active: boolean; needsRenewal: boolean };
@@ -84,6 +84,7 @@ export function PushControls({ deliveryTime, onNotice, onSubscriptionChange }: P
           }
         }
       }
+      await onBeforeSubscribe?.();
       window.localStorage.setItem("achim-gyeol-delivery", JSON.stringify({ time: deliveryTime }));
       window.localStorage.setItem(serverSubscriptionKey, subscription.endpoint);
       setSubscribed(true);
