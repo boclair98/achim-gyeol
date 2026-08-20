@@ -293,6 +293,7 @@ class NewsBriefingGenerator(
     @Value("\${app.pipeline.ai-concurrency:3}") private var aiConcurrency: Int = 3
     @Value("\${app.pipeline.max-stories-per-category:3}") private var maxStoriesPerCategory: Int = 3
     @Value("\${app.pipeline.economy-finance-max-stories-per-category:2}") private var economyFinanceMaxStoriesPerCategory: Int = 2
+    @Value("\${app.pipeline.economy-finance-max-stories-total:3}") private var economyFinanceMaxStoriesTotal: Int = 3
     @Value("\${app.pipeline.max-stories:24}") private var maxStories: Int = 24
     @Value("\${app.pipeline.minimum-importance-score:60}") private var minimumImportanceScore: Int = 60
     @Value("\${app.pipeline.require-human-approval:false}") private var requireHumanApproval: Boolean = false
