@@ -6,7 +6,7 @@ import { defaultReaderPreferences, type ReaderPreferences } from "@/lib/experien
 import { deviceHeaders } from "@/lib/device";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
-const categories = ["정책", "경제", "사회", "국제", "테크", "생활", "문화", "스포츠", "e스포츠"];
+const categories = ["정책", "경제", "금융", "사회", "국제", "테크", "생활", "문화", "스포츠", "e스포츠"];
 
 export function PreferenceCenter() {
   const [preferences, setPreferences] = useState<ReaderPreferences>(defaultReaderPreferences);
@@ -86,7 +86,7 @@ export function PreferenceCenter() {
     <section className="preference-hero"><span>내 브리핑 설정</span><h1>뉴스가 나를 방해하지 않도록,<br /><em>분량과 관심사를 직접 정합니다.</em></h1><p>관심 분야, 읽을 분량과 알림 여부를 한곳에서 관리합니다. 브리핑은 매일 오전 7시 30분에 도착합니다.</p></section>
     <section className="preference-layout">
       <div className="preference-main">
-        <PreferenceBlock icon={SlidersHorizontal} title="관심 분야" description="공통 중요 뉴스는 모두 제공하고, 선택한 분야의 카드를 앞쪽에 배치합니다."><div className="choice-grid">{categories.map((item) => <button key={item} className={preferences.categories.includes(item) ? "active" : ""} onClick={() => toggle("categories", item)}><Check size={14} />{item}</button>)}</div></PreferenceBlock>
+        <PreferenceBlock icon={SlidersHorizontal} title="관심 분야" description="분야를 가리지 않고 중요한 뉴스는 모두 제공하며, 선택한 분야의 카드를 먼저 보여드립니다."><div className="choice-grid">{categories.map((item) => <button key={item} className={preferences.categories.includes(item) ? "active" : ""} onClick={() => toggle("categories", item)}><Check size={14} />{item}</button>)}</div></PreferenceBlock>
         <PreferenceBlock icon={Clock3} title="도착 일정" description="등록된 기기에는 요일 선택 없이 매일 오전 7시 30분에 브리핑을 보냅니다."><div className="schedule-preference"><input aria-label="매일 고정 도착 시각" type="time" value="07:30" readOnly /></div></PreferenceBlock>
         <PreferenceBlock icon={BellRing} title="읽을 분량" description="아침에 읽고 싶은 설명의 길이를 정합니다."><div className="digest-options">{(["compact", "standard", "deep"] as const).map((size) => <button key={size} className={preferences.digestSize === size ? "active" : ""} onClick={() => setPreferences({ ...preferences, digestSize: size })}><strong>{size === "compact" ? "빠르게" : size === "standard" ? "기본" : "깊게"}</strong><span>{size === "compact" ? "결론 중심" : size === "standard" ? "핵심 내용 포함" : "원문까지 자세히"}</span></button>)}</div></PreferenceBlock>
       </div>
