@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent, type UIEvent as ReactUIEvent, type WheelEvent as ReactWheelEvent } from "react";
 import Link from "next/link";
 import { AlertTriangle, BookOpen, CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight, FileCheck2, Flag, Radar, RefreshCw, Share2, Sparkles, Settings2, ThumbsDown, ThumbsUp, WifiOff } from "lucide-react";
 import { demoBriefing, type Briefing, type Story, type StoryInterest } from "@/lib/briefing";
@@ -122,6 +122,8 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
   const [preferredCategories, setPreferredCategories] = useState<string[]>([]);
   const [digestSize, setDigestSize] = useState<"compact" | "standard" | "deep">("standard");
   const trackRef = useRef<HTMLDivElement>(null);
+  const pointerDragRef = useRef<{ pointerId: number; startX: number; startScrollLeft: number; moved: boolean } | null>(null);
+  const suppressClickRef = useRef(false);
   const orderedStories = useMemo(() => {
     const coreStories = briefing.stories.slice(0, 3);
     const personalizedStories = briefing.stories.slice(3).sort((a, b) => Number(preferredCategories.includes(b.category)) - Number(preferredCategories.includes(a.category)));
@@ -149,6 +151,72 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
     const target = track.querySelector<HTMLElement>(`[data-page-index="${safePage}"]`);
     if (target) track.scrollTo({ left: Math.max(0, target.offsetLeft - track.offsetLeft - 14), behavior: "smooth" });
     setPage(safePage);
+  };
+
+  const pageForTrackScroll = (track: HTMLDivElement) => {
+    const cards = Array.from(track.querySelectorAll<HTMLElement>("[data-page-index]"));
+    const center = track.scrollLeft + track.clientWidth / 2;
+    return cards.reduce((best, card, index) => {
+      const distance = Math.abs(card.offsetLeft + card.clientWidth / 2 - center);
+      const bestCard = cards[best];
+      const bestDistance = bestCard ? Math.abs(bestCard.offsetLeft + bestCard.clientWidth / 2 - center) : Number.POSITIVE_INFINITY;
+      return distance < bestDistance ? index : best;
+    }, 0);
+  };
+
+  const handleTrackScroll = (event: ReactUIEvent<HTMLDivElement>) => {
+    const track = event.currentTarget;
+    if (!track.clientWidth) return;
+    const nextPage = pageForTrackScroll(track);
+    const selected = deckPages[nextPage];
+    if (nextPage !== page && selected) markRead(selected.story.id, nextPage);
+  };
+
+  const handleTrackWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
+    // Trackpad horizontal gestures should move between cards. Vertical wheel
+    // input remains available for reading the long article inside a card.
+    if (Math.abs(event.deltaX) < 1 || Math.abs(event.deltaX) < Math.abs(event.deltaY) * 0.35) return;
+    event.preventDefault();
+    event.currentTarget.scrollLeft += event.deltaX;
+  };
+
+  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== "mouse" || event.button !== 0) return;
+    pointerDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startScrollLeft: event.currentTarget.scrollLeft,
+      moved: false,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = pointerDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    const distance = event.clientX - drag.startX;
+    if (Math.abs(distance) < 5 && !drag.moved) return;
+    drag.moved = true;
+    event.preventDefault();
+    event.currentTarget.scrollLeft = drag.startScrollLeft - distance;
+  };
+
+  const handlePointerEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = pointerDragRef.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    pointerDragRef.current = null;
+    if (drag.moved) {
+      suppressClickRef.current = true;
+      moveTo(pageForTrackScroll(event.currentTarget));
+    }
+  };
+
+  const handleTrackClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (!suppressClickRef.current) return;
+    event.preventDefault();
+    event.stopPropagation();
+    suppressClickRef.current = false;
   };
 
   const openStoryCard = (storyId: number) => {
@@ -185,28 +253,32 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
 
   return <section className="brief-sheet-section" aria-label="오늘의 아침결 카드 브리핑">
     <div className="brief-sheet-deck" id="briefing-card-deck">
-      <div className="brief-sheet-track" id="briefing-card-track" ref={trackRef} onScroll={(event) => {
-        const track = event.currentTarget;
-        if (track.clientWidth) {
-          const cards = Array.from(track.querySelectorAll<HTMLElement>("[data-page-index]"));
-          const center = track.scrollLeft + track.clientWidth / 2;
-          const nextPage = cards.reduce((best, card, index) => {
-            const distance = Math.abs(card.offsetLeft + card.clientWidth / 2 - center);
-            const bestCard = cards[best];
-            const bestDistance = bestCard ? Math.abs(bestCard.offsetLeft + bestCard.clientWidth / 2 - center) : Number.POSITIVE_INFINITY;
-            return distance < bestDistance ? index : best;
-          }, 0);
-          const selected = deckPages[nextPage];
-          if (nextPage !== page && selected) markRead(selected.story.id, nextPage);
-        }
-      }}>
+      <div
+        className="brief-sheet-track"
+        id="briefing-card-track"
+        ref={trackRef}
+        role="region"
+        aria-roledescription="carousel"
+        aria-label="뉴스 카드 목록"
+        onScroll={handleTrackScroll}
+        onWheel={handleTrackWheel}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
+        onClick={handleTrackClick}
+      >
         {orderedStories.map((story, storyPageIndex) => {
           const pageIndex = storyPageIndex;
           const storyIndex = briefing.stories.findIndex((item) => item.id === story.id) + 1;
           return <article className={`brief-sheet ${digestSize}`} id={`briefing-card-${story.id}`} data-page-index={pageIndex} aria-label={`${storyPageIndex + 1}번째 뉴스, ${story.title}`} tabIndex={-1} key={`sheet-${story.id}`}>
           <header>
             <div><span>ACHIMGYEOL</span><strong>어제 뉴스 · 오늘 아침 한 번에</strong></div>
-            <div><b>{briefing.dateLabel}</b><small>{storyPageIndex + 1} / {orderedStories.length}</small></div>
+            <div className="brief-sheet-card-tools">
+              <button type="button" aria-label={`${storyPageIndex + 1}번째 카드 이전`} onClick={() => moveTo(storyPageIndex - 1)} disabled={storyPageIndex === 0}><ChevronLeft size={15} /></button>
+              <span className="brief-sheet-card-page"><b>{briefing.dateLabel}</b><small>{storyPageIndex + 1} / {orderedStories.length}</small></span>
+              <button type="button" aria-label={`${storyPageIndex + 1}번째 카드 다음`} onClick={() => moveTo(storyPageIndex + 1)} disabled={storyPageIndex >= orderedStories.length - 1}><ChevronRight size={15} /></button>
+            </div>
           </header>
           <div className="brief-sheet-rule"><i /></div>
           <div className="brief-sheet-stories">
@@ -220,11 +292,7 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
         </article>})}
       </div>
       <div className="brief-sheet-progress" aria-hidden="true"><i style={{ width: `${((page + 1) / Math.max(deckPages.length, 1)) * 100}%` }} /></div>
-      <div className="brief-sheet-controls">
-        <button type="button" aria-label="이전 브리핑 카드" onClick={() => moveTo(page - 1)} disabled={page === 0}><ChevronLeft /></button>
-        <div><strong>{page + 1}</strong><span>/ {orderedStories.length}</span><small><Check size={11} /> 옆으로 뉴스 · 아래로 핵심 내용과 원문</small></div>
-        <button type="button" aria-label="다음 브리핑 카드" onClick={() => moveTo(page + 1)} disabled={page >= deckPages.length - 1}><ChevronRight /></button>
-      </div>
+      <p className="brief-sheet-swipe-hint"><Check size={12} /> 모바일은 좌우로 밀고, 컴퓨터는 카드 위에서 드래그하세요.</p>
     </div>
   </section>;
 }
