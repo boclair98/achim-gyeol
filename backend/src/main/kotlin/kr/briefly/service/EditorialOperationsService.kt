@@ -205,7 +205,7 @@ class ReaderExperienceService(
     @Transactional
     fun savePreferences(ownerId: String, categories: Set<String>, digestSize: String, consent: Boolean): ReaderPreference {
         require(digestSize in setOf("compact", "standard", "deep")) { "브리핑 분량이 올바르지 않습니다" }
-        val allowed = setOf("정책", "경제", "사회", "국제", "테크", "생활", "문화", "스포츠", "e스포츠")
+        val allowed = setOf("정책", "경제", "금융", "사회", "국제", "테크", "생활", "문화", "스포츠", "e스포츠")
         val selected = categories.intersect(allowed)
         require(selected.isNotEmpty()) { "관심 분야를 한 개 이상 선택해 주세요" }
         val preference = preferenceRepository.findByOwnerId(ownerId) ?: ReaderPreference(ownerId)
