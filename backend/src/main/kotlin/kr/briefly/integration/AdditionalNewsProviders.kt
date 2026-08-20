@@ -178,6 +178,7 @@ private data class OfficialFeed(val publisher: String, val url: String, val prof
 @ConditionalOnProperty(name = ["app.news.official-rss.enabled"], havingValue = "true", matchIfMissing = true)
 class OfficialRssNewsClient(
     @Value("\${app.news.official-rss.read-timeout-seconds:20}") readTimeoutSeconds: Long,
+    @Value("\${app.news.official-rss.extra-feeds:}") extraFeeds: String,
 ) : NewsProvider {
     private val client = RestClient.builder()
         .requestFactory(SimpleClientHttpRequestFactory().apply {
@@ -190,7 +191,9 @@ class OfficialRssNewsClient(
         OfficialFeed("한국은행", "https://www.bok.or.kr/portal/bbs/B0000552/news.rss?menuNo=200690", setOf("economy", "finance")),
         OfficialFeed("금융위원회", "https://www.fsc.go.kr/about/fsc_bbs_rss/?fid=0111", setOf("policy", "economy", "finance")),
         OfficialFeed("질병관리청", "https://www.kdca.go.kr/bbs/kdca/41/rssList.do?row=50", setOf("society", "life")),
-    )
+        // 경찰청 보도자료는 사건·안전·수사 분야의 1차 발표를 보강한다.
+        OfficialFeed("경찰청", "https://www.police.go.kr/portal/bbs/rss.do?bbsId=B0000011&menuNo=200067", setOf("policy", "society", "life")),
+    ) + parseExtraFeeds(extraFeeds)
 
     override fun search(query: String, display: Int, start: Int): List<CollectedArticle> {
         val zone = ZoneId.of("Asia/Seoul")
@@ -260,6 +263,23 @@ class OfficialRssNewsClient(
         else -> null
     }
 
+    /**
+     * 기관별 RSS 주소는 운영 환경에서 추가할 수 있도록 열어 둔다.
+     * 형식: publisher|url|profile1,profile2;publisher|url|profile3
+     * 예: 통계청|https://example.go.kr/rss|society,policy
+     */
+    private fun parseExtraFeeds(raw: String): List<OfficialFeed> = raw
+        .split(';')
+        .mapNotNull { entry ->
+            val parts = entry.trim().split('|', limit = 3)
+            if (parts.size != 3) return@mapNotNull null
+            val publisher = parts[0].trim()
+            val url = parts[1].trim()
+            val profiles = parts[2].split(',').map(String::trim).filter(String::isNotBlank).toSet()
+            if (publisher.isBlank() || url.isBlank() || profiles.isEmpty() || !url.startsWith("https://")) null
+            else OfficialFeed(publisher, url, profiles)
+        }
+
     private fun parsePublishedAt(value: String, fallbackDate: LocalDate, zone: ZoneId): OffsetDateTime? {
         val raw = value.trim()
         if (raw.isBlank()) return null
@@ -301,3 +321,4 @@ class OfficialRssNewsClient(
         .replace(Regex("\\s+"), " ")
         .trim()
 }
+
