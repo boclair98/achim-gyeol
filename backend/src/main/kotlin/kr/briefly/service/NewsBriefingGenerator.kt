@@ -551,22 +551,15 @@ class NewsBriefingGenerator(
     private fun selectBalancedEditorialStories(candidates: List<EditorialStory>): List<EditorialStory> {
         val comparator = compareByDescending<EditorialStory> { it.importanceScore }
             .thenByDescending { it.clusterRank }
-        val sortedByCategory = candidates.groupBy { it.story.category }
-            .mapValues { (category, stories) -> stories.sortedWith(comparator).take(categoryStoryCap(category)) }
         val limit = maxStories.coerceAtLeast(1)
-        val selected = mutableListOf<EditorialStory>()
-        Category.entries.forEach { category ->
-            sortedByCategory[category]?.firstOrNull()?.let { candidate ->
-                if (canAddToEditorialSelection(selected, candidate)) selected += candidate
-            }
-        }
-        val remaining = candidates
-            .filterNot { candidate -> selected.any { it.story == candidate.story } }
+        // A missing category must never consume a slot or block delivery. Select
+        // globally by importance, then keep the existing safety cap for the
+        // economy/finance pair so a single market theme cannot crowd out all
+        // other public-interest news.
+        return candidates
             .sortedWith(comparator)
-        remaining.forEach { candidate ->
-            if (selected.size < limit && canAddToEditorialSelection(selected, candidate)) selected += candidate
-        }
-        return selected.sortedWith(comparator).take(limit)
+            .filterWithEconomyFinanceCap()
+            .take(limit)
     }
 
     private fun applyEditorialPass(candidates: List<EditorialStory>): EditorialPassOutcome {

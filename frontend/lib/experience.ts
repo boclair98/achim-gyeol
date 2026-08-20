@@ -28,7 +28,7 @@ export type ReaderPreferences = {
 };
 
 export const defaultReaderPreferences: ReaderPreferences = {
-  categories: ["정책", "경제", "사회", "테크"],
+  categories: ["정책", "경제", "금융", "사회", "국제", "테크", "생활", "문화", "스포츠", "e스포츠"],
   deliveryTime: "07:30",
   digestSize: "standard",
   channels: ["알림"],
