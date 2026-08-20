@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type UIEvent as ReactUIEvent, type WheelEvent as ReactWheelEvent } from "react";
 import Link from "next/link";
 import { AlertTriangle, BookOpen, CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight, FileCheck2, Flag, Radar, RefreshCw, Share2, Sparkles, Settings2, ThumbsDown, ThumbsUp, WifiOff } from "lucide-react";
-import { demoBriefing, type Briefing, type Story, type StoryInterest } from "@/lib/briefing";
+import { briefingCategoryOrder, demoBriefing, type Briefing, type BriefingCategory, type Story, type StoryInterest } from "@/lib/briefing";
 import { deviceHeaders } from "@/lib/device";
 import { defaultBrand, type BriefingBrand } from "@/lib/product";
 import { StoryVisual } from "@/components/StoryVisual";
@@ -121,6 +121,7 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
   const [readStories, setReadStories] = useState<number[]>([]);
   const [preferredCategories, setPreferredCategories] = useState<string[]>([]);
   const [digestSize, setDigestSize] = useState<"compact" | "standard" | "deep">("standard");
+  const [activeCategory, setActiveCategory] = useState<BriefingCategory | "전체">("전체");
   const trackRef = useRef<HTMLDivElement>(null);
   const mouseDragRef = useRef<{ startX: number; startScrollLeft: number; moved: boolean } | null>(null);
   const suppressClickRef = useRef(false);
@@ -129,7 +130,15 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
     const personalizedStories = briefing.stories.slice(3).sort((a, b) => Number(preferredCategories.includes(b.category)) - Number(preferredCategories.includes(a.category)));
     return [...coreStories, ...personalizedStories];
   }, [briefing.stories, preferredCategories]);
-  const deckPages = useMemo(() => orderedStories.map((story) => ({ kind: "story" as const, story })), [orderedStories]);
+  const availableCategories = useMemo(
+    () => briefingCategoryOrder.filter((category) => briefing.stories.some((story) => story.category === category)),
+    [briefing.stories],
+  );
+  const visibleStories = useMemo(
+    () => activeCategory === "전체" ? orderedStories : orderedStories.filter((story) => story.category === activeCategory),
+    [activeCategory, orderedStories],
+  );
+  const deckPages = useMemo(() => visibleStories.map((story) => ({ kind: "story" as const, story })), [visibleStories]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -273,6 +282,22 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
   };
 
   return <section className="brief-sheet-section" aria-label="오늘의 아침결 카드 브리핑">
+    <div className="briefing-category-toolbar" aria-label="분야별 뉴스 보기">
+      <div className="briefing-category-heading">
+        <div><span>분야별 브리핑</span><strong>{activeCategory === "전체" ? "모든 분야의 중요한 뉴스" : activeCategory}</strong></div>
+        <small>{visibleStories.length}건 · 분야별 최대 10건</small>
+      </div>
+      <nav className="briefing-category-tabs" aria-label="뉴스 분야">
+        <button type="button" className={activeCategory === "전체" ? "active" : ""} aria-pressed={activeCategory === "전체"} onClick={() => { setActiveCategory("전체"); setPage(0); }}>
+          전체 <b>{briefing.stories.length}</b>
+        </button>
+        {availableCategories.map((category) => (
+          <button key={category} type="button" className={activeCategory === category ? "active" : ""} aria-pressed={activeCategory === category} onClick={() => { setActiveCategory(category); setPage(0); }}>
+            {category} <b>{briefing.stories.filter((story) => story.category === category).length}</b>
+          </button>
+        ))}
+      </nav>
+    </div>
     <div className="brief-sheet-deck" id="briefing-card-deck">
       <div
         className="brief-sheet-track"
@@ -289,7 +314,7 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
         onDragStart={(event) => event.preventDefault()}
         onClick={handleTrackClick}
       >
-        {orderedStories.map((story, storyPageIndex) => {
+        {visibleStories.map((story, storyPageIndex) => {
           const pageIndex = storyPageIndex;
           const storyIndex = briefing.stories.findIndex((item) => item.id === story.id) + 1;
           return <article className={`brief-sheet ${digestSize}`} id={`briefing-card-${story.id}`} data-page-index={pageIndex} aria-label={`${storyPageIndex + 1}번째 뉴스, ${story.title}`} tabIndex={-1} key={`sheet-${story.id}`}>
@@ -297,7 +322,7 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
             <div><span>ACHIMGYEOL</span><strong>어제 뉴스 · 오늘 아침 한 번에</strong></div>
             <div className="brief-sheet-card-tools">
               <button type="button" aria-label={`${storyPageIndex + 1}번째 카드 이전`} onClick={() => moveTo(storyPageIndex - 1)} disabled={storyPageIndex === 0}><ChevronLeft size={15} /></button>
-              <span className="brief-sheet-card-page"><b>{briefing.dateLabel}</b><small>{storyPageIndex + 1} / {orderedStories.length}</small></span>
+              <span className="brief-sheet-card-page"><b>{briefing.dateLabel}</b><small>{storyPageIndex + 1} / {visibleStories.length}</small></span>
               <button type="button" aria-label={`${storyPageIndex + 1}번째 카드 다음`} onClick={() => moveTo(storyPageIndex + 1)} disabled={storyPageIndex >= orderedStories.length - 1}><ChevronRight size={15} /></button>
             </div>
           </header>
