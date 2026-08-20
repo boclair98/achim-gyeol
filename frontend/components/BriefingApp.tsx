@@ -87,7 +87,7 @@ export function BriefingApp() {
 
       <section className="landing-proof" aria-label="서비스 핵심 특징">
         <div><strong>07:30</strong><span>매일 아침 정규 도착</span></div>
-        <div><strong>9개</strong><span>폭넓은 뉴스 분야</span></div>
+        <div><strong>10개</strong><span>폭넓은 뉴스 분야</span></div>
         <div><strong>3줄</strong><span>뉴스별 핵심 요약</span></div>
         <div><strong>0원</strong><span>회원가입 없이 무료</span></div>
       </section>
@@ -99,7 +99,7 @@ export function BriefingApp() {
           <p>설정은 한 번만. 그다음부터는 전날의 중요한 흐름을 매일 아침 가볍게 확인하세요.</p>
         </div>
         <div className="how-grid">
-          <article><div className="how-icon mint"><Clock3 /></div><small>01 · 핵심만</small><h3>중요한 흐름을 골라 드려요</h3><p>정책부터 경제, 사회, 국제, 테크까지 하루를 시작하기 전에 알아야 할 소식을 한곳에 담습니다.</p></article>
+          <article><div className="how-icon mint"><Clock3 /></div><small>01 · 핵심만</small><h3>중요한 흐름을 골라 드려요</h3><p>정책·경제·금융부터 문화·스포츠·e스포츠까지, 하루를 시작하기 전에 알아야 할 소식을 분야별로 담습니다.</p></article>
           <article><div className="how-icon violet"><BookOpen /></div><small>02 · 읽기 쉽게</small><h3>배경부터 의미까지 풀어드려요</h3><p>낯선 용어와 배경은 일상어로 풀고, 무엇이 달라지는지와 관련 원문을 함께 보여드립니다.</p></article>
           <article><div className="how-icon yellow"><Smartphone /></div><small>03 · 매일 아침</small><h3>오전 7시 30분에 받아요</h3><p>휴대폰 알림을 누르면 큰 글자로 정리된 뉴스 전용 화면이 바로 열립니다.</p></article>
         </div>
