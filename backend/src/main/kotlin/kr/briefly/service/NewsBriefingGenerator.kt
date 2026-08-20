@@ -293,6 +293,7 @@ class NewsBriefingGenerator(
     @Value("\${app.pipeline.ai-concurrency:3}") private var aiConcurrency: Int = 3
     @Value("\${app.pipeline.max-stories-per-category:3}") private var maxStoriesPerCategory: Int = 3
     @Value("\${app.pipeline.economy-finance-max-stories-per-category:2}") private var economyFinanceMaxStoriesPerCategory: Int = 2
+    @Value("\${app.pipeline.economy-finance-max-stories-total:3}") private var economyFinanceMaxStoriesTotal: Int = 3
     @Value("\${app.pipeline.max-stories:24}") private var maxStories: Int = 24
     @Value("\${app.pipeline.minimum-importance-score:60}") private var minimumImportanceScore: Int = 60
     @Value("\${app.pipeline.require-human-approval:false}") private var requireHumanApproval: Boolean = false
@@ -552,16 +553,20 @@ class NewsBriefingGenerator(
             .thenByDescending { it.clusterRank }
         val sortedByCategory = candidates.groupBy { it.story.category }
             .mapValues { (category, stories) -> stories.sortedWith(comparator).take(categoryStoryCap(category)) }
-        val categoryLeads = Category.entries.mapNotNull { category -> sortedByCategory[category]?.firstOrNull() }
-        val leadStories = categoryLeads.map { it.story }.toSet()
-        val remaining = candidates.filterNot { it.story in leadStories }.sortedWith(comparator)
         val limit = maxStories.coerceAtLeast(1)
-        val selected = if (categoryLeads.size >= limit) {
-            categoryLeads.sortedWith(comparator).take(limit)
-        } else {
-            categoryLeads + remaining.take(limit - categoryLeads.size)
+        val selected = mutableListOf<EditorialStory>()
+        Category.entries.forEach { category ->
+            sortedByCategory[category]?.firstOrNull()?.let { candidate ->
+                if (canAddToEditorialSelection(selected, candidate)) selected += candidate
+            }
         }
-        return selected.sortedWith(comparator)
+        val remaining = candidates
+            .filterNot { candidate -> selected.any { it.story == candidate.story } }
+            .sortedWith(comparator)
+        remaining.forEach { candidate ->
+            if (selected.size < limit && canAddToEditorialSelection(selected, candidate)) selected += candidate
+        }
+        return selected.sortedWith(comparator).take(limit)
     }
 
     private fun applyEditorialPass(candidates: List<EditorialStory>): EditorialPassOutcome {
@@ -594,8 +599,9 @@ class NewsBriefingGenerator(
             val review = reviewer.review(reviewCandidates, maxStories.coerceAtLeast(1))
             val reviewed = resolveEditorialSelection(byRef, review.orderedRefs)
                 .take(maxStories.coerceAtLeast(1))
+            val reviewedDiverse = reviewed.filterWithEconomyFinanceCap()
             val baselineCoverage = coveragePolicy.evaluate(baseline.map(EditorialStory::story))
-            val reviewedCoverage = coveragePolicy.evaluate(reviewed.map(EditorialStory::story))
+            val reviewedCoverage = coveragePolicy.evaluate(reviewedDiverse.map(EditorialStory::story))
             check(
                 if (baselineCoverage.ready) reviewedCoverage.ready
                 else reviewedCoverage.storyCount >= baselineCoverage.storyCount &&
@@ -609,11 +615,11 @@ class NewsBriefingGenerator(
                 "Morning briefing final editorial pass applied: model={}, durationMs={}, selected={}, excluded={}, rationale={}",
                 reviewer.modelName,
                 elapsed,
-                reviewed.joinToString { it.story.title.take(60) },
+                reviewedDiverse.joinToString { it.story.title.take(60) },
                 review.excludedRefs.joinToString(),
                 review.rationale.take(300),
             )
-            EditorialPassOutcome(reviewed.map(EditorialStory::story), true, reviewer.modelName, elapsed)
+            EditorialPassOutcome(reviewedDiverse.map(EditorialStory::story), true, reviewer.modelName, elapsed)
         }.getOrElse { exception ->
             val elapsed = (System.nanoTime() - startedAt) / 1_000_000
             val reason = (exception.message ?: exception.javaClass.simpleName).take(500)
@@ -647,6 +653,23 @@ class NewsBriefingGenerator(
         )
         else -> maxStoriesPerCategory.coerceAtLeast(1)
     }
+
+    private fun canAddToEditorialSelection(selected: Collection<EditorialStory>, candidate: EditorialStory): Boolean =
+        !isEconomyFinance(candidate.story.category) ||
+            selected.count { isEconomyFinance(it.story.category) } < economyFinanceMaxStoriesTotal.coerceAtLeast(1)
+
+    private fun List<EditorialStory>.filterWithEconomyFinanceCap(): List<EditorialStory> {
+        var economyFinanceCount = 0
+        return filter { candidate ->
+            if (!isEconomyFinance(candidate.story.category)) return@filter true
+            if (economyFinanceCount >= economyFinanceMaxStoriesTotal.coerceAtLeast(1)) return@filter false
+            economyFinanceCount += 1
+            true
+        }
+    }
+
+    private fun isEconomyFinance(category: Category): Boolean =
+        category == Category.ECONOMY || category == Category.FINANCE
 
     private fun limitEditorialCandidatesByCategory(candidates: List<EditorialStory>): List<EditorialStory> {
         val comparator = compareByDescending<EditorialStory> { it.importanceScore }
