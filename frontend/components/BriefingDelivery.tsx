@@ -377,6 +377,11 @@ function OriginalStoryCard({ story, index, reportingEnabled, onBackToCard }: { s
     <div className="brief-sheet-original-rule"><i /></div>
     <div className="brief-sheet-original-kicker"><b>{story.category}</b><span>여러 기사에서 공통으로 확인된 내용</span></div>
     <h3>{story.title}</h3>
+    <section className="reader-context" aria-label="기사 이해를 돕는 배경">
+      <h3><BookOpen size={18} /> 기사 이해를 돕는 배경</h3>
+      <p>{story.backgroundContext || story.oneLineSummary || story.summary}</p>
+      <div><strong>이해 포인트</strong><p>{story.plainExplanation || story.summary}</p></div>
+    </section>
     <div className="brief-sheet-original-body">{paragraphs.map((paragraph, paragraphIndex) => <p className={`brief-sheet-original-paragraph${paragraphIndex === 0 ? " lead" : ""}`} key={`${story.id}-original-${paragraphIndex}`}>{paragraph}</p>)}</div>
     <footer className="brief-sheet-original-sources"><strong>출처</strong><div>{story.sources.map((source, sourceIndex) => <span key={`${source.publisher}-${sourceIndex}`}>[{sourceIndex + 1}] {source.publisher}</span>)}</div></footer>
     {reportingEnabled && <StoryFeedbackPanel storyId={story.id} />}
