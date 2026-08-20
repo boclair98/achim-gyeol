@@ -292,6 +292,17 @@ body {
 .modal-arrival-preview > div:last-child { display: grid; gap: 4px; }
 .modal-arrival-preview strong { font-size: 10px; }
 .modal-arrival-preview span { color: #7c8781; font-size: 8px; }
+.interest-survey { margin-top: 20px; border: 1px solid #bde8d2; border-radius: 15px; background: #f4fcf7; padding: 15px; }
+.interest-survey > header { display: grid; gap: 4px; }
+.interest-survey > header > span { color: #08734b; font-size: 8px; font-weight: 900; letter-spacing: .08em; }
+.interest-survey h3 { margin: 0; color: var(--landing-ink); font-size: 17px; letter-spacing: -.035em; }
+.interest-survey > header p { margin: 0; color: #65736c; font-size: 9px; line-height: 1.55; }
+.interest-choice-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin-top: 13px; }
+.interest-choice { display: inline-flex; align-items: center; justify-content: flex-start; gap: 6px; min-height: 36px; border: 1px solid #cfe2d6; border-radius: 9px; background: white; padding: 0 9px; color: #586760; cursor: pointer; font-size: 9px; font-weight: 800; text-align: left; }
+.interest-choice svg { color: #a9b8af; flex: 0 0 auto; }
+.interest-choice.active { border-color: #18b779; background: #e1f8eb; color: #08734b; }
+.interest-choice.active svg { color: #18b779; }
+.interest-survey-note { margin: 11px 0 0; color: #77857d; font-size: 8px; line-height: 1.5; }
 .subscription-modal .push-controls { grid-template-columns: 1fr; margin-top: 18px; }
 .subscription-modal .push-controls .primary-button { min-height: 50px; border: 0; border-radius: 10px; background: var(--landing-green); color: white; box-shadow: 0 10px 23px rgba(24,183,121,.2); font-size: 12px; }
 .subscription-modal .push-controls .secondary-button.blue { border: 0; background: var(--landing-green-dark); box-shadow: none; }
