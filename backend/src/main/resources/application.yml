@@ -72,6 +72,7 @@ app:
     ai-concurrency: ${NEWS_AI_CONCURRENCY:3}
     max-stories-per-category: ${NEWS_MAX_STORIES_PER_CATEGORY:3}
     economy-finance-max-stories-per-category: ${NEWS_ECONOMY_FINANCE_MAX_STORIES_PER_CATEGORY:2}
+    economy-finance-max-stories-total: ${NEWS_ECONOMY_FINANCE_MAX_STORIES_TOTAL:3}
     max-stories: ${NEWS_MAX_STORIES:24}
     minimum-importance-score: ${NEWS_MINIMUM_IMPORTANCE_SCORE:60}
     minimum-delivery-stories: ${NEWS_MINIMUM_DELIVERY_STORIES:10}
