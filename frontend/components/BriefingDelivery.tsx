@@ -329,7 +329,9 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
           <div className="brief-sheet-rule"><i /></div>
           <div className="brief-sheet-stories">
             <section className="brief-sheet-story">
+              <div className="brief-sheet-section-label brief-sheet-summary-label"><span>상단 · 핵심 요약</span><small>제목부터 중요한 사실과 맥락까지 먼저 읽어보세요.</small></div>
               <CoreStoryCard story={story} index={storyIndex} digestSize={digestSize} />
+              <div className="brief-sheet-section-label brief-sheet-detail-label"><span>하단 · 기사형 상세</span><small>여러 출처에서 확인된 내용을 한 흐름으로 정리했습니다.</small></div>
               <OriginalStoryCard story={story} index={storyIndex} reportingEnabled={reportingEnabled} onBackToCard={openStoryCard} />
               {reportingEnabled && <StoryInterestControls key={`${story.id}-${story.viewerInterest ?? "none"}`} story={story} />}
               <footer><span>서로 다른 출처 {story.sources.length}개 · {story.sources.slice(0, 2).map((source) => source.publisher).join(" · ")}</span><div><button type="button" onClick={() => void shareStory(story)} aria-label="뉴스 공유"><Share2 size={13} /> 공유</button></div></footer>
@@ -397,8 +399,8 @@ function OriginalStoryCard({ story, index, reportingEnabled, onBackToCard }: { s
   const evidenceReady = story.evidenceAvailable && Boolean(story.claims?.length);
   const claims = evidenceReady ? story.claims!.map((claim) => claim.statement) : summaryPoints(story.summary);
   const paragraphs = buildFullSourceArticle(story, claims);
-  return <article className="brief-sheet-original-card" id={`news-${story.id}`} tabIndex={-1} aria-label={`${index}번째 뉴스 원문 정리`}>
-    <header><span>원문 통합 정리</span><time>출처 {story.sources.length}개</time></header>
+  return <article className="brief-sheet-original-card" id={`news-${story.id}`} tabIndex={-1} aria-label={`${index}번째 뉴스 기사형 상세 내용`}>
+    <header><span>기사형 상세 내용</span><time>출처 {story.sources.length}개 · 공통 사실 중심</time></header>
     <div className="brief-sheet-original-rule"><i /></div>
     <div className="brief-sheet-original-kicker"><b>{story.category}</b><span>여러 기사에서 공통으로 확인된 내용</span></div>
     <h3>{story.title}</h3>
