@@ -21,35 +21,35 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ -z "\$TELEGRAM_BOT_TOKEN" || -z "\$TELEGRAM_CHAT_ID" ]]; then
+          if [[ -z "$TELEGRAM_BOT_TOKEN" || -z "$TELEGRAM_CHAT_ID" ]]; then
             echo "Telegram private delivery is not configured." >&2
             exit 1
           fi
 
-          briefing_json="\$(curl --fail-with-body --silent --show-error \
+          briefing_json="$(curl --fail-with-body --silent --show-error \
             --retry 3 --retry-all-errors --max-time 45 \
             "https://morningnews.coders.kr/api/briefings/today")"
 
-          if [[ "\$(jq -r '.productionReady // false' <<< "\$briefing_json")" != "true" ]]; then
+          if [[ "$(jq -r '.productionReady // false' <<< "$briefing_json")" != "true" ]]; then
             echo "Today's briefing is not production-ready." >&2
             exit 1
           fi
 
           send_html() {
-            local text="\$1"
+            local text="$1"
             local response
-            response="\$(curl --fail-with-body --silent --show-error \
+            response="$(curl --fail-with-body --silent --show-error \
               --retry 3 --retry-all-errors --max-time 30 \
-              -X POST "https://api.telegram.org/bot\${TELEGRAM_BOT_TOKEN}/sendMessage" \
-              --data-urlencode "chat_id=\${TELEGRAM_CHAT_ID}" \
+              -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+              --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
               --data-urlencode "parse_mode=HTML" \
-              --data-urlencode "text=\${text}" \
+              --data-urlencode "text=${text}" \
               --data-urlencode "disable_web_page_preview=false" \
               --data-urlencode "protect_content=true")"
-            jq -e '.ok == true' <<< "\$response" >/dev/null
+            jq -e '.ok == true' <<< "$response" >/dev/null
           }
 
-          header="\$(jq -r '
+          header="$(jq -r '
             def esc: tostring | @html;
             "<b>아침결 · 오늘 뉴스 미리보기</b>\n\n" +
             (.dateLabel | esc) + " · " +
@@ -59,17 +59,17 @@ jobs:
             "<b>분야</b> " + (([.stories[].category] | unique | join(" · ")) | esc) + "\n\n" +
             "<a href=\"https://morningnews.coders.kr/briefing/\">웹에서 현재 템플릿으로 전체 보기</a>\n" +
             "<i>이 미리보기는 본인 채팅으로만 발송했습니다.</i>"
-          ' <<< "\$briefing_json")"
-          send_html "\$header"
+          ' <<< "$briefing_json")"
+          send_html "$header"
 
-          stories_json="\$(jq -c '.stories' <<< "\$briefing_json")"
+          stories_json="$(jq -c '.stories' <<< "$briefing_json")"
           for start in 0 3 6; do
-            chunk="\$(jq -c --argjson start "\$start" '.[$start:($start + 3)]' <<< "\$stories_json")"
-            if [[ "\$(jq 'length' <<< "\$chunk")" == "0" ]]; then
+            chunk="$(jq -c --argjson start "$start" '.[$start:($start + 3)]' <<< "$stories_json")"
+            if [[ "$(jq 'length' <<< "$chunk")" == "0" ]]; then
               continue
             fi
 
-            message="\$(jq -r '
+            message="$(jq -r '
               def esc: tostring | @html;
               map(
                 "<b>[" + (.category | esc) + "] " + (.title | esc) + "</b>\n" +
@@ -79,8 +79,8 @@ jobs:
                 (if ((.whatToWatch // "") | tostring) != "" then "<b>다음 확인</b> " + (.whatToWatch | esc) + "\n" else "" end) +
                 (if ((.sources[0].url // "") | tostring) != "" then "<a href=\"" + (.sources[0].url | esc) + "\">원문 보기</a>" else "" end)
               ) | join("\n\n")
-            ' <<< "\$chunk")"
-            send_html "\$message"
+            ' <<< "$chunk")"
+            send_html "$message"
           done
 
           echo "Private Telegram briefing preview delivered to the configured operator chat."
