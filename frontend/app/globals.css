@@ -357,6 +357,11 @@ button:disabled { cursor: wait; opacity: .55; }
 .brief-sheet-stories { display: grid; }
 .brief-sheet-story { padding: 29px 0 27px; }
 .brief-sheet-story + .brief-sheet-story { border-top: 1px solid #d9d0bf; }
+.brief-sheet-section-label { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin: 0 0 9px; }
+.brief-sheet-section-label span { color: #60716a; font-size: 10px; font-weight: 950; letter-spacing: .12em; }
+.brief-sheet-section-label small { color: #8a928d; font-size: 9px; line-height: 1.4; text-align: right; }
+.brief-sheet-detail-label { margin-top: 22px; border-top: 1px solid #c9cdc5; padding-top: 16px; }
+.brief-sheet-detail-label span { color: #1b4d3f; }
 .brief-sheet-meta { display: flex; align-items: center; gap: 8px; }
 .brief-sheet-meta > b { color: #17212a; font-size: 23px; font-weight: 950; }
 .brief-sheet-meta > span { border-radius: 999px; background: #dff4e9; padding: 5px 9px; color: #116d51; font-size: 9px; font-weight: 900; }
@@ -471,6 +476,30 @@ button:disabled { cursor: wait; opacity: .55; }
 .brief-sheet-progress i { display: block; height: 100%; border-radius: inherit; background: #18a872; transition: width .2s ease; }
 .brief-sheet-swipe-hint { display: flex; align-items: center; justify-content: center; gap: 5px; margin: 13px 0 0; color: #718079; font-size: 10px; font-weight: 750; text-align: center; }
 .brief-sheet-swipe-hint svg { flex: 0 0 auto; color: #148660; }
+
+/* Reader finish: a quieter, editorial palette keeps the eye on the story. */
+.focus-reader-shell { background: #e7eae7; color: #17231e; }
+.focus-reader-shell .news-reader-topbar { border-bottom-color: #2b4238; background: rgba(18, 34, 28, .96); color: #f4f5ee; }
+.focus-reader-shell .delivered-brand { color: #f4f5ee; }
+.focus-reader-shell .delivered-brand i { border-color: #f4f5ee; box-shadow: 2px 2px 0 #08140f; }
+.focus-reader-shell .delivered-brand span { color: #a7b9b0; }
+.focus-reader-shell .delivered-settings { border-color: #486057; background: #203b31; color: #f4f5ee; }
+.focus-reader-shell .reader-top-actions > div { border-color: #486057; background: #203b31; }
+.focus-reader-shell .reader-top-actions button { color: #b5c6be; }
+.focus-reader-shell .reader-top-actions button.active { background: #b9df70; color: #14241d; }
+.focus-reader-shell .briefing-availability { border-color: #b3c7bc; background: #f1f4f0; color: #31483d; }
+.focus-reader-shell .briefing-availability.live { border-color: #77a990; background: #dcece3; color: #1c6048; }
+.focus-reader-shell .briefing-history-bar { border-color: #abc1b4; background: #dce7e1; color: #24493b; }
+.focus-reader-shell .briefing-history-bar input { border-color: #a9c0b3; background: #f8faf7; }
+.focus-reader-shell .brief-sheet { border-color: #afb8b1; background: #f4f1e8; box-shadow: 0 24px 66px rgba(26, 39, 33, .22); }
+.focus-reader-shell .brief-sheet-rule { border-color: #42544b; }
+.focus-reader-shell .brief-sheet-core-card { border-color: #bfc7c0; background: #fbfaf6; box-shadow: 0 12px 28px rgba(26, 39, 33, .1); }
+.focus-reader-shell .brief-sheet-original-card { border-color: #bfc4bc; background: #f7f3e9; box-shadow: 0 14px 32px rgba(26, 39, 33, .13); }
+.focus-reader-shell .brief-sheet-original-rule { border-color: #42544b; }
+.focus-reader-shell .brief-sheet-detail-label { border-color: #b7c0b8; }
+.focus-reader-shell .brief-sheet-progress { background: #c5d0c9; }
+.focus-reader-shell .brief-sheet-progress i { background: #27785b; }
+.focus-reader-shell .brief-sheet-swipe-hint { color: #60736a; }
 
 /* Focus reader: put the horizontal briefing cards first and let the cards use the available viewport. */
 .focus-reader-shell .brief-sheet-intro { display: none; }
@@ -642,6 +671,9 @@ button:disabled { cursor: wait; opacity: .55; }
   .brief-sheet > header strong { font-size: 13px; }
   .brief-sheet > header b { font-size: 10px; }
   .brief-sheet-story { padding: 24px 0 22px; }
+.brief-sheet-section-label { display: grid; gap: 3px; margin-bottom: 8px; }
+.brief-sheet-section-label small { text-align: left; font-size: 8px; }
+.brief-sheet-detail-label { margin-top: 18px; padding-top: 13px; }
   .brief-sheet-core-card { padding: 16px 15px 16px; border-radius: 15px; }
   .brief-sheet-core-card h2 { font-size: 25px; line-height: 1.26; }
   .brief-sheet-original-card { margin-top: 14px; padding: 18px 15px 17px; border-radius: 15px; }
