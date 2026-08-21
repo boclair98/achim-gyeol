@@ -95,11 +95,24 @@ class GdeltNewsClientTest {
     }
 
     @Test
-    fun `문화와 스포츠는 국내 검색 공급원에 맡기고 GDELT를 중복 호출하지 않는다`() {
-        val client = GdeltNewsClient("key", "http://127.0.0.1:1", 3, 0.45, 30)
+    fun `문화와 스포츠 검색은 넓어진 GDELT 분야에 매핑한다`() {
+        val queries = mutableListOf<String>()
+        server = HttpServer.create(InetSocketAddress(0), 0).apply {
+            createContext("/api/v2/stories") { exchange ->
+                queries += exchange.requestURI.query.orEmpty()
+                val body = """{"success":true,"data":[]}""".toByteArray()
+                exchange.responseHeaders.add("Content-Type", "application/json")
+                exchange.sendResponseHeaders(200, body.size.toLong())
+                exchange.responseBody.use { it.write(body) }
+            }
+            start()
+        }
+        val client = GdeltNewsClient("key", "http://127.0.0.1:${server!!.address.port}", 3, 0.45, 30)
 
-        assertThat(
-            client.searchForDate("영화 드라마", LocalDate.of(2026, 8, 13), ZoneId.of("Asia/Seoul"), 100, 1),
-        ).isEmpty()
+        client.searchForDate("영화 드라마", LocalDate.of(2026, 8, 13), ZoneId.of("Asia/Seoul"), 100, 1)
+        client.searchForDate("프로야구 경기 결과", LocalDate.of(2026, 8, 13), ZoneId.of("Asia/Seoul"), 100, 1)
+
+        assertThat(queries).anyMatch { it.contains("category=ENTERTAINMENT,CULTURE") }
+        assertThat(queries).anyMatch { it.contains("category=SPORTS") }
     }
 }
