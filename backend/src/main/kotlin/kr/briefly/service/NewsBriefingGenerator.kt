@@ -497,7 +497,7 @@ class NewsBriefingGenerator(
             category = cluster.category,
             title = summary.title.trim().take(300),
             summary = summary.summary.trim().take(1200),
-            oneLineSummary = summary.oneLineSummary.trim().take(400),
+            oneLineSummary = summary.oneLineSummary.trim().take(60),
             whyItMatters = summary.whyItMatters.trim().take(700),
             whatToWatch = summary.whatToWatch.trim().take(500).ifBlank { null },
             verificationStatus = decision.status,

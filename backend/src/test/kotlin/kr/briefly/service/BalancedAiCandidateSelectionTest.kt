@@ -36,9 +36,10 @@ class BalancedAiCandidateSelectionTest {
             (1..6).map { offset -> cluster(category, 100 - offset) }
         }
 
-        val selected = selectBalancedAiCandidates(clusters, maxPerCategory = 2, maxTotal = 18)
+        val maxTotal = Category.entries.size * 2
+        val selected = selectBalancedAiCandidates(clusters, maxPerCategory = 2, maxTotal = maxTotal)
 
-        assertThat(selected).hasSize(18)
+        assertThat(selected).hasSize(maxTotal)
         assertThat(selected.groupingBy(ArticleCluster::category).eachCount().values).containsOnly(2)
     }
 

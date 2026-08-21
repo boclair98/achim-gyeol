@@ -272,6 +272,18 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
     setPage(pageIndex);
   };
 
+  const openStoryDetail = (story: Story, pageIndex: number) => {
+    const article = document.getElementById(`news-${story.id}`);
+    if (!article) return;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const behavior: ScrollBehavior = reduceMotion ? "auto" : "smooth";
+    markRead(story.id, pageIndex);
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#news-${story.id}`);
+    article.scrollIntoView({ behavior, block: "start" });
+    article.focus({ preventScroll: true });
+    if (reportingEnabled) void trackReaderEvent("STORY_DETAIL", briefing.id, story.id);
+  };
+
   const shareStory = async (story: Story) => {
     try {
       const url = `${window.location.origin}/briefing/#news-${story.id}`;
@@ -329,11 +341,10 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
           <div className="brief-sheet-rule"><i /></div>
           <div className="brief-sheet-stories">
             <section className="brief-sheet-story">
-              <div className="brief-sheet-section-label brief-sheet-summary-label"><span>상단 · 핵심 요약</span><small>제목부터 중요한 사실과 맥락까지 먼저 읽어보세요.</small></div>
-              <CoreStoryCard story={story} index={storyIndex} digestSize={digestSize} />
-              <div className="brief-sheet-section-label brief-sheet-detail-label"><span>하단 · 기사형 상세</span><small>여러 출처에서 확인된 내용을 한 흐름으로 정리했습니다.</small></div>
+              <div className="brief-sheet-section-label brief-sheet-summary-label"><span>상단 · 10초 요약</span><small>이미지와 결론, 중요한 사실만 빠르게 확인하세요.</small></div>
+              <CoreStoryCard story={story} index={storyIndex} digestSize={digestSize} onOpenDetail={() => openStoryDetail(story, pageIndex)} />
+              <div className="brief-sheet-section-label brief-sheet-detail-label"><span>하단 · 기사형 상세</span><small>상세 요약부터 배경·근거·다음 확인까지 차례로 읽어보세요.</small></div>
               <OriginalStoryCard story={story} index={storyIndex} reportingEnabled={reportingEnabled} onBackToCard={openStoryCard} />
-              {reportingEnabled && <StoryInterestControls key={`${story.id}-${story.viewerInterest ?? "none"}`} story={story} />}
               <footer><span>서로 다른 출처 {story.sources.length}개 · {story.sources.slice(0, 2).map((source) => source.publisher).join(" · ")}</span><div><button type="button" onClick={() => void shareStory(story)} aria-label="뉴스 공유"><Share2 size={13} /> 공유</button></div></footer>
             </section>
           </div>
@@ -378,38 +389,57 @@ function StoryInterestControls({ story }: { story: Story }) {
   </section>;
 }
 
-function CoreStoryCard({ story, index, digestSize }: { story: Story; index: number; digestSize: "compact" | "standard" | "deep" }) {
+function CoreStoryCard({ story, index, digestSize, onOpenDetail }: { story: Story; index: number; digestSize: "compact" | "standard" | "deep"; onOpenDetail: () => void }) {
   const evidenceReady = story.evidenceAvailable && Boolean(story.claims?.length);
   const verified = story.verificationStatus === "VERIFIED";
-  const claims = evidenceReady ? story.claims!.slice(0, digestSize === "deep" ? 4 : 3) : summaryPoints(story.summary).slice(0, 3).map((statement) => ({ statement, sources: [] }));
+  const factLimit = digestSize === "compact" ? 1 : 2;
+  const claims = evidenceReady ? story.claims!.slice(0, factLimit) : summaryPoints(story.summary).slice(0, factLimit).map((statement) => ({ statement, sources: [] }));
   return <section className={`brief-sheet-core-card ${digestSize}`} aria-label="핵심 내용 카드">
     <div className="brief-sheet-meta"><b>{String(index).padStart(2, "0")}</b><span>{story.category}</span><i className={verified && evidenceReady ? "priority" : ""}>{verified && evidenceReady ? "교차 확인" : "내용 정리"}</i><em className={verified && evidenceReady ? "confirmed" : "checking"}>{story.sources.length}개 출처</em></div>
-    <h2>{story.title}</h2>
     <StoryVisual story={story} variant="card" />
-    <div className="brief-sheet-conclusion"><strong>한 줄 결론</strong><p>{story.oneLineSummary || summaryPoints(story.summary)[0] || story.title}</p></div>
-    <div className="brief-sheet-easy"><strong>이해 포인트</strong><p>{story.plainExplanation || story.summary}</p></div>
-    <strong className="brief-sheet-facts-label">핵심 내용</strong>
+    <h2>{story.title}</h2>
+    <div className="brief-sheet-conclusion"><strong>10초 핵심</strong><p>{story.oneLineSummary || summaryPoints(story.summary)[0] || story.title}</p></div>
+    <strong className="brief-sheet-facts-label">확인된 사실</strong>
     <ul>{claims.map((claim, claimIndex) => <li key={`${story.id}-core-${claimIndex}`}>{claim.statement}</li>)}</ul>
-    <div className="brief-sheet-matter"><strong>왜 중요한가</strong><p>{story.whyItMatters}</p></div>
-    {story.whatToWatch && <div className="brief-sheet-watch"><strong>다음 확인</strong><p>{story.whatToWatch}</p></div>}
+    <a className="brief-sheet-detail-jump" href={`#news-${story.id}`} onClick={(event) => { event.preventDefault(); onOpenDetail(); }}><BookOpen size={18} /><span><strong>아래에서 자세히 읽기</strong><small>상세 요약·배경·근거·중요한 이유 확인</small></span><ChevronRight size={18} /></a>
   </section>;
 }
 
 function OriginalStoryCard({ story, index, reportingEnabled, onBackToCard }: { story: Story; index: number; reportingEnabled: boolean; onBackToCard: (storyId: number) => void }) {
   const evidenceReady = story.evidenceAvailable && Boolean(story.claims?.length);
-  const claims = evidenceReady ? story.claims!.map((claim) => claim.statement) : summaryPoints(story.summary);
-  const paragraphs = buildFullSourceArticle(story, claims);
+  const confirmedPoints = evidenceReady ? story.claims! : summaryPoints(story.summary).map((statement) => ({ statement, sources: [] }));
   return <article className="brief-sheet-original-card" id={`news-${story.id}`} tabIndex={-1} aria-label={`${index}번째 뉴스 기사형 상세 내용`}>
     <header><span>기사형 상세 내용</span><time>출처 {story.sources.length}개 · 공통 사실 중심</time></header>
     <div className="brief-sheet-original-rule"><i /></div>
     <div className="brief-sheet-original-kicker"><b>{story.category}</b><span>여러 기사에서 공통으로 확인된 내용</span></div>
     <h3>{story.title}</h3>
+    <section className="reader-conclusion"><span>한 줄 결론</span><p>{story.oneLineSummary || confirmedPoints[0]?.statement || story.title}</p></section>
+    <section className="reader-detail-summary">
+      <span>상세 요약</span>
+      <h3>무슨 일이 있었나</h3>
+      <p>{story.summary}</p>
+    </section>
     <section className="reader-context" aria-label="기사 이해를 돕는 배경">
       <h3><BookOpen size={18} /> 기사 이해를 돕는 배경</h3>
       <p>{story.backgroundContext || story.oneLineSummary || story.summary}</p>
       <div><strong>이해 포인트</strong><p>{story.plainExplanation || story.summary}</p></div>
     </section>
-    <div className="brief-sheet-original-body">{paragraphs.map((paragraph, paragraphIndex) => <p className={`brief-sheet-original-paragraph${paragraphIndex === 0 ? " lead" : ""}`} key={`${story.id}-original-${paragraphIndex}`}>{paragraph}</p>)}</div>
+    <section className="reader-confirmed">
+      <h3><FileCheck2 size={18} /> 확인된 사실</h3>
+      <ol>{confirmedPoints.map((claim, claimIndex) => <li key={`${claim.statement}-${claimIndex}`}>
+        <p>{claim.statement}</p>
+        {claim.sources.length > 0 && <div className="claim-citations">{claim.sources.map((source) => {
+          const sourceNumber = story.sources.findIndex((item) => item.url === source.url) + 1;
+          return <span key={`${claim.statement}-${source.url}`}>[{sourceNumber}] {source.publisher}</span>;
+        })}</div>}
+      </li>)}</ol>
+      {!evidenceReady && <div className="reader-legacy"><AlertTriangle size={17} /><p>이 뉴스는 아래 원문 목록을 함께 제공합니다.</p></div>}
+    </section>
+    <section className="reader-why"><span>왜 중요한가</span><p>{story.whyItMatters}</p></section>
+    {story.whatToWatch && <section className="reader-watch"><h3><Radar size={17} /> 다음 확인 포인트</h3><p>{story.whatToWatch}</p></section>}
+    {story.uncertainty && <section className="reader-uncertainty"><h3><AlertTriangle size={17} /> 더 지켜볼 내용</h3><p>{story.uncertainty}</p></section>}
+    {reportingEnabled && <StoryInterestControls key={`${story.id}-${story.viewerInterest ?? "none"}`} story={story} />}
+    {Boolean(story.corrections?.length) && <section className="reader-corrections"><h3>정정 이력</h3>{story.corrections!.map((correction) => <p key={correction.correctedAt}><time>{new Date(correction.correctedAt).toLocaleString("ko-KR")}</time>{correction.reason}</p>)}</section>}
     <footer className="brief-sheet-original-sources"><strong>출처</strong><div>{story.sources.map((source, sourceIndex) => <span key={`${source.publisher}-${sourceIndex}`}>[{sourceIndex + 1}] {source.publisher}</span>)}</div></footer>
     {reportingEnabled && <StoryFeedbackPanel storyId={story.id} />}
     <a className="reader-card-return bottom" href={`#briefing-card-${story.id}`} onClick={(event) => { event.preventDefault(); onBackToCard(story.id); }}><ChevronLeft size={16} /> 카드로 돌아가기</a>
@@ -483,29 +513,6 @@ function buildSourceDigest(story: Story, claims: string[]) {
   add(story.whyItMatters);
   add(story.whatToWatch);
   return paragraphs.slice(0, 7);
-}
-
-function buildFullSourceArticle(story: Story, claims: string[]) {
-  const candidates = [
-    story.summary,
-    ...claims,
-    story.backgroundContext,
-    story.plainExplanation,
-    story.whyItMatters,
-    story.whatToWatch,
-    story.uncertainty,
-    ...((story.corrections ?? []).map((correction) => correction.reason)),
-  ];
-  const seen = new Set<string>();
-  const paragraphs: string[] = [];
-  for (const candidate of candidates) {
-    const text = candidate?.replace(/\s+/g, " ").trim();
-    const normalized = normalizeStoryPoint(text ?? "");
-    if (!text || !normalized || seen.has(normalized)) continue;
-    seen.add(normalized);
-    paragraphs.push(text);
-  }
-  return paragraphs.length ? paragraphs : [story.summary];
 }
 
 function buildCommonSourceDigest(story: Story, claims: string[]) {

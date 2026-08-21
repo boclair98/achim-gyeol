@@ -66,7 +66,7 @@ test("browser tab uses the branded mail icon", async ({ page }) => {
   await expect(page.locator('link[rel="icon"]')).toHaveAttribute("href", /mail-icon\.svg$/);
 });
 
-test("news reader shows an available article image and accessible context", async ({ page }) => {
+test("news reader keeps the top card brief and the lower article detailed", async ({ page }) => {
   await page.route("**/api/briefings/today", async (route) => {
     await route.fulfill({
       status: 200,
@@ -85,14 +85,20 @@ test("news reader shows an available article image and accessible context", asyn
           category: "경제",
           title: "기준금리 결정이 생활비에 미치는 영향",
           oneLineSummary: "기준금리는 대출과 예금 금리에 영향을 주는 기준입니다.",
-          summary: "기준금리 결정이 발표됐습니다.",
+          summary: "한국은행이 기준금리 결정을 발표했습니다. 물가와 경기 흐름을 함께 고려한 결과입니다.",
           backgroundContext: "한국은행은 물가와 경기 상황을 살펴 기준금리를 정합니다.",
           plainExplanation: "결정 방향에 따라 대출 이자와 예금 금리의 기준이 달라질 수 있습니다.",
           whyItMatters: "대출 이자와 예금 수익에 영향을 줄 수 있습니다.",
+          whatToWatch: "앞으로 은행권 대출·예금 금리가 어떻게 움직이는지 확인해야 합니다.",
+          uncertainty: "시장 금리가 실제 생활금리에 반영되는 시점은 더 지켜봐야 합니다.",
           verificationStatus: "VERIFIED",
           qualityScore: 90,
           evidenceAvailable: true,
-          claims: [{ statement: "기준금리 결정이 발표됐습니다.", sources: [{ publisher: "한국은행", url: "https://www.bok.or.kr", publishedAt: "2026-08-16T09:00:00+09:00" }] }],
+          claims: [
+            { statement: "기준금리 결정이 발표됐습니다.", sources: [{ publisher: "한국은행", url: "https://www.bok.or.kr", publishedAt: "2026-08-16T09:00:00+09:00" }] },
+            { statement: "물가와 경기 흐름이 결정에 함께 반영됐습니다.", sources: [{ publisher: "한국은행", url: "https://www.bok.or.kr", publishedAt: "2026-08-16T09:00:00+09:00" }] },
+            { statement: "세 번째 확인 사실은 상세 기사에서만 보여야 합니다.", sources: [{ publisher: "한국은행", url: "https://www.bok.or.kr", publishedAt: "2026-08-16T09:00:00+09:00" }] },
+          ],
           sources: [{ publisher: "한국은행", url: "https://www.bok.or.kr", publishedAt: "2026-08-16T09:00:00+09:00", primarySource: true }],
           imageUrl: "/og-v2.png",
           imagePublisher: "한국은행",
@@ -101,7 +107,31 @@ test("news reader shows an available article image and accessible context", asyn
     });
   });
   await page.goto("/briefing/");
-  await expect(page.getByRole("img", { name: /기준금리 결정이 생활비에 미치는 영향 관련 기사 대표 이미지/ }).first()).toBeVisible();
-  await expect(page.getByText("기사 이해를 돕는 배경")).toBeVisible();
-  await expect(page.getByText(/대출 이자와 예금 금리의 기준이 달라질 수 있습니다/).first()).toBeVisible();
+  const storyCard = page.locator("#briefing-card-701");
+  const topSummary = storyCard.locator(".brief-sheet-core-card");
+  await expect(topSummary.getByRole("img", { name: /기준금리 결정이 생활비에 미치는 영향 관련 기사 대표 이미지/ })).toBeVisible();
+  await expect(topSummary.getByText("10초 핵심", { exact: true })).toBeVisible();
+  await expect(topSummary.getByText("확인된 사실", { exact: true })).toBeVisible();
+  await expect(topSummary.locator("ul > li")).toHaveCount(2);
+  await expect(topSummary).not.toContainText("이해 포인트");
+  await expect(topSummary).not.toContainText("왜 중요한가");
+  await expect(topSummary).not.toContainText("다음 확인 포인트");
+  await expect(topSummary).not.toContainText("이 주제가 흥미로웠나요?");
+
+  const article = page.locator("#news-701");
+  await expect(article.getByText("한 줄 결론", { exact: true })).toBeVisible();
+  await expect(article.getByText("상세 요약", { exact: true })).toBeVisible();
+  await expect(article.getByRole("heading", { name: "무슨 일이 있었나" })).toBeVisible();
+  await expect(article).toContainText("한국은행이 기준금리 결정을 발표했습니다. 물가와 경기 흐름을 함께 고려한 결과입니다.");
+  await expect(article.getByText("기사 이해를 돕는 배경")).toBeVisible();
+  await expect(article).toContainText("결정 방향에 따라 대출 이자와 예금 금리의 기준이 달라질 수 있습니다.");
+  await expect(article).toContainText("세 번째 확인 사실은 상세 기사에서만 보여야 합니다.");
+  await expect(article).toContainText("대출 이자와 예금 수익에 영향을 줄 수 있습니다.");
+  await expect(article).toContainText("앞으로 은행권 대출·예금 금리가 어떻게 움직이는지 확인해야 합니다.");
+  await expect(article).toContainText("시장 금리가 실제 생활금리에 반영되는 시점은 더 지켜봐야 합니다.");
+  await expect(article.getByRole("group", { name: "뉴스 관심도 선택" })).toBeVisible();
+
+  await topSummary.getByRole("link", { name: /아래에서 자세히 읽기/ }).click();
+  await expect(page).toHaveURL(/#news-701$/);
+  await expect(article).toBeFocused();
 });
