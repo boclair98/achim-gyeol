@@ -65,18 +65,19 @@ app:
     enabled: ${NEWS_PIPELINE_ENABLED:false}
     generate-on-startup: ${NEWS_GENERATE_ON_STARTUP:false}
     cron: ${NEWS_GENERATION_CRON:0 0 0 * * *}
-    max-candidates-per-category: ${NEWS_MAX_CANDIDATES_PER_CATEGORY:12}
-    max-articles-per-category: ${NEWS_MAX_ARTICLES_PER_CATEGORY:120}
+    max-candidates-per-category: ${NEWS_MAX_CANDIDATES_PER_CATEGORY:14}
+    max-articles-per-category: ${NEWS_MAX_ARTICLES_PER_CATEGORY:160}
     search-max-pages: ${NEWS_SEARCH_MAX_PAGES:5}
     max-ai-candidates: ${NEWS_MAX_AI_CANDIDATES:120}
     ai-concurrency: ${NEWS_AI_CONCURRENCY:4}
-    max-stories-per-category: ${NEWS_MAX_STORIES_PER_CATEGORY:10}
-    economy-finance-max-stories-per-category: ${NEWS_ECONOMY_FINANCE_MAX_STORIES_PER_CATEGORY:10}
-    economy-finance-max-stories-total: ${NEWS_ECONOMY_FINANCE_MAX_STORIES_TOTAL:20}
-    max-stories: ${NEWS_MAX_STORIES:100}
+    max-stories-per-category: ${NEWS_MAX_STORIES_PER_CATEGORY:5}
+    economy-finance-max-stories-per-category: ${NEWS_ECONOMY_FINANCE_MAX_STORIES_PER_CATEGORY:4}
+    economy-finance-max-stories-total: ${NEWS_ECONOMY_FINANCE_MAX_STORIES_TOTAL:8}
+    max-stories: ${NEWS_MAX_STORIES:30}
+    target-stories: ${NEWS_TARGET_STORIES:24}
     minimum-importance-score: ${NEWS_MINIMUM_IMPORTANCE_SCORE:60}
-    minimum-delivery-stories: ${NEWS_MINIMUM_DELIVERY_STORIES:10}
-    minimum-delivery-categories: ${NEWS_MINIMUM_DELIVERY_CATEGORIES:5}
+    minimum-delivery-stories: ${NEWS_MINIMUM_DELIVERY_STORIES:15}
+    minimum-delivery-categories: ${NEWS_MINIMUM_DELIVERY_CATEGORIES:7}
     admin-token: ${BRIEFING_ADMIN_TOKEN:}
     previous-admin-token: ${BRIEFING_ADMIN_TOKEN_PREVIOUS:}
     require-human-approval: ${REQUIRE_HUMAN_APPROVAL:false}

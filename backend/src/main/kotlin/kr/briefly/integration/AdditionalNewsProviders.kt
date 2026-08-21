@@ -137,32 +137,32 @@ class GdeltNewsClient(
     }
 
     private fun profileFor(query: String): GdeltSearchProfile? = when {
-        listOf("국제", "외교", "안보", "미국", "중국", "일본", "유럽", "전쟁", "휴전", "제재", "정상회담", "선거")
+        listOf("국제", "외교", "안보", "미국", "중국", "일본", "유럽", "전쟁", "휴전", "제재", "정상회담", "선거", "중동", "우크라이나", "러시아", "국제기구", "기후 협약", "북한", "한반도", "아시아", "태평양")
             .any(query::contains) -> GdeltSearchProfile(
             "global",
             "POLITICAL,ECONOMIC,CORPORATE,TECHNOLOGY,INFRASTRUCTURE,ENVIRONMENT,HEALTH,INFORMATION," +
                 "Battles,Protests,Riots,Explosions/Remote violence,Violence against civilians,Strategic developments",
         )
-        listOf("금융", "금융위원회", "금융감독원", "한국은행", "은행", "대출", "가계부채", "증시", "환율", "보험", "연금")
+        listOf("금융", "금융위원회", "금융감독원", "한국은행", "은행", "대출", "가계부채", "증시", "환율", "보험", "연금", "가상자산", "코인", "ETF", "공모주", "배당", "채권", "개인신용", "부동산PF", "금융시장")
             .any(query::contains) -> GdeltSearchProfile("finance", "ECONOMIC,CORPORATE")
-        listOf("금리", "물가", "환율", "증시", "금융", "금융위원회", "금융감독원", "한국은행", "은행", "대출", "가계부채", "부동산", "기업", "실적", "수출", "고용", "소비")
+        listOf("금리", "물가", "환율", "증시", "금융", "금융위원회", "금융감독원", "한국은행", "은행", "대출", "가계부채", "부동산", "기업", "실적", "수출", "고용", "소비", "스타트업", "투자", "인수", "제조업", "무역", "관세", "공급망", "자동차", "조선", "반도체")
             .any(query::contains) -> GdeltSearchProfile("economy", "ECONOMIC,CORPORATE")
-        listOf("AI", "인공지능", "반도체", "배터리", "보안", "해킹", "과학", "우주", "바이오", "플랫폼", "모빌리티")
+        listOf("AI", "인공지능", "반도체", "배터리", "보안", "해킹", "과학", "우주", "바이오", "플랫폼", "모빌리티", "로봇", "양자컴퓨팅", "생성형", "클라우드", "데이터센터", "통신", "5G", "6G", "디지털 전환")
             .any(query::contains) -> GdeltSearchProfile("technology", "TECHNOLOGY,INFORMATION,INFRASTRUCTURE")
-        listOf("사건", "사고", "재난", "법원", "수사", "의료", "보건", "교육", "노동", "교통", "안전")
+        listOf("사건", "사고", "재난", "법원", "수사", "의료", "보건", "교육", "노동", "교통", "안전", "저출생", "고령화", "인구", "소비자", "생활법률", "장애인", "돌봄", "임대차", "지역사회")
             .any(query::contains) -> GdeltSearchProfile(
             "society",
             "CRIME,HEALTH,DEMOGRAPHIC,INFRASTRUCTURE,ENVIRONMENT,Violence against civilians,Protests",
         )
-        listOf("날씨", "식품", "리콜", "건강", "질병", "주거", "요금", "환경", "기후", "여행")
+        listOf("날씨", "식품", "리콜", "건강", "질병", "주거", "요금", "환경", "기후", "여행", "재난 안전", "시험", "자격증", "커리어", "워라밸", "육아", "반려동물", "식음료", "생활용품")
             .any(query::contains) -> GdeltSearchProfile("life", "HEALTH,ENVIRONMENT,INFRASTRUCTURE,DEMOGRAPHIC")
-        listOf("프로야구", "축구", "농구", "배구", "국가대표", "올림픽", "월드컵", "스포츠", "경기 결과", "이적", "부상")
+        listOf("프로야구", "축구", "농구", "배구", "국가대표", "올림픽", "월드컵", "스포츠", "경기 결과", "이적", "부상", "테니스", "골프", "격투기", "기록", "우승", "결승", "프로스포츠", "메달")
             .any(query::contains) -> GdeltSearchProfile("sports", "SPORTS")
-        listOf("LCK", "e스포츠", "리그오브레전드", "발로란트", "오버워치")
+        listOf("LCK", "e스포츠", "리그오브레전드", "발로란트", "오버워치", "PUBG", "배틀그라운드", "MSI", "월즈", "게임 업데이트", "패치", "스트리머")
             .any(query::contains) -> GdeltSearchProfile("esports", "SPORTS,TECHNOLOGY")
-        listOf("영화", "드라마", "음악", "공연", "출판", "전시", "방송", "콘텐츠", "문화재")
+        listOf("영화", "드라마", "음악", "공연", "출판", "전시", "방송", "콘텐츠", "문화재", "웹툰", "애니", "패션", "유명인", "K팝", "저작권", "글로벌 투어")
             .any(query::contains) -> GdeltSearchProfile("culture", "ENTERTAINMENT,CULTURE")
-        listOf("정부", "정책", "국회", "법안", "복지", "대통령", "국무회의")
+        listOf("정부", "정책", "국회", "법안", "복지", "대통령", "국무회의", "세제", "예산", "지방자치", "행정", "공공기관", "청년", "연금", "규제")
             .any(query::contains) -> GdeltSearchProfile("policy", "POLITICAL,ECONOMIC,DEMOGRAPHIC")
         else -> null
     }
