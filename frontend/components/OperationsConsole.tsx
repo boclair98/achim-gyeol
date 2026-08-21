@@ -7,7 +7,7 @@ const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 type EditorialState = "AUTO_APPROVED" | "REVIEW" | "APPROVED" | "HELD" | "PUBLISHED";
 type QueueStory = { id: number; order: number; category: string; title: string; oneLineSummary?: string; summary: string; whyItMatters: string; whatToWatch?: string; uncertainty?: string; verificationStatus: string; qualityScore: number; editorialState: EditorialState; claims: number; sources: number };
 type Queue = { editionId: number; briefingDate: string; state: EditorialState; approvedAt?: string; stories: QueueStory[] };
-type Metrics = { activeSubscriptions: number; uniqueReaders30d: number; opens30d: number; completed30d: number; sourceOpens30d: number; shares30d: number; recentDelivered: number; recentFailed: number };
+type Metrics = { activeSubscriptions: number; uniqueReaders30d: number; returningReaders30d: number; loyalReaders7d: number; loyalReaders14d: number; loyalReaders30d: number; averageActiveDays30d: number; opens30d: number; completed30d: number; sourceOpens30d: number; shares30d: number; recentDelivered: number; recentFailed: number };
 type Audit = { id: number; action: string; targetType?: string; targetId?: number; actor: string; detail?: string; createdAt: string };
 type Delivery = { id: number; editionId: number; subscriptionId: number; state: string; attempts: number; lastAttemptAt?: string; deliveredAt?: string; error?: string };
 type BuildStatus = { date?: string; coverageReady: boolean; productionReady: boolean; stories: number; categories: number; minimumStories: number; minimumCategories: number; blockReasons: string[]; generationJob: { state: string; result?: { collectedArticles: number; candidateClusters: number; rejectedCandidates: number; categoryCounts: Record<string, number>; deliveryReady: boolean } } };
@@ -103,6 +103,13 @@ export function OperationsConsole() {
       <div className="ops-metrics">{[
         ["활성 기기", metrics.activeSubscriptions, Smartphone], ["30일 독자", metrics.uniqueReaders30d, Activity], ["브리핑 열람", metrics.opens30d, BarChart3], ["완독", metrics.completed30d, Check], ["원문 이동", metrics.sourceOpens30d, FileCheck2], ["최근 발송", `${metrics.recentDelivered}/${metrics.recentFailed}`, Send],
       ].map(([label, value, Icon]) => { const MetricIcon = Icon as typeof Activity; return <article key={String(label)}><MetricIcon /><span>{String(label)}</span><strong>{String(value)}</strong></article>; })}</div>
+      <div className="ops-retention" aria-label="재방문 독자 지표">
+        <article><span>재방문 독자</span><strong>{metrics.returningReaders30d}</strong><small>최근 30일 중 2일 이상</small></article>
+        <article><span>주 5일 이상</span><strong>{metrics.loyalReaders7d}</strong><small>최근 7일 중 5일 이상</small></article>
+        <article><span>2주 이상 유지</span><strong>{metrics.loyalReaders14d}</strong><small>최근 14일 중 10일 이상</small></article>
+        <article><span>거의 매일</span><strong>{metrics.loyalReaders30d}</strong><small>최근 30일 중 20일 이상</small></article>
+        <article><span>평균 방문일</span><strong>{Number(metrics.averageActiveDays30d ?? 0).toFixed(1)}</strong><small>독자 1명 기준</small></article>
+      </div>
 
       <div className="ops-grid"><section className="ops-queue"><header><span>번호</span><span>발행 후보</span><span>근거</span><span>상태</span></header>{queue.stories.map((story) => <article key={story.id}><b>{String(story.order).padStart(2, "0")}</b><button onClick={() => setSelected(story)}><small>{story.category} · 품질 {story.qualityScore}</small><strong>{story.title}</strong><p>{story.oneLineSummary}</p></button><span>{story.claims}문장<br />{story.sources}출처</span><em className={story.editorialState.toLowerCase()}>{story.editorialState}</em></article>)}</section><aside className="ops-side"><section><header><History /><strong>감사 로그</strong></header>{audits.slice(0, 8).map((item) => <p key={item.id}><time>{new Date(item.createdAt).toLocaleString("ko-KR")}</time><b>{item.action}</b><span>{item.actor}</span></p>)}</section><section><header><Send /><strong>최근 발송 시도</strong></header>{deliveries.slice(0, 8).map((item) => <p key={item.id}><time>에디션 {item.editionId}</time><b>{item.state} · {item.attempts}회</b><span>{item.error || item.deliveredAt || "대기"}</span></p>)}</section></aside></div>
     </section> : <section className="ops-locked"><LockKeyhole /><h2>운영 데이터는 공개하지 않습니다</h2><p>위에서 운영 서버의 관리자 토큰을 입력하면 실제 활성 기기·뉴스 후보·발송 결과가 표시됩니다.</p></section>}
