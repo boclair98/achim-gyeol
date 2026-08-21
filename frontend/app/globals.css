@@ -302,7 +302,8 @@ button:disabled { cursor: wait; opacity: .55; }
 .font-large .brief-sheet-story h2 { font-size: clamp(28px, 3vw, 38px); }
 .font-large .brief-sheet-conclusion { font-size: 16px; }
 .font-large .brief-sheet-story ul { font-size: 14px; }
-.font-large .reader-article li > p,.font-large .reader-why p,.font-large .reader-detail-summary p { font-size: 19px; }
+.font-large .brief-sheet-matter p { font-size: 13px; }
+.font-large .reader-article li > p,.font-large .reader-why p { font-size: 19px; }
 .brief-sheet-section { display: grid; grid-template-columns: minmax(280px, .78fr) minmax(520px, 1.22fr); gap: clamp(36px, 6vw, 88px); max-width: 1280px; margin: 0 auto; padding: 58px 32px 72px; }
 .briefing-history-bar { display: flex; align-items: center; justify-content: space-between; gap: 18px; width: min(1180px, calc(100% - 40px)); margin: 18px auto 0; border: 1px solid #c8dfd4; border-radius: 16px; background: #f4fbf7; padding: 12px 14px; color: #164d3e; }
 .briefing-history-bar > div { display: flex; align-items: center; gap: 9px; min-width: 0; }
@@ -418,12 +419,13 @@ button:disabled { cursor: wait; opacity: .55; }
 .brief-sheet-core-card { position: relative; overflow: hidden; border: 1px solid #d9d0bf; border-top: 4px solid #17212a; border-radius: 18px; background: #fffdf8; padding: 20px 20px 19px; box-shadow: 0 10px 28px rgba(36,43,57,.08); }
 .brief-sheet-core-card::before { position: absolute; top: 3px; left: 20px; width: 72px; height: 3px; background: #1ab17a; content: ""; }
 .brief-sheet-core-card .brief-sheet-meta { border-bottom: 1px solid #ddd4c3; padding-bottom: 11px; }
-.brief-sheet-core-card h2 { margin: 14px 0 0; color: #17212a; font-size: clamp(26px, 3vw, 38px); line-height: 1.22; letter-spacing: -.055em; word-break: keep-all; }
+.brief-sheet-core-card h2 { margin: 10px 0 0; color: #17212a; font-size: clamp(26px, 3vw, 38px); line-height: 1.22; letter-spacing: -.055em; word-break: keep-all; }
 .brief-sheet-core-card .story-visual-card { margin-top: 16px; }
 .brief-sheet-core-card .brief-sheet-conclusion { margin-top: 14px; }
+.brief-sheet-core-card .brief-sheet-easy { margin-top: 12px; }
 .brief-sheet-core-card .brief-sheet-facts-label { margin-top: 18px; }
 .brief-sheet-core-card ul { margin-bottom: 0; }
-.brief-sheet-original-card { margin-top: 18px; scroll-margin-top: 88px; border: 1px solid #d7d0c1; border-radius: 18px; background: #fffaf0; padding: 23px 22px 20px; box-shadow: 0 12px 30px rgba(36,43,57,.1); }
+.brief-sheet-original-card { margin-top: 18px; border: 1px solid #d7d0c1; border-radius: 18px; background: #fffaf0; padding: 23px 22px 20px; box-shadow: 0 12px 30px rgba(36,43,57,.1); }
 .brief-sheet-original-card > header { display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #68706a; }
 .brief-sheet-original-card > header span { color: #17775b; font-size: 10px; font-weight: 950; letter-spacing: .16em; }
 .brief-sheet-original-card > header time { font-size: 10px; font-weight: 800; }
@@ -582,15 +584,6 @@ button:disabled { cursor: wait; opacity: .55; }
 .reader-conclusion { margin-top: 26px; border-left: 5px solid var(--blue); background: #f1f5ff; padding: 17px 20px; }
 .reader-conclusion span, .reader-why span { display: block; color: var(--blue); font-size: 11px; font-weight: 950; }
 .reader-conclusion p { margin: 7px 0 0; font-size: 19px; line-height: 1.65; font-weight: 850; }
-.reader-detail-summary { margin-top: 34px; border-top: 1px solid #dfe2de; padding-top: 27px; }
-.reader-detail-summary > span { color: #116d51; font-size: 10px; font-weight: 950; letter-spacing: .12em; }
-.reader-detail-summary h3,.brief-sheet-original-card .reader-detail-summary h3 { margin: 7px 0 0; font-family: inherit; font-size: 22px; letter-spacing: -.035em; }
-.reader-detail-summary p { margin: 14px 0 0; color: #303b45; font-family: Georgia, "Noto Serif KR", serif; font-size: 17px; line-height: 1.82; white-space: pre-line; }
-.brief-sheet-original-card .brief-sheet-interest { margin-top: 22px; padding: 17px 18px; }
-.brief-sheet-original-card .brief-sheet-interest-copy strong { font-size: 13px; }
-.brief-sheet-original-card .brief-sheet-interest-copy small { font-size: 10px; }
-.brief-sheet-original-card .brief-sheet-interest-actions button { min-height: 40px; font-size: 11px; }
-.brief-sheet-original-card .brief-sheet-interest > p { font-size: 10px; }
 .reader-confirmed { margin-top: 35px; }
 .reader-confirmed h3, .reader-uncertainty h3 { display: flex; align-items: center; gap: 7px; margin: 0; font-size: 15px; }
 .reader-confirmed > ol { display: grid; gap: 17px; margin: 18px 0 0; padding: 0; list-style: none; counter-reset: confirmed; }
@@ -734,15 +727,10 @@ button:disabled { cursor: wait; opacity: .55; }
   .reader-context > div p { font-size: 16px; }
   .reader-conclusion { margin-top: 22px; padding: 15px 16px; }
   .reader-conclusion p { font-size: 18px; line-height: 1.58; }
-  .reader-detail-summary { margin-top: 27px; padding-top: 23px; }
-  .reader-detail-summary h3,.brief-sheet-original-card .reader-detail-summary h3 { font-size: 21px; }
-  .reader-detail-summary p { font-size: 16px; line-height: 1.75; }
   .reader-confirmed { margin-top: 29px; }
   .reader-confirmed li > p { font-size: 16px; line-height: 1.72; }
   .reader-why { margin-top: 29px; padding: 19px; }
   .reader-why p { font-size: 15px; }
-  .brief-sheet-original-card .brief-sheet-interest { padding: 15px; }
-  .brief-sheet-original-card .brief-sheet-interest-actions { grid-template-columns: 1fr; }
   .reader-uncertainty p { font-size: 14px; }
   .reader-sources > div { grid-template-columns: 1fr; }
   .reader-source-item { padding: 13px; font-size: 12px; }
