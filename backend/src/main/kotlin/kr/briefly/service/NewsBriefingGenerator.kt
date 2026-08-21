@@ -275,26 +275,27 @@ class NewsBriefingGenerator(
     private val zone = ZoneId.of("Asia/Seoul")
     private val coverageHoldMarker = "COVERAGE_GATE"
     private val queries = linkedMapOf(
-        Category.POLICY to listOf("정부 정책", "국회 법안", "복지 노동", "주거 교육 정책", "대통령 국무회의", "선거 공공기관 개혁", "청년 지원 연금", "규제 변화 행정"),
-        Category.ECONOMY to listOf("물가 소비 경기", "기업 실적 수출", "고용 산업 생산", "부동산 주택 공급", "유통 자영업 매출", "경제 성장 전망", "스타트업 투자 기업 인수", "반도체 자동차 조선 산업"),
-        Category.FINANCE to listOf("금융위원회 금융감독원", "한국은행 금리", "증시 주식 투자", "환율 외환 시장", "은행 대출 가계부채", "보험 연금 금융상품", "가상자산 코인 규제", "공모주 배당 ETF 투자"),
-        Category.SOCIETY to listOf("사건 사고 재난", "법원 판결 수사", "의료 보건 질병관리청", "교육 노동", "경찰 소방 안전", "교통 안전", "저출생 고령화 인구", "소비자 피해 생활법률"),
-        Category.INTERNATIONAL to listOf("국제 외교 안보", "미국 중국", "일본 유럽", "전쟁 휴전 제재", "정상회담 선거", "세계 경제 무역", "중동 우크라이나 러시아", "국제기구 기후 협약"),
-        Category.TECH to listOf("AI 인공지능", "반도체 배터리", "개인정보 보안 해킹", "과학 우주 바이오", "플랫폼 모빌리티", "로봇 양자컴퓨팅", "게임 기술 신작", "생성형 AI 서비스 출시"),
-        Category.LIFE to listOf("날씨 재난 생활", "식품 리콜 소비자", "건강 질병", "주거 교통 요금", "환경 기후 여행", "재난 안전 행정", "교육 시험 자격증", "직장 커리어 워라밸"),
-        Category.CULTURE to listOf("영화 드라마", "음악 공연", "출판 전시", "방송 콘텐츠", "문화재 수상", "웹툰 게임 애니", "패션 디자인 트렌드", "유명인 인터뷰 화제"),
-        Category.SPORTS to listOf("프로야구 경기 결과", "축구 경기 결과", "농구 배구 경기 결과", "국가대표 경기", "올림픽 월드컵", "스포츠 이적 부상", "테니스 골프 격투기", "스포츠 기록 우승 화제"),
-        Category.ESPORTS to listOf("LCK e스포츠", "리그오브레전드 대회", "발로란트 e스포츠", "오버워치 e스포츠", "e스포츠 경기 결과", "게임 업데이트 패치", "스트리머 대회", "MSI 월즈 국제대회"),
+        Category.POLICY to listOf("정부 정책", "국회 법안", "복지 노동", "주거 교육 정책", "대통령 국무회의", "선거 공공기관 개혁", "청년 지원 연금", "규제 변화 행정", "세제 개편 예산", "지방자치 행정 지역 현안"),
+        Category.ECONOMY to listOf("물가 소비 경기", "기업 실적 수출", "고용 산업 생산", "부동산 주택 공급", "유통 자영업 매출", "경제 성장 전망", "스타트업 투자 기업 인수", "반도체 자동차 조선 산업", "중소기업 제조업", "무역 관세 공급망"),
+        Category.FINANCE to listOf("금융위원회 금융감독원", "한국은행 금리", "증시 주식 투자", "환율 외환 시장", "은행 대출 가계부채", "보험 연금 금융상품", "가상자산 코인 규제", "공모주 배당 ETF 투자", "채권 금리 금융시장", "개인신용 대출 부동산PF"),
+        Category.SOCIETY to listOf("사건 사고 재난", "법원 판결 수사", "의료 보건 질병관리청", "교육 노동", "경찰 소방 안전", "교통 안전", "저출생 고령화 인구", "소비자 피해 생활법률", "장애인 복지 돌봄", "주거 임대차 지역사회"),
+        Category.INTERNATIONAL to listOf("국제 외교 안보", "미국 중국", "일본 유럽", "전쟁 휴전 제재", "정상회담 선거", "세계 경제 무역", "중동 우크라이나 러시아", "국제기구 기후 협약", "북한 한반도 외교", "아시아 태평양 정상회의"),
+        Category.TECH to listOf("AI 인공지능", "반도체 배터리", "개인정보 보안 해킹", "과학 우주 바이오", "플랫폼 모빌리티", "로봇 양자컴퓨팅", "게임 기술 신작", "생성형 AI 서비스 출시", "클라우드 데이터센터", "통신 5G 6G 디지털 전환"),
+        Category.LIFE to listOf("날씨 재난 생활", "식품 리콜 소비자", "건강 질병", "주거 교통 요금", "환경 기후 여행", "재난 안전 행정", "교육 시험 자격증", "직장 커리어 워라밸", "육아 반려동물 가족", "식음료 유통 생활용품"),
+        Category.CULTURE to listOf("영화 드라마", "음악 공연", "출판 전시", "방송 콘텐츠", "문화재 수상", "웹툰 게임 애니", "패션 디자인 트렌드", "유명인 인터뷰 화제", "K팝 글로벌 투어", "문화 산업 저작권"),
+        Category.SPORTS to listOf("프로야구 경기 결과", "축구 경기 결과", "농구 배구 경기 결과", "국가대표 경기", "올림픽 월드컵", "스포츠 이적 부상", "테니스 골프 격투기", "스포츠 기록 우승 화제", "프로스포츠 감독 선수", "국제대회 메달 경기 일정"),
+        Category.ESPORTS to listOf("LCK e스포츠", "리그오브레전드 대회", "발로란트 e스포츠", "오버워치 e스포츠", "e스포츠 경기 결과", "게임 업데이트 패치", "스트리머 대회", "MSI 월즈 국제대회", "PUBG 배틀그라운드 e스포츠", "e스포츠 선수 이적 팀 소식"),
     )
-    @Value("\${app.pipeline.max-candidates-per-category:9}") private var maxCandidatesPerCategory: Int = 9
-    @Value("\${app.pipeline.max-articles-per-category:120}") private var maxArticlesPerCategory: Int = 120
+    @Value("\${app.pipeline.max-candidates-per-category:14}") private var maxCandidatesPerCategory: Int = 14
+    @Value("\${app.pipeline.max-articles-per-category:160}") private var maxArticlesPerCategory: Int = 160
     @Value("\${app.pipeline.search-max-pages:5}") private var searchMaxPages: Int = 5
-    @Value("\${app.pipeline.max-ai-candidates:36}") private var maxAiCandidates: Int = 36
+    @Value("\${app.pipeline.max-ai-candidates:120}") private var maxAiCandidates: Int = 120
     @Value("\${app.pipeline.ai-concurrency:3}") private var aiConcurrency: Int = 3
-    @Value("\${app.pipeline.max-stories-per-category:3}") private var maxStoriesPerCategory: Int = 3
-    @Value("\${app.pipeline.economy-finance-max-stories-per-category:2}") private var economyFinanceMaxStoriesPerCategory: Int = 2
-    @Value("\${app.pipeline.economy-finance-max-stories-total:3}") private var economyFinanceMaxStoriesTotal: Int = 3
-    @Value("\${app.pipeline.max-stories:24}") private var maxStories: Int = 24
+    @Value("\${app.pipeline.max-stories-per-category:5}") private var maxStoriesPerCategory: Int = 5
+    @Value("\${app.pipeline.economy-finance-max-stories-per-category:4}") private var economyFinanceMaxStoriesPerCategory: Int = 4
+    @Value("\${app.pipeline.economy-finance-max-stories-total:8}") private var economyFinanceMaxStoriesTotal: Int = 8
+    @Value("\${app.pipeline.max-stories:30}") private var maxStories: Int = 30
+    @Value("\${app.pipeline.target-stories:24}") private var targetStories: Int = 24
     @Value("\${app.pipeline.minimum-importance-score:60}") private var minimumImportanceScore: Int = 60
     @Value("\${app.pipeline.require-human-approval:false}") private var requireHumanApproval: Boolean = false
     @Synchronized
@@ -592,7 +593,7 @@ class NewsBriefingGenerator(
             val review = reviewer.review(reviewCandidates, maxStories.coerceAtLeast(1))
             val reviewed = resolveEditorialSelection(byRef, review.orderedRefs)
                 .take(maxStories.coerceAtLeast(1))
-            val reviewedDiverse = reviewed.filterWithEconomyFinanceCap()
+            val reviewedDiverse = ensureEditorialTarget(reviewed, baseline)
             val baselineCoverage = coveragePolicy.evaluate(baseline.map(EditorialStory::story))
             val reviewedCoverage = coveragePolicy.evaluate(reviewedDiverse.map(EditorialStory::story))
             check(
@@ -659,6 +660,19 @@ class NewsBriefingGenerator(
             economyFinanceCount += 1
             true
         }
+    }
+
+    private fun ensureEditorialTarget(
+        reviewed: List<EditorialStory>,
+        baseline: List<EditorialStory>,
+    ): List<EditorialStory> {
+        val target = targetStories
+            .coerceAtLeast(coveragePolicy.minimumStories)
+            .coerceAtMost(maxStories.coerceAtLeast(1))
+        val candidates = (reviewed + baseline.filterNot(reviewed::contains))
+            .distinct()
+            .filterWithEconomyFinanceCap()
+        return candidates.take(target)
     }
 
     private fun isEconomyFinance(category: Category): Boolean =
