@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.time.OffsetDateTime
+import java.time.ZoneId
 
 data class EditorialStoryItem(
     val id: Long,
@@ -47,6 +48,11 @@ data class CorrectionInput(val afterText: String, val reason: String)
 data class OperationMetric(
     val activeSubscriptions: Int,
     val uniqueReaders30d: Int,
+    val returningReaders30d: Int,
+    val loyalReaders7d: Int,
+    val loyalReaders14d: Int,
+    val loyalReaders30d: Int,
+    val averageActiveDays30d: Double,
     val opens30d: Int,
     val completed30d: Int,
     val sourceOpens30d: Int,
@@ -161,11 +167,22 @@ class EditorialOperationsService(
     fun metrics(): OperationMetric {
         val since = OffsetDateTime.now().minusDays(30)
         val events = eventRepository.findAllByCreatedAtAfter(since)
+        val activeDaysByReader = events.asSequence()
+            .filter { it.type == ReaderEventType.BRIEFING_OPEN }
+            .groupBy(ReaderEvent::actorHash)
+            .mapValues { (_, readerEvents) ->
+                readerEvents.map { it.createdAt.atZoneSameInstant(ZoneId.of("Asia/Seoul")).toLocalDate() }.toSet().size
+            }
         val latestEdition = editionRepository.findFirstByOrderByBriefingDateDesc()
         val editionId = latestEdition?.id
         return OperationMetric(
             activeSubscriptions = pushRepository.countByActiveTrue().toInt(),
-            uniqueReaders30d = events.map(ReaderEvent::actorHash).distinct().size,
+            uniqueReaders30d = activeDaysByReader.size,
+            returningReaders30d = activeDaysByReader.count { it.value >= 2 },
+            loyalReaders7d = activeDaysByReader.count { it.value >= 5 },
+            loyalReaders14d = activeDaysByReader.count { it.value >= 10 },
+            loyalReaders30d = activeDaysByReader.count { it.value >= 20 },
+            averageActiveDays30d = activeDaysByReader.values.takeIf { it.isNotEmpty() }?.average()?.let { kotlin.math.round(it * 10) / 10.0 } ?: 0.0,
             opens30d = events.count { it.type == ReaderEventType.BRIEFING_OPEN },
             completed30d = events.count { it.type == ReaderEventType.COMPLETE },
             sourceOpens30d = events.count { it.type == ReaderEventType.SOURCE_OPEN },
@@ -205,7 +222,7 @@ class ReaderExperienceService(
     @Transactional
     fun savePreferences(ownerId: String, categories: Set<String>, digestSize: String, consent: Boolean): ReaderPreference {
         require(digestSize in setOf("compact", "standard", "deep")) { "브리핑 분량이 올바르지 않습니다" }
-        val allowed = setOf("정책", "경제", "금융", "사회", "국제", "테크", "생활", "문화", "스포츠", "e스포츠")
+        val allowed = setOf("정책", "경제", "사회", "국제", "테크", "생활", "문화", "스포츠", "e스포츠")
         val selected = categories.intersect(allowed)
         require(selected.isNotEmpty()) { "관심 분야를 한 개 이상 선택해 주세요" }
         val preference = preferenceRepository.findByOwnerId(ownerId) ?: ReaderPreference(ownerId)
