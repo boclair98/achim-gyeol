@@ -7,6 +7,7 @@ import kr.briefly.repository.PushDeliveryAttemptRepository
 import kr.briefly.repository.ReaderEventRepository
 import kr.briefly.domain.PushDeliveryAttempt
 import kr.briefly.domain.DeliveryState
+import kr.briefly.repository.BriefingEditionRepository
 import nl.martijndwars.webpush.Notification
 import nl.martijndwars.webpush.Encoding
 import nl.martijndwars.webpush.PushService
@@ -94,6 +95,7 @@ internal val allDeliveryWeekdays: Set<Int> = (0..6).toSet()
 internal val allDeliveryWeekdaysValue: String = allDeliveryWeekdays.joinToString(",")
 internal val fixedDeliveryTime: LocalTime = LocalTime.of(7, 30)
 internal val lastDeliveryTime: LocalTime = LocalTime.of(8, 0)
+internal val fixedFinalizationTime: LocalTime = LocalTime.of(7, 0)
 internal fun pushStatusIsRetryable(status: Int): Boolean = status == 408 || status == 429 || status >= 500
 internal fun pushEndpointIsInvalid(status: Int): Boolean = status in setOf(400, 401, 403, 404, 410)
 internal data class VapidKeyResolution(val publicKey: String, val configuredPublicKeyMatchesPrivateKey: Boolean)
@@ -121,10 +123,27 @@ private fun decodeBase64Url(value: String): ByteArray {
 internal fun deliveryIsDue(current: LocalTime, scheduled: LocalTime = fixedDeliveryTime): Boolean =
     !current.isBefore(scheduled) && !current.isAfter(lastDeliveryTime)
 
+internal fun parseFinalizationTime(value: String): LocalTime =
+    runCatching { LocalTime.parse(value.trim()) }.getOrDefault(fixedFinalizationTime)
+
+internal fun finalizationIsComplete(
+    lastVerifiedAt: OffsetDateTime?,
+    now: OffsetDateTime,
+    finalizationTime: LocalTime = fixedFinalizationTime,
+    zone: ZoneId = ZoneId.of("Asia/Seoul"),
+): Boolean {
+    val cutoff = now.atZoneSameInstant(zone).toLocalDate()
+        .atTime(finalizationTime)
+        .atZone(zone)
+        .toInstant()
+    return lastVerifiedAt?.toInstant()?.let { !it.isBefore(cutoff) } == true
+}
+
 @Service
 class WebPushService(
     private val repository: PushSubscriptionRepository,
     private val briefingService: BriefingService,
+    private val briefingEditionRepository: BriefingEditionRepository,
     private val metricsService: SubscriptionMetricsService,
     private val deliveryAttemptRepository: PushDeliveryAttemptRepository,
     @Value("\${app.push.enabled:false}") private val enabled: Boolean,
@@ -132,10 +151,12 @@ class WebPushService(
     @Value("\${app.push.private-key:}") private val privateKey: String,
     @Value("\${app.push.subject:https://morningnews.coders.kr}") private val subject: String,
     @Value("\${app.push.public-url:https://morningnews.coders.kr}") private val publicUrl: String,
+    @Value("\${app.pipeline.finalization-time:07:00}") finalizationTimeValue: String,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val mapper = jacksonObjectMapper()
     private val vapidKey = runCatching { resolveVapidKey(publicKey, privateKey) }.getOrNull()
+    private val finalizationTime = parseFinalizationTime(finalizationTimeValue)
 
     init {
         if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) Security.addProvider(BouncyCastleProvider())
@@ -227,9 +248,15 @@ class WebPushService(
             logger.info("Push delivery skipped: briefing is not available")
             return PushDeliverySummary("BRIEFING_UNAVAILABLE", repository.findAllByActiveTrue().size, 0, 0, 0, "발송할 브리핑이 없습니다.")
         }
-        if (briefing.briefingDate != LocalDate.now(ZoneId.of("Asia/Seoul")) || !briefing.productionReady) {
+        val today = LocalDate.now(ZoneId.of("Asia/Seoul"))
+        if (briefing.briefingDate != today || !briefing.productionReady) {
             logger.info("Push delivery skipped: today's pipeline-generated briefing is not ready")
             return PushDeliverySummary("BRIEFING_NOT_READY", repository.findAllByActiveTrue().size, 0, 0, 0, "오늘의 실제 브리핑이 아직 준비되지 않았습니다.")
+        }
+        val edition = briefingEditionRepository.findByBriefingDate(today)
+        if (!finalizationIsComplete(edition?.lastVerifiedAt, OffsetDateTime.now(ZoneId.of("Asia/Seoul")), finalizationTime)) {
+            logger.info("Push delivery skipped: the final morning briefing pass has not completed yet (cutoff={})", finalizationTime)
+            return PushDeliverySummary("BRIEFING_FINALIZING", repository.findAllByActiveTrue().size, 0, 0, 0, "최종 브리핑 검토가 끝난 뒤 발송합니다.")
         }
         val subscriptions = repository.findAllByActiveTrue()
         var due = 0

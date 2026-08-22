@@ -747,12 +747,31 @@ internal fun newsSourceFamily(url: String): String = runCatching {
 class NewsGenerationScheduler(private val generationJob: MorningGenerationJob) {
     private val log = LoggerFactory.getLogger(javaClass)
 
-    @Scheduled(cron = "\${app.pipeline.cron:0 0 0 * * *}", zone = "Asia/Seoul")
-    fun generateEveryMorning() {
+    /**
+     * 기사 공급원은 새벽 동안 매시 다시 확인한다. 각 라운드는 같은 날짜의
+     * 브리핑을 강제로 새로 만들어, 늦게 올라온 기사와 일시적인 공급원 오류를
+     * 다음 라운드에서 보완할 수 있게 한다.
+     */
+    @Scheduled(cron = "\${app.pipeline.collection-cron:0 0 0-6 * * *}", zone = "Asia/Seoul")
+    fun collectHourly() {
         val briefingDate = LocalDate.now(ZoneId.of("Asia/Seoul"))
-        runCatching { generationJob.start(briefingDate) }
-            .onSuccess { log.info("Scheduled morning briefing generation submitted: {}", it) }
-            .onFailure { log.error("Scheduled morning briefing generation could not be submitted", it) }
+        submit(briefingDate, force = true, phase = "hourly collection")
+    }
+
+    /**
+     * 07:30 발송 전에 마지막으로 전체 수집·검증·편집을 수행한다. 발송기는
+     * 이 라운드 이후 저장된 브리핑만 정기 발송 대상으로 인정한다.
+     */
+    @Scheduled(cron = "\${app.pipeline.finalization-cron:0 0 7 * * *}", zone = "Asia/Seoul")
+    fun finalizeMorningBriefing() {
+        val briefingDate = LocalDate.now(ZoneId.of("Asia/Seoul"))
+        submit(briefingDate, force = true, phase = "finalization")
+    }
+
+    private fun submit(briefingDate: LocalDate, force: Boolean, phase: String) {
+        runCatching { generationJob.start(briefingDate, force = force) }
+            .onSuccess { log.info("Scheduled morning briefing {} submitted: {}", phase, it) }
+            .onFailure { log.error("Scheduled morning briefing {} could not be submitted", phase, it) }
     }
 }
 
