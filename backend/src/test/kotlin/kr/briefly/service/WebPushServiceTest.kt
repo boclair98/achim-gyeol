@@ -3,6 +3,8 @@ package kr.briefly.service
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import nl.martijndwars.webpush.Encoding
+import java.time.OffsetDateTime
+import java.time.ZoneOffset
 import java.time.LocalTime
 
 class WebPushServiceTest {
@@ -37,6 +39,24 @@ class WebPushServiceTest {
         assertThat(deliveryIsDue(LocalTime.of(7, 48), scheduled)).isTrue()
         assertThat(deliveryIsDue(LocalTime.of(8, 0), scheduled)).isTrue()
         assertThat(deliveryIsDue(LocalTime.of(8, 1), scheduled)).isFalse()
+    }
+
+    @Test
+    fun `regular delivery waits for the final morning pass`() {
+        val zone = java.time.ZoneId.of("Asia/Seoul")
+        val beforeFinalization = OffsetDateTime.of(2026, 8, 22, 6, 59, 59, 0, ZoneOffset.ofHours(9))
+        val afterFinalization = OffsetDateTime.of(2026, 8, 22, 7, 0, 1, 0, ZoneOffset.ofHours(9))
+        val now = OffsetDateTime.of(2026, 8, 22, 7, 30, 0, 0, ZoneOffset.ofHours(9))
+
+        assertThat(finalizationIsComplete(beforeFinalization, now, fixedFinalizationTime, zone)).isFalse()
+        assertThat(finalizationIsComplete(afterFinalization, now, fixedFinalizationTime, zone)).isTrue()
+        assertThat(finalizationIsComplete(null, now, fixedFinalizationTime, zone)).isFalse()
+    }
+
+    @Test
+    fun `invalid finalization time falls back to the safe seven o'clock cutoff`() {
+        assertThat(parseFinalizationTime("not-a-time")).isEqualTo(fixedFinalizationTime)
+        assertThat(parseFinalizationTime("07:15")).isEqualTo(LocalTime.of(7, 15))
     }
 
     @Test
