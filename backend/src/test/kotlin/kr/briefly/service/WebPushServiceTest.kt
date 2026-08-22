@@ -44,8 +44,8 @@ class WebPushServiceTest {
     @Test
     fun `regular delivery waits for the final morning pass`() {
         val zone = java.time.ZoneId.of("Asia/Seoul")
-        val beforeFinalization = OffsetDateTime.of(2026, 8, 22, 6, 59, 59, 0, ZoneOffset.ofHours(9))
-        val afterFinalization = OffsetDateTime.of(2026, 8, 22, 7, 0, 1, 0, ZoneOffset.ofHours(9))
+        val beforeFinalization = OffsetDateTime.of(2026, 8, 22, 5, 59, 59, 0, ZoneOffset.ofHours(9))
+        val afterFinalization = OffsetDateTime.of(2026, 8, 22, 6, 0, 1, 0, ZoneOffset.ofHours(9))
         val now = OffsetDateTime.of(2026, 8, 22, 7, 30, 0, 0, ZoneOffset.ofHours(9))
 
         assertThat(finalizationIsComplete(beforeFinalization, now, fixedFinalizationTime, zone)).isFalse()
@@ -54,7 +54,7 @@ class WebPushServiceTest {
     }
 
     @Test
-    fun `invalid finalization time falls back to the safe seven o'clock cutoff`() {
+    fun `invalid finalization time falls back to the safe six o'clock cutoff`() {
         assertThat(parseFinalizationTime("not-a-time")).isEqualTo(fixedFinalizationTime)
         assertThat(parseFinalizationTime("07:15")).isEqualTo(LocalTime.of(7, 15))
     }

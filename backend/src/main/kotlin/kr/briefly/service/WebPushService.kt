@@ -95,7 +95,7 @@ internal val allDeliveryWeekdays: Set<Int> = (0..6).toSet()
 internal val allDeliveryWeekdaysValue: String = allDeliveryWeekdays.joinToString(",")
 internal val fixedDeliveryTime: LocalTime = LocalTime.of(7, 30)
 internal val lastDeliveryTime: LocalTime = LocalTime.of(8, 0)
-internal val fixedFinalizationTime: LocalTime = LocalTime.of(7, 0)
+internal val fixedFinalizationTime: LocalTime = LocalTime.of(6, 0)
 internal fun pushStatusIsRetryable(status: Int): Boolean = status == 408 || status == 429 || status >= 500
 internal fun pushEndpointIsInvalid(status: Int): Boolean = status in setOf(400, 401, 403, 404, 410)
 internal data class VapidKeyResolution(val publicKey: String, val configuredPublicKeyMatchesPrivateKey: Boolean)
@@ -254,9 +254,20 @@ class WebPushService(
             return PushDeliverySummary("BRIEFING_NOT_READY", repository.findAllByActiveTrue().size, 0, 0, 0, "오늘의 실제 브리핑이 아직 준비되지 않았습니다.")
         }
         val edition = briefingEditionRepository.findByBriefingDate(today)
-        if (!finalizationIsComplete(edition?.lastVerifiedAt, OffsetDateTime.now(ZoneId.of("Asia/Seoul")), finalizationTime)) {
-            logger.info("Push delivery skipped: the final morning briefing pass has not completed yet (cutoff={})", finalizationTime)
-            return PushDeliverySummary("BRIEFING_FINALIZING", repository.findAllByActiveTrue().size, 0, 0, 0, "최종 브리핑 검토가 끝난 뒤 발송합니다.")
+        val finalizationComplete = finalizationIsComplete(
+            edition?.lastVerifiedAt,
+            OffsetDateTime.now(ZoneId.of("Asia/Seoul")),
+            finalizationTime,
+        )
+        if (!finalizationComplete) {
+            val currentTime = OffsetDateTime.now(ZoneId.of("Asia/Seoul")).toLocalTime()
+            if (!deliveryIsDue(currentTime)) {
+                logger.info("Push delivery skipped: the final morning briefing pass has not completed yet (cutoff={})", finalizationTime)
+                return PushDeliverySummary("BRIEFING_FINALIZING", repository.findAllByActiveTrue().size, 0, 0, 0, "최종 브리핑 검토가 끝난 뒤 발송합니다.")
+            }
+            // 정시성을 우선한다. 07:30까지 최종 라운드가 끝나지 않으면
+            // 직전 시간대에 완료된 검증본을 보내고, 늦은 최종화는 웹 화면에 반영한다.
+            logger.error("Final morning briefing pass missed the cutoff; sending the latest completed edition on time")
         }
         val subscriptions = repository.findAllByActiveTrue()
         var due = 0
@@ -302,12 +313,12 @@ class WebPushService(
             }
         }
         return PushDeliverySummary(
-            "COMPLETED",
+            if (finalizationComplete) "COMPLETED" else "COMPLETED_WITH_DEADLINE_FALLBACK",
             subscriptions.size,
             due,
             delivered,
             failed,
-            "오늘 브리핑 발송 검사를 완료했습니다.",
+            if (finalizationComplete) "오늘 브리핑 발송 검사를 완료했습니다." else "최종화가 지연되어 마지막 완료본을 정시에 발송했습니다.",
             failureReasons,
         )
     }
