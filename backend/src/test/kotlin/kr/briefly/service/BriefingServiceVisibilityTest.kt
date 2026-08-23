@@ -64,7 +64,7 @@ class BriefingServiceVisibilityTest {
     }
 
     @Test
-    fun `검증 카드가 없는 날도 생성 완료 안내 브리핑을 공개한다`() {
+    fun `검증 카드가 없는 날은 안내만 공개하고 발송 준비로 표시하지 않는다`() {
         val date = LocalDate.of(2026, 8, 13)
         val emptyEdition = BriefingEdition(
             briefingDate = date,
@@ -78,7 +78,7 @@ class BriefingServiceVisibilityTest {
         val result = service.latest()
 
         assertThat(result.stories).isEmpty()
-        assertThat(result.productionReady).isTrue()
+        assertThat(result.productionReady).isFalse()
     }
 
     private fun edition(date: LocalDate, state: EditorialState, id: Long): BriefingEdition {
