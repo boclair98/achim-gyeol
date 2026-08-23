@@ -81,6 +81,13 @@ class WebPushServiceTest {
     }
 
     @Test
+    fun `forced delivery tolerates a subscription disappearing before dispatch`() {
+        assertThat(forcedDispatchCountIsSafe(expected = 15, current = 14)).isTrue()
+        assertThat(forcedDispatchCountIsSafe(expected = 14, current = 15)).isFalse()
+        assertThat(forcedDispatchCountIsSafe(expected = 0, current = 0)).isTrue()
+    }
+
+    @Test
     fun `VAPID public key is derived from the configured private key`() {
         // P-256 scalar 1 maps to the standard curve generator point.
         val privateKey = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE"

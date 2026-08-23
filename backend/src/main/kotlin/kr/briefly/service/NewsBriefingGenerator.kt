@@ -49,6 +49,7 @@ data class GenerationResult(
     val editorialModel: String? = null,
     val editorialDurationMillis: Long = 0,
     val editorialFallbackReason: String? = null,
+    val generationWarnings: List<String> = emptyList(),
 )
 
 data class ArticleCluster(val category: Category, val articles: List<CollectedArticle>, val rank: Int)
@@ -325,10 +326,11 @@ class NewsBriefingGenerator(
         val summarizer = aiSummarizer ?: error("OpenAI API 키가 설정되지 않았습니다")
         val coverageDate = briefingDate.minusDays(1)
         var collectedCount = 0
+        val providerWarnings = mutableListOf<String>()
         val clusters = deduplicateClusters(queries.flatMap { (category, categoryQueries) ->
             val articles = selectBalancedCoverageArticles(
                 queryResults = categoryQueries.map { query ->
-                    newsProviders.flatMap { provider -> collectCoverageArticles(provider, query, coverageDate) }
+                    newsProviders.flatMap { provider -> collectCoverageArticles(provider, query, coverageDate, providerWarnings) }
                 },
                 maxTotal = maxArticlesPerCategory,
             )
@@ -414,6 +416,11 @@ class NewsBriefingGenerator(
             stories = stories,
             rejectedCandidates = (aiCandidates.size - editorialStories.size).coerceAtLeast(0),
             coverage = coverage,
+            generationWarnings = (providerWarnings + failures)
+                .map(String::trim)
+                .filter(String::isNotBlank)
+                .distinct()
+                .take(8),
             editorialPass = editorialPass,
         )
     }
@@ -541,10 +548,18 @@ class NewsBriefingGenerator(
         return false
     }
 
-    private fun collectCoverageArticles(provider: NewsProvider, query: String, coverageDate: LocalDate): List<CollectedArticle> {
+    private fun collectCoverageArticles(
+        provider: NewsProvider,
+        query: String,
+        coverageDate: LocalDate,
+        warningSink: MutableList<String>,
+    ): List<CollectedArticle> {
         return collectArticlesForDate(coverageDate, zone, searchMaxPages) { start ->
             runCatching { provider.searchForDate(query, coverageDate, zone, display = 100, start = start) }
-                .onFailure { log.warn("News provider failed: query={}, start={}, message={}", query, start, it.message) }
+                .onFailure {
+                    warningSink += "${provider.javaClass.simpleName}: ${it.message.orEmpty()}".take(320)
+                    log.warn("News provider failed: query={}, start={}, message={}", query, start, it.message)
+                }
                 .getOrDefault(emptyList())
         }
     }
@@ -693,6 +708,7 @@ class NewsBriefingGenerator(
         stories: Collection<NewsStory>,
         rejectedCandidates: Int,
         coverage: BriefingCoverageDecision,
+        generationWarnings: List<String> = emptyList(),
         editorialPass: EditorialPassOutcome = EditorialPassOutcome(stories.toList(), applied = false),
     ) = GenerationResult(
         briefingDate = briefingDate,
@@ -704,14 +720,15 @@ class NewsBriefingGenerator(
         categoryCounts = stories.groupingBy { it.category.name }.eachCount().toSortedMap(),
         minimumDeliveryStories = coverage.minimumStories,
         minimumDeliveryCategories = coverage.minimumCategories,
-        deliveryReady = true,
-        deliveryBlockReasons = emptyList(),
+        deliveryReady = stories.isNotEmpty(),
+        deliveryBlockReasons = if (stories.isEmpty()) listOf("생성된 뉴스 카드가 없습니다") else emptyList(),
         coverageTargetMet = coverage.ready,
-        coverageWarnings = coverage.reasons,
+        coverageWarnings = (coverage.reasons + generationWarnings).distinct(),
         editorialPassApplied = editorialPass.applied,
         editorialModel = editorialPass.model,
         editorialDurationMillis = editorialPass.durationMillis,
         editorialFallbackReason = editorialPass.fallbackReason,
+        generationWarnings = generationWarnings,
     )
 
     private fun deduplicateClusters(clusters: List<ArticleCluster>): List<ArticleCluster> = clusters.fold(mutableListOf<ArticleCluster>()) { unique, candidate ->

@@ -45,6 +45,15 @@ data class PushRegistration(
     val deliveryMinute: Int,
     val userAgent: String?,
 )
+
+/**
+ * A device may disappear between the workflow's count snapshot and dispatch
+ * (for example, an expired browser subscription). Sending to the current
+ * active set is safe when it shrinks; abort if it grows so a newly registered
+ * device cannot be silently missed.
+ */
+internal fun forcedDispatchCountIsSafe(expected: Int, current: Int): Boolean =
+    expected >= 0 && current in 0..expected
 data class PushConfigResponse(val enabled: Boolean, val publicKey: String)
 data class PushResult(
     val delivered: Boolean,
@@ -338,8 +347,15 @@ class WebPushService(
             "오늘의 재생성 브리핑이 발송 가능한 상태가 아닙니다"
         }
         val subscriptions = repository.findAllByActiveTrue()
-        require(subscriptions.size == expectedActiveSubscriptions) {
+        require(forcedDispatchCountIsSafe(expectedActiveSubscriptions, subscriptions.size)) {
             "등록 기기 수가 예상과 다릅니다. 예상 ${expectedActiveSubscriptions}대, 현재 ${subscriptions.size}대"
+        }
+        if (subscriptions.size < expectedActiveSubscriptions) {
+            logger.warn(
+                "Forced delivery snapshot shrank before dispatch; sending to current active devices: expected={}, current={}",
+                expectedActiveSubscriptions,
+                subscriptions.size,
+            )
         }
 
         val lead = briefing.stories.firstOrNull()

@@ -68,7 +68,10 @@ class BriefingService(
             // Story/category targets are editorial warnings, not a reason to make
             // the daily news service go silent. Individual stories have already
             // passed the source and claim checks before they reach the edition.
-            productionReady = edition.pipelineGenerated == true && publishableState,
+            // An unavailable/empty edition is a status notice, not a deliverable
+            // briefing. Keep it readable so users see the explanation, but never
+            // let it pass the production or push-delivery gate.
+            productionReady = edition.pipelineGenerated == true && publishableState && edition.stories.isNotEmpty(),
             stories = coverage.storyCount,
             categories = coverage.categoryCount,
             minimumStories = coverage.minimumStories,
@@ -125,7 +128,9 @@ class BriefingService(
         return BriefingResponse(
             id = requireNotNull(id),
             briefingDate = briefingDate,
-            productionReady = pipelineGenerated == true && (editorialState ?: EditorialState.AUTO_APPROVED) in setOf(EditorialState.AUTO_APPROVED, EditorialState.APPROVED, EditorialState.PUBLISHED),
+            // Empty fallback editions must not be reported as production-ready.
+            productionReady = pipelineGenerated == true && stories.isNotEmpty() &&
+                (editorialState ?: EditorialState.AUTO_APPROVED) in setOf(EditorialState.AUTO_APPROVED, EditorialState.APPROVED, EditorialState.PUBLISHED),
             editorialState = editorialState ?: EditorialState.AUTO_APPROVED,
             humanReviewed = (editorialState ?: EditorialState.AUTO_APPROVED) in setOf(EditorialState.APPROVED, EditorialState.PUBLISHED),
             dateLabel = briefingDate.format(DateTimeFormatter.ofPattern("M월 d일 EEEE", Locale.KOREAN)),
