@@ -245,7 +245,7 @@ jobs:
                   echo "- 포함 분야: ${categories}개"
                   echo "- 경고: ${reasons}"
                   echo ""
-                  echo "> 스포츠·e스포츠와 확인된 뉴스가 있으면 오전 7시 30분 발송합니다. 10건 목표 미달은 경고로 남깁니다."
+                  echo "> 전날 확인 뉴스가 있으면 스포츠·e스포츠 유무와 관계없이 오전 7시 30분 발송합니다."
                 } >> "$GITHUB_STEP_SUMMARY"
               fi
               exit 0
@@ -267,7 +267,7 @@ jobs:
                 echo "- 포함 분야: ${categories}개 / 최소 ${minimum_categories}개"
                 echo "- 이유: ${reasons}"
                 echo ""
-                echo "> 스포츠·e스포츠 또는 확인된 뉴스가 없어 발송하지 않습니다. 생성 실패와 공급원 경고를 함께 확인하세요."
+                echo "> 확인된 전날 뉴스 카드가 없어 발송하지 않습니다. 스포츠·e스포츠 부재는 발송 차단 사유가 아닙니다."
               } >> "$GITHUB_STEP_SUMMARY"
               echo "Briefing is not publishable: $reasons" >&2
               exit 1
