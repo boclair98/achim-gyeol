@@ -24,7 +24,7 @@ services:
       BACKUP_STORAGE_ACCESS_KEY: ${backups.access_key}
       BACKUP_STORAGE_SECRET_KEY: ${backups.secret_key}
       NEWS_PIPELINE_ENABLED: "true"
-      GDELT_NEWS_ENABLED: "true"
+      GDELT_NEWS_ENABLED: "false"
       GDELT_MINIMUM_ARTICLE_COUNT: "3"
       GDELT_MINIMUM_SIGNIFICANCE: "0.45"
       OFFICIAL_NEWS_RSS_ENABLED: "true"
