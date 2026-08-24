@@ -65,13 +65,11 @@ class BriefingService(
         BriefingBuildStatus(
             briefingDate = edition.briefingDate,
             coverageReady = coverage.ready,
-            // Story/category targets are editorial warnings, not a reason to make
-            // the daily news service go silent. Individual stories have already
-            // passed the source and claim checks before they reach the edition.
-            // An unavailable/empty edition is a status notice, not a deliverable
-            // briefing. Keep it readable so users see the explanation, but never
-            // let it pass the production or push-delivery gate.
-            productionReady = edition.pipelineGenerated == true && publishableState && edition.stories.isNotEmpty(),
+            // Keep the status notice readable, but only allow a complete edition
+            // through the production/push gate. This prevents a thin edition
+            // from being sent when the 10-15 story and required-category policy
+            // has not been met.
+            productionReady = edition.pipelineGenerated == true && publishableState && coverage.ready,
             stories = coverage.storyCount,
             categories = coverage.categoryCount,
             minimumStories = coverage.minimumStories,
@@ -128,8 +126,8 @@ class BriefingService(
         return BriefingResponse(
             id = requireNotNull(id),
             briefingDate = briefingDate,
-            // Empty fallback editions must not be reported as production-ready.
-            productionReady = pipelineGenerated == true && stories.isNotEmpty() &&
+            // Incomplete fallback editions must not be reported as ready to send.
+            productionReady = pipelineGenerated == true && coveragePolicy.evaluate(stories).ready &&
                 (editorialState ?: EditorialState.AUTO_APPROVED) in setOf(EditorialState.AUTO_APPROVED, EditorialState.APPROVED, EditorialState.PUBLISHED),
             editorialState = editorialState ?: EditorialState.AUTO_APPROVED,
             humanReviewed = (editorialState ?: EditorialState.AUTO_APPROVED) in setOf(EditorialState.APPROVED, EditorialState.PUBLISHED),

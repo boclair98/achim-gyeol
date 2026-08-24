@@ -31,6 +31,33 @@ class BriefingCoveragePolicyTest {
         assertThat(decision.categoryCount).isEqualTo(8)
     }
 
+    @Test
+    fun `스포츠와 e스포츠가 모두 없으면 발송 준비가 아니다`() {
+        val requiredPolicy = BriefingCoveragePolicy(10, 5, "SPORTS,ESPORTS")
+        val stories = listOf(
+            Category.POLICY, Category.ECONOMY, Category.SOCIETY, Category.INTERNATIONAL,
+            Category.TECH, Category.LIFE, Category.CULTURE, Category.SPORTS, Category.FINANCE, Category.TECH,
+        ).map(::story)
+
+        val decision = requiredPolicy.evaluate(stories)
+
+        assertThat(decision.ready).isFalse()
+        assertThat(decision.reasons).contains("필수 분야 누락: e스포츠")
+    }
+
+    @Test
+    fun `스포츠와 e스포츠를 포함한 열 건은 발송할 수 있다`() {
+        val requiredPolicy = BriefingCoveragePolicy(10, 5, "SPORTS,ESPORTS")
+        val stories = listOf(
+            Category.POLICY, Category.ECONOMY, Category.SOCIETY, Category.INTERNATIONAL,
+            Category.TECH, Category.LIFE, Category.CULTURE, Category.SPORTS, Category.ESPORTS, Category.FINANCE,
+        ).map(::story)
+
+        val decision = requiredPolicy.evaluate(stories)
+
+        assertThat(decision.ready).isTrue()
+    }
+
     private fun story(category: Category) = NewsStory(
         category = category,
         title = "검증된 뉴스",

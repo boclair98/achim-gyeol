@@ -245,7 +245,7 @@ jobs:
                   echo "- 포함 분야: ${categories}개"
                   echo "- 경고: ${reasons}"
                   echo ""
-                  echo "> 기사별 검증을 통과한 내용은 그대로 오전 7시 30분에 발송합니다."
+                  echo "> 최소 분량과 스포츠·e스포츠 기준을 충족할 때까지 오전 7시 30분 발송을 보류합니다."
                 } >> "$GITHUB_STEP_SUMMARY"
               fi
               exit 0
@@ -267,7 +267,7 @@ jobs:
                 echo "- 포함 분야: ${categories}개 / 최소 ${minimum_categories}개"
                 echo "- 이유: ${reasons}"
                 echo ""
-                echo "> 분량 부족은 발송을 막지 않습니다. 이 상태는 생성 실패 또는 운영자 보류 여부를 확인해야 합니다."
+                echo "> 최소 분량·분야 기준을 충족하지 못해 발송하지 않습니다. 생성 실패와 공급원 경고를 함께 확인하세요."
               } >> "$GITHUB_STEP_SUMMARY"
               echo "Briefing is not publishable: $reasons" >&2
               exit 1
