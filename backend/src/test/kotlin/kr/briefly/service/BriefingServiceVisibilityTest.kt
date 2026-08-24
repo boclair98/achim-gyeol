@@ -54,7 +54,7 @@ class BriefingServiceVisibilityTest {
         `when`(correctionRepository.findAllByStoryIdOrderByCreatedAtDesc(131L)).thenReturn(emptyList())
         val strictService = BriefingService(
             editionRepository, storyRepository, feedbackRepository, correctionRepository,
-            BriefingCoveragePolicy(minimumStories = 8, minimumCategories = 5),
+            BriefingCoveragePolicy(minimumStories = 8, minimumCategories = 5, requiredCategories = "SPORTS,ESPORTS"),
         )
 
         val result = strictService.latest()

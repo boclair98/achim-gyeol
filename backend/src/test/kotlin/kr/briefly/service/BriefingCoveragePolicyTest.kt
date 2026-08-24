@@ -10,10 +10,11 @@ class BriefingCoveragePolicyTest {
     private val policy = BriefingCoveragePolicy(minimumStories = 8, minimumCategories = 5)
 
     @Test
-    fun `두 건이거나 한 분야에 몰린 브리핑은 발송 준비가 아니다`() {
+    fun `두 건이거나 한 분야에 몰린 브리핑은 목표를 채우지 못한다`() {
         val decision = policy.evaluate(listOf(story(Category.TECH), story(Category.TECH)))
 
-        assertThat(decision.ready).isFalse()
+        assertThat(decision.ready).isTrue()
+        assertThat(decision.targetMet).isFalse()
         assertThat(decision.reasons).contains("뉴스 수 부족: 2/8", "분야 다양성 부족: 1/5")
     }
 
@@ -27,6 +28,7 @@ class BriefingCoveragePolicyTest {
         val decision = policy.evaluate(stories)
 
         assertThat(decision.ready).isTrue()
+        assertThat(decision.targetMet).isTrue()
         assertThat(decision.storyCount).isEqualTo(8)
         assertThat(decision.categoryCount).isEqualTo(8)
     }
@@ -42,7 +44,22 @@ class BriefingCoveragePolicyTest {
         val decision = requiredPolicy.evaluate(stories)
 
         assertThat(decision.ready).isFalse()
+        assertThat(decision.targetMet).isFalse()
         assertThat(decision.reasons).contains("필수 분야 누락: e스포츠")
+    }
+
+    @Test
+    fun `열 건보다 적어도 스포츠와 e스포츠가 있으면 중요 뉴스는 발송한다`() {
+        val requiredPolicy = BriefingCoveragePolicy(10, 5, "SPORTS,ESPORTS")
+        val stories = listOf(
+            Category.SPORTS, Category.ESPORTS, Category.TECH,
+        ).map(::story)
+
+        val decision = requiredPolicy.evaluate(stories)
+
+        assertThat(decision.ready).isTrue()
+        assertThat(decision.targetMet).isFalse()
+        assertThat(decision.reasons).contains("뉴스 수 부족: 3/10", "분야 다양성 부족: 3/5")
     }
 
     @Test
@@ -56,6 +73,7 @@ class BriefingCoveragePolicyTest {
         val decision = requiredPolicy.evaluate(stories)
 
         assertThat(decision.ready).isTrue()
+        assertThat(decision.targetMet).isTrue()
     }
 
     private fun story(category: Category) = NewsStory(
