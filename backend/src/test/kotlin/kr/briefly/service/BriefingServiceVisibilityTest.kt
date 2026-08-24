@@ -45,7 +45,7 @@ class BriefingServiceVisibilityTest {
     }
 
     @Test
-    fun `두 건 한 분야여도 검증된 브리핑은 정규 발송 준비로 표시한다`() {
+    fun `두 건 한 분야인 브리핑은 공개하되 정규 발송 준비로 표시하지 않는다`() {
         val date = LocalDate.of(2026, 8, 13)
         val thinEdition = edition(date, EditorialState.AUTO_APPROVED, 13)
         thinEdition.addStory(story(Category.TECH, 131))
@@ -60,7 +60,7 @@ class BriefingServiceVisibilityTest {
         val result = strictService.latest()
 
         assertThat(result.stories).hasSize(2)
-        assertThat(result.productionReady).isTrue()
+        assertThat(result.productionReady).isFalse()
     }
 
     @Test
