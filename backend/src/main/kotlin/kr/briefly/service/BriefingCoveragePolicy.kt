@@ -2,6 +2,7 @@ package kr.briefly.service
 
 import kr.briefly.domain.Category
 import kr.briefly.domain.NewsStory
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 
@@ -15,7 +16,7 @@ data class BriefingCoverageDecision(
 )
 
 @Component
-class BriefingCoveragePolicy(
+class BriefingCoveragePolicy @Autowired constructor(
     @Value("\${app.pipeline.minimum-delivery-stories:10}") minimumStories: Int,
     @Value("\${app.pipeline.minimum-delivery-categories:5}") minimumCategories: Int,
     @Value("\${app.pipeline.required-categories:SPORTS,ESPORTS}") requiredCategories: String,
