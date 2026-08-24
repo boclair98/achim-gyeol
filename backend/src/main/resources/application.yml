@@ -98,4 +98,3 @@ app:
     secret-key: ${BACKUP_STORAGE_SECRET_KEY:}
     encryption-key: ${BACKUP_ENCRYPTION_KEY:}
 
-

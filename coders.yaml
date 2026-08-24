@@ -67,4 +67,3 @@ services:
   backups:
     type: object
     quota_gb: 1
-
