@@ -37,20 +37,20 @@ class BriefingCoveragePolicy @Autowired constructor(
         val categoryCount = categories.size
         val hardReasons = buildList {
             if (storyCount == 0) add("생성된 뉴스 카드가 없습니다")
-            requiredCategories
-                .filterNot(categories::contains)
-                .sortedBy(Category::name)
-                .forEach { add("필수 분야 누락: ${label(it)}") }
         }
         val targetReasons = buildList {
             if (storyCount < minimumStories) add("뉴스 수 부족: $storyCount/$minimumStories")
             if (categoryCount < minimumCategories) add("분야 다양성 부족: $categoryCount/$minimumCategories")
+            requiredCategories
+                .filterNot(categories::contains)
+                .sortedBy(Category::name)
+                .forEach { add("해당 분야 뉴스 없음: ${label(it)}") }
         }
         val reasons = (hardReasons + targetReasons).distinct()
         return BriefingCoverageDecision(
-            // Sports/e-sports and at least one verified card are hard delivery
-            // requirements. The 10-story and breadth targets remain soft so a
-            // smaller but important edition can still be delivered.
+            // A non-empty previous-day edition is always deliverable. Sports
+            // and e-sports are preferred and included whenever available, but
+            // their absence must never prevent the daily briefing.
             ready = hardReasons.isEmpty(),
             targetMet = reasons.isEmpty(),
             storyCount = storyCount,

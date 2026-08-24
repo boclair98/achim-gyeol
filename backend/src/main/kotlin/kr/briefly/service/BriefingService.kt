@@ -65,8 +65,8 @@ class BriefingService(
         BriefingBuildStatus(
             briefingDate = edition.briefingDate,
             // coverageReady reports the soft 10-story/breadth target. A smaller
-            // edition can still be production-ready when it has cards and the
-            // required sports/e-sports categories.
+            // edition can still be production-ready whenever any previous-day
+            // cards are available; missing sports/e-sports is only a warning.
             coverageReady = coverage.targetMet,
             productionReady = edition.pipelineGenerated == true && publishableState && coverage.ready,
             stories = coverage.storyCount,
@@ -125,8 +125,8 @@ class BriefingService(
         return BriefingResponse(
             id = requireNotNull(id),
             briefingDate = briefingDate,
-            // Only empty or missing-required-category editions are held. A
-            // smaller but important edition remains visible and deliverable.
+            // Only an empty edition is held. A smaller but important edition,
+            // including one without sports/e-sports, remains deliverable.
             productionReady = pipelineGenerated == true && coveragePolicy.evaluate(stories).ready &&
                 (editorialState ?: EditorialState.AUTO_APPROVED) in setOf(EditorialState.AUTO_APPROVED, EditorialState.APPROVED, EditorialState.PUBLISHED),
             editorialState = editorialState ?: EditorialState.AUTO_APPROVED,

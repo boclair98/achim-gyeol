@@ -34,7 +34,7 @@ class BriefingCoveragePolicyTest {
     }
 
     @Test
-    fun `스포츠와 e스포츠가 모두 없으면 발송 준비가 아니다`() {
+    fun `스포츠와 e스포츠가 없어도 전날 뉴스는 발송 준비가 된다`() {
         val requiredPolicy = BriefingCoveragePolicy(10, 5, "SPORTS,ESPORTS")
         val stories = listOf(
             Category.POLICY, Category.ECONOMY, Category.SOCIETY, Category.INTERNATIONAL,
@@ -43,9 +43,9 @@ class BriefingCoveragePolicyTest {
 
         val decision = requiredPolicy.evaluate(stories)
 
-        assertThat(decision.ready).isFalse()
+        assertThat(decision.ready).isTrue()
         assertThat(decision.targetMet).isFalse()
-        assertThat(decision.reasons).contains("필수 분야 누락: e스포츠")
+        assertThat(decision.reasons).contains("해당 분야 뉴스 없음: e스포츠")
     }
 
     @Test

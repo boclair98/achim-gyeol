@@ -38,7 +38,7 @@ class OperationalReadinessMonitor(
         }
         if (deliverable && coverage.targetMet) logger.info("Morning briefing readiness confirmed: date={}, stories={}", today, edition?.stories?.size)
         else if (deliverable) logger.warn("Morning briefing will be delivered below the soft coverage target: date={}, reasons={}", today, coverage.reasons.joinToString())
-        else logger.error("Morning briefing is not ready at 06:45 KST: date={}, reasons={}", today, coverage.reasons.joinToString())
+        else logger.error("Morning briefing is not ready at 06:45 KST because no verified cards exist: date={}, reasons={}", today, coverage.reasons.joinToString())
     }
 
     @Scheduled(cron = "0 20 7 * * *", zone = "Asia/Seoul")
@@ -55,7 +55,7 @@ class OperationalReadinessMonitor(
         if (!auditRepository.existsByActionAndCreatedAtAfter(action, OffsetDateTime.now(zone).toLocalDate().atStartOfDay(zone).toOffsetDateTime())) {
             auditRepository.save(EditorialAuditLog(action, "EDITION", edition?.id, "SYSTEM", "activeSubscriptions=$active; date=$today; stories=${coverage.storyCount}; categories=${coverage.categoryCount}; reasons=${coverage.reasons.joinToString()}"))
         }
-        if (!deliverable) logger.error("Delivery blocked at 07:20 KST: today's briefing is missing, held, or missing a required category")
+        if (!deliverable) logger.error("Delivery blocked at 07:20 KST: today's briefing is missing or held with no verified cards")
         else if (!coverage.targetMet) logger.warn("Delivery will continue below the soft coverage target: {}", coverage.reasons.joinToString())
     }
 }
