@@ -73,9 +73,9 @@ app:
     search-max-pages: ${NEWS_SEARCH_MAX_PAGES:5}
     max-ai-candidates: ${NEWS_MAX_AI_CANDIDATES:120}
     ai-concurrency: ${NEWS_AI_CONCURRENCY:4}
-    max-stories-per-category: ${NEWS_MAX_STORIES_PER_CATEGORY:3}
-    economy-finance-max-stories-per-category: ${NEWS_ECONOMY_FINANCE_MAX_STORIES_PER_CATEGORY:3}
-    economy-finance-max-stories-total: ${NEWS_ECONOMY_FINANCE_MAX_STORIES_TOTAL:6}
+    max-stories-per-category: ${NEWS_MAX_STORIES_PER_CATEGORY:15}
+    economy-finance-max-stories-per-category: ${NEWS_ECONOMY_FINANCE_MAX_STORIES_PER_CATEGORY:15}
+    economy-finance-max-stories-total: ${NEWS_ECONOMY_FINANCE_MAX_STORIES_TOTAL:15}
     max-stories: ${NEWS_MAX_STORIES:15}
     target-stories: ${NEWS_TARGET_STORIES:15}
     minimum-importance-score: ${NEWS_MINIMUM_IMPORTANCE_SCORE:65}

@@ -64,11 +64,10 @@ class BriefingService(
             setOf(EditorialState.AUTO_APPROVED, EditorialState.APPROVED, EditorialState.PUBLISHED)
         BriefingBuildStatus(
             briefingDate = edition.briefingDate,
-            coverageReady = coverage.ready,
-            // Keep the status notice readable, but only allow a complete edition
-            // through the production/push gate. This prevents a thin edition
-            // from being sent when the 10-15 story and required-category policy
-            // has not been met.
+            // coverageReady reports the soft 10-story/breadth target. A smaller
+            // edition can still be production-ready when it has cards and the
+            // required sports/e-sports categories.
+            coverageReady = coverage.targetMet,
             productionReady = edition.pipelineGenerated == true && publishableState && coverage.ready,
             stories = coverage.storyCount,
             categories = coverage.categoryCount,
@@ -126,7 +125,8 @@ class BriefingService(
         return BriefingResponse(
             id = requireNotNull(id),
             briefingDate = briefingDate,
-            // Incomplete fallback editions must not be reported as ready to send.
+            // Only empty or missing-required-category editions are held. A
+            // smaller but important edition remains visible and deliverable.
             productionReady = pipelineGenerated == true && coveragePolicy.evaluate(stories).ready &&
                 (editorialState ?: EditorialState.AUTO_APPROVED) in setOf(EditorialState.AUTO_APPROVED, EditorialState.APPROVED, EditorialState.PUBLISHED),
             editorialState = editorialState ?: EditorialState.AUTO_APPROVED,

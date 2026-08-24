@@ -157,7 +157,7 @@ class ArticleClusterer {
         "정부", "국회", "대통령", "법원", "헌법", "전국", "시행", "법안", "규제", "지원금", "세금",
         "금리", "물가", "환율", "증시", "부동산", "고용", "수출", "관세", "연금", "건강보험",
         "재난", "경보", "태풍", "산불", "지진", "감염", "파업", "교통", "교육", "입시", "의료",
-        "개인정보", "해킹", "보안", "인공지능", "AI", "반도체", "플랫폼",
+        "개인정보", "해킹", "보안", "인공지능", "AI", "첨단기술", "반도체", "플랫폼",
         "외교", "전쟁", "휴전", "정상회담", "관세", "제재", "선거", "기후", "식품", "주거", "교통",
         "영화", "드라마", "음악", "공연", "수상", "국가대표", "월드컵", "올림픽", "메달", "우승", "결승",
         "e스포츠", "LCK", "MSI", "월즈", "리그오브레전드", "발로란트", "오버워치", "대회",
@@ -292,9 +292,9 @@ class NewsBriefingGenerator(
     @Value("\${app.pipeline.search-max-pages:5}") private var searchMaxPages: Int = 5
     @Value("\${app.pipeline.max-ai-candidates:120}") private var maxAiCandidates: Int = 120
     @Value("\${app.pipeline.ai-concurrency:3}") private var aiConcurrency: Int = 3
-    @Value("\${app.pipeline.max-stories-per-category:5}") private var maxStoriesPerCategory: Int = 5
-    @Value("\${app.pipeline.economy-finance-max-stories-per-category:4}") private var economyFinanceMaxStoriesPerCategory: Int = 4
-    @Value("\${app.pipeline.economy-finance-max-stories-total:8}") private var economyFinanceMaxStoriesTotal: Int = 8
+    @Value("\${app.pipeline.max-stories-per-category:15}") private var maxStoriesPerCategory: Int = 15
+    @Value("\${app.pipeline.economy-finance-max-stories-per-category:15}") private var economyFinanceMaxStoriesPerCategory: Int = 15
+    @Value("\${app.pipeline.economy-finance-max-stories-total:15}") private var economyFinanceMaxStoriesTotal: Int = 15
     @Value("\${app.pipeline.max-stories:30}") private var maxStories: Int = 30
     @Value("\${app.pipeline.target-stories:24}") private var targetStories: Int = 24
     @Value("\${app.pipeline.minimum-importance-score:60}") private var minimumImportanceScore: Int = 60
@@ -403,7 +403,12 @@ class NewsBriefingGenerator(
 
         if (!coverage.ready) {
             log.warn(
-                "Morning briefing is held until coverage policy is met: date={}, stories={}, categories={}, reasons={}",
+                "Morning briefing is held because a hard delivery requirement is missing: date={}, stories={}, categories={}, reasons={}",
+                briefingDate, coverage.storyCount, coverage.categoryCount, coverage.reasons.joinToString(),
+            )
+        } else if (!coverage.targetMet) {
+            log.warn(
+                "Morning briefing will be delivered below the soft coverage target: date={}, stories={}, categories={}, reasons={}",
                 briefingDate, coverage.storyCount, coverage.categoryCount, coverage.reasons.joinToString(),
             )
         }
@@ -538,9 +543,8 @@ class NewsBriefingGenerator(
 
     private fun shouldReuseExistingEdition(edition: BriefingEdition): Boolean {
         if (edition.pipelineGenerated != true || edition.stories.isEmpty()) return false
-        // A publishable edition that missed the breadth target is a recoverable
-        // partial result. Let the next scheduled generate call collect again
-        // with the expanded source/category pool instead of silently reusing it.
+        // A publishable edition that missed the breadth target is still a valid
+        // partial result. Reuse it instead of regenerating forever at dispatch.
         if (!coveragePolicy.evaluate(edition.stories).ready) return false
         val state = edition.editorialState ?: EditorialState.AUTO_APPROVED
         if (state in setOf(EditorialState.AUTO_APPROVED, EditorialState.REVIEW, EditorialState.APPROVED, EditorialState.PUBLISHED)) return true
@@ -738,7 +742,7 @@ class NewsBriefingGenerator(
         } else {
             coverage.reasons.ifEmpty { listOf("생성된 뉴스 카드가 없습니다") }
         },
-        coverageTargetMet = coverage.ready,
+        coverageTargetMet = coverage.targetMet,
         coverageWarnings = (coverage.reasons + generationWarnings).distinct(),
         editorialPassApplied = editorialPass.applied,
         editorialModel = editorialPass.model,
