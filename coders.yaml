@@ -34,8 +34,8 @@ services:
       NEWS_FINALIZATION_CRON: "0 0 6 * * *"
       NEWS_FINALIZATION_TIME: "06:00"
       DEMO_DATA_ENABLED: "false"
-      OPENAI_CANDIDATE_MODEL: "gpt-5.6-terra"
-      OPENAI_EDITOR_MODEL: "gpt-5.6-sol"
+      OPENAI_CANDIDATE_MODEL: "gpt-5.6-luna"
+      OPENAI_EDITOR_MODEL: "gpt-5.6-terra"
       NEWS_EDITORIAL_PASS_ENABLED: "true"
       OPENAI_EDITOR_READ_TIMEOUT_SECONDS: "180"
       OPENAI_CONNECT_TIMEOUT_SECONDS: "10"
@@ -67,3 +67,4 @@ services:
   backups:
     type: object
     quota_gb: 1
+
