@@ -31,7 +31,7 @@ app:
       client-secret: ${NAVER_API_HUB_CLIENT_SECRET:${NAVER_CLIENT_SECRET:}}
       base-url: ${NAVER_API_HUB_BASE_URL:https://naverapihub.apigw.ntruss.com}
     gdelt:
-      enabled: ${GDELT_NEWS_ENABLED:true}
+      enabled: ${GDELT_NEWS_ENABLED:false}
       api-key: ${GDELT_CLOUD_API_KEY:}
       base-url: ${GDELT_CLOUD_BASE_URL:https://gdeltcloud.com}
       minimum-article-count: ${GDELT_MINIMUM_ARTICLE_COUNT:3}
