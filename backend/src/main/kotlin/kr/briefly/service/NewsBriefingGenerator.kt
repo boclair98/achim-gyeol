@@ -403,7 +403,7 @@ class NewsBriefingGenerator(
 
         if (!coverage.ready) {
             log.warn(
-                "Morning briefing will still be delivered with coverage warnings: date={}, stories={}, categories={}, reasons={}",
+                "Morning briefing is held until coverage policy is met: date={}, stories={}, categories={}, reasons={}",
                 briefingDate, coverage.storyCount, coverage.categoryCount, coverage.reasons.joinToString(),
             )
         }
@@ -568,13 +568,17 @@ class NewsBriefingGenerator(
         val comparator = compareByDescending<EditorialStory> { it.importanceScore }
             .thenByDescending { it.clusterRank }
         val limit = maxStories.coerceAtLeast(1)
-        // A missing category must never consume a slot or block delivery. Select
-        // globally by importance, then keep the existing safety cap for the
-        // economy/finance pair so a single market theme cannot crowd out all
-        // other public-interest news.
-        return candidates
-            .sortedWith(comparator)
+        val sorted = candidates.sortedWith(comparator)
+        // Reserve one slot for each required category before filling the rest
+        // by importance. This keeps the digest hot without allowing a crowded
+        // politics/market cycle to erase sports and e-sports entirely.
+        val required = coveragePolicy.requiredCategories
+            .mapNotNull { category -> sorted.firstOrNull { it.story.category == category } }
+            .distinctBy { it.story.category }
+        val remaining = sorted
+            .filterNot(required::contains)
             .filterWithEconomyFinanceCap()
+        return (required + remaining)
             .take(limit)
     }
 
@@ -687,7 +691,15 @@ class NewsBriefingGenerator(
         val candidates = (reviewed + baseline.filterNot(reviewed::contains))
             .distinct()
             .filterWithEconomyFinanceCap()
-        return candidates.take(target)
+        val selected = candidates.take(target).toMutableList()
+        coveragePolicy.requiredCategories.forEach { category ->
+            if (selected.any { it.story.category == category }) return@forEach
+            val required = candidates.firstOrNull { it.story.category == category } ?: return@forEach
+            val replaceIndex = selected.indexOfLast { it.story.category !in coveragePolicy.requiredCategories }
+            if (replaceIndex >= 0) selected[replaceIndex] = required
+            else if (selected.size < target) selected += required
+        }
+        return selected.distinct().take(target)
     }
 
     private fun isEconomyFinance(category: Category): Boolean =
@@ -720,8 +732,12 @@ class NewsBriefingGenerator(
         categoryCounts = stories.groupingBy { it.category.name }.eachCount().toSortedMap(),
         minimumDeliveryStories = coverage.minimumStories,
         minimumDeliveryCategories = coverage.minimumCategories,
-        deliveryReady = stories.isNotEmpty(),
-        deliveryBlockReasons = if (stories.isEmpty()) listOf("생성된 뉴스 카드가 없습니다") else emptyList(),
+        deliveryReady = stories.isNotEmpty() && coverage.ready,
+        deliveryBlockReasons = if (coverage.ready) {
+            emptyList()
+        } else {
+            coverage.reasons.ifEmpty { listOf("생성된 뉴스 카드가 없습니다") }
+        },
         coverageTargetMet = coverage.ready,
         coverageWarnings = (coverage.reasons + generationWarnings).distinct(),
         editorialPassApplied = editorialPass.applied,
