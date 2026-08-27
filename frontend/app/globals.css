@@ -1345,3 +1345,76 @@ button:disabled { cursor: wait; opacity: .55; }
     padding-top: 17px;
   }
 }
+
+
+/* Accessibility and interaction polish */
+.reader-skip-link {
+  position: fixed;
+  top: 12px;
+  left: 16px;
+  z-index: 120;
+  transform: translateY(-180%);
+  border: 1px solid #bfe7ce;
+  border-radius: 999px;
+  background: #f7fff9;
+  padding: 9px 13px;
+  color: #123f32;
+  font-size: 11px;
+  font-weight: 850;
+  text-decoration: none;
+  box-shadow: 0 8px 22px rgba(9, 55, 38, .18);
+  transition: transform .18s ease;
+}
+
+.reader-skip-link:focus {
+  transform: translateY(0);
+  outline: 3px solid #8ed6ad;
+  outline-offset: 3px;
+}
+
+.focus-reader-shell .brief-sheet-track {
+  outline: none;
+}
+
+.focus-reader-shell .brief-sheet-track:focus-visible {
+  outline: 3px solid #8ed6ad;
+  outline-offset: 7px;
+  border-radius: 25px;
+}
+
+.focus-reader-shell .brief-sheet-progress[role="progressbar"] {
+  position: relative;
+  height: 5px;
+  border-radius: 999px;
+  background: #d4e2d8;
+}
+
+.focus-reader-shell .brief-sheet-progress[role="progressbar"]::after {
+  position: absolute;
+  right: 0;
+  bottom: -20px;
+  color: #718079;
+  content: "카드 진행";
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: .04em;
+}
+
+.focus-reader-shell .brief-sheet-swipe-hint {
+  padding-top: 10px;
+}
+
+@media (max-width: 850px) {
+  .reader-skip-link {
+    top: 8px;
+    left: 12px;
+  }
+
+  .focus-reader-shell .brief-sheet-track:focus-visible {
+    outline-offset: 4px;
+  }
+
+  .focus-reader-shell .brief-sheet-progress[role="progressbar"]::after {
+    bottom: -18px;
+  }
+}

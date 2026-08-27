@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowUpRight, BellRing, Mail } from "lucide-react";
+import { ArrowUpRight, BellRing, Mail, Menu } from "lucide-react";
 import { SubscriptionTrigger } from "@/components/SubscriptionExperience";
 
 export function SiteHeader({ context = "무료 알림 받기" }: { context?: string }) {
@@ -11,10 +11,22 @@ export function SiteHeader({ context = "무료 알림 받기" }: { context?: str
         <span>매일 아침, 어제의 뉴스</span>
       </Link>
       <nav aria-label="주요 메뉴">
-        <Link href="/#how-it-works">이용 방법</Link>
-        <Link href="/briefing">오늘의 뉴스</Link>
-        <Link href="/archive">지난 뉴스</Link>
-        <Link href="/trust">서비스 원칙</Link>
+        <div className="site-header-links">
+          <Link href="/#how-it-works">이용 방법</Link>
+          <Link href="/briefing">오늘의 뉴스</Link>
+          <Link href="/archive">지난 뉴스</Link>
+          <Link href="/trust">서비스 원칙</Link>
+        </div>
+        <details className="site-mobile-nav">
+          <summary aria-label="메뉴 열기"><Menu size={17} aria-hidden="true" /><span>메뉴</span></summary>
+          <div className="site-mobile-menu">
+            <Link href="/#how-it-works">이용 방법</Link>
+            <Link href="/briefing">오늘의 뉴스</Link>
+            <Link href="/archive">지난 뉴스</Link>
+            <Link href="/trust">서비스 원칙</Link>
+            <Link href="/preferences">알림 설정</Link>
+          </div>
+        </details>
       </nav>
       <SubscriptionTrigger className="site-context"><BellRing size={14} /> {context}</SubscriptionTrigger>
     </header>
