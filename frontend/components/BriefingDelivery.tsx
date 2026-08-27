@@ -140,6 +140,8 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
     [activeCategory, orderedStories],
   );
   const deckPages = useMemo(() => visibleStories.map((story) => ({ kind: "story" as const, story })), [visibleStories]);
+  const readCount = briefing.stories.reduce((count, story) => count + (readStories.includes(story.id) ? 1 : 0), 0);
+  const nextUnreadIndex = visibleStories.findIndex((story) => !readStories.includes(story.id));
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -302,7 +304,7 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
     <div className="briefing-category-toolbar" aria-label="분야별 뉴스 보기">
       <div className="briefing-category-heading">
         <div><span>분야별 브리핑</span><strong>{activeCategory === "전체" ? "모든 분야의 중요한 뉴스" : activeCategory}</strong></div>
-        <small>{visibleStories.length}건 · {readStories.length}/{briefing.stories.length} 읽음</small>
+        <small>{visibleStories.length}건 · {readCount}/{briefing.stories.length} 읽음</small>
       </div>
       <nav className="briefing-category-tabs" aria-label="뉴스 분야">
         <button type="button" className={activeCategory === "전체" ? "active" : ""} aria-pressed={activeCategory === "전체"} onClick={() => { setActiveCategory("전체"); setPage(0); }}>
@@ -315,6 +317,30 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
         ))}
       </nav>
     </div>
+    <div className="briefing-reader-status" aria-live="polite">
+      <div className="briefing-reader-status-copy">
+        <span>읽는 흐름</span>
+        <strong>{readCount} / {briefing.stories.length} 읽음</strong>
+        <small>약 {briefing.readMinutes}분</small>
+      </div>
+      <div className="briefing-reader-status-actions">
+        {readCount === briefing.stories.length ? (
+          <span className="briefing-complete"><CheckCircle2 size={14} /> 오늘 브리핑을 모두 읽었어요</span>
+        ) : (
+          <button type="button" onClick={() => moveTo(nextUnreadIndex)} disabled={nextUnreadIndex < 0}>다음 안 읽은 뉴스 <ChevronRight size={14} /></button>
+        )}
+        <button type="button" onClick={() => moveTo(0)} disabled={page === 0}>처음부터</button>
+      </div>
+    </div>
+    <nav className="briefing-story-map" aria-label="뉴스 빠른 이동">
+      {visibleStories.map((story, storyIndex) => (
+        <button type="button" key={story.id} className={page === storyIndex ? "active" : ""} aria-current={page === storyIndex ? "true" : undefined} onClick={() => moveTo(storyIndex)}>
+          <span>{String(storyIndex + 1).padStart(2, "0")}</span>
+          <div><b>{story.category}</b><strong>{story.title}</strong></div>
+          {readStories.includes(story.id) && <Check size={14} aria-label="읽음" />}
+        </button>
+      ))}
+    </nav>
     <div className="brief-sheet-deck" id="briefing-card-deck">
       <div
         className="brief-sheet-track"
