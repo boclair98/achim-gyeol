@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type UIEvent as ReactUIEvent, type WheelEvent as ReactWheelEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type UIEvent as ReactUIEvent, type WheelEvent as ReactWheelEvent } from "react";
 import Link from "next/link";
 import { AlertTriangle, BookOpen, CalendarDays, Check, CheckCircle2, ChevronLeft, ChevronRight, FileCheck2, Flag, Radar, RefreshCw, Share2, Sparkles, Settings2, ThumbsDown, ThumbsUp, WifiOff } from "lucide-react";
 import { briefingCategoryOrder, demoBriefing, type Briefing, type BriefingCategory, type Story, type StoryInterest } from "@/lib/briefing";
@@ -83,6 +83,7 @@ export function BriefingDelivery() {
   const reportingEnabled = loadState === "live" && liveToday && briefing.productionReady === true;
 
   return <main className={`news-reader-shell focus-reader-shell font-${readerFont}`}>
+    <a className="reader-skip-link" href="#briefing-card-deck">본문으로 건너뛰기</a>
     <header className="news-reader-topbar">
       <Link href="/" className="delivered-brand"><i /><strong>{brand.name}</strong><span>MORNING NEWS</span></Link>
       <div className="reader-top-actions"><div className="reader-font-controls" role="group" aria-label="글자 크기"><button type="button" className={readerFont === "small" ? "active" : ""} aria-label="작은 글자" title="작은 글자" aria-pressed={readerFont === "small"} onClick={() => changeFont("small")}>가</button><button type="button" className={readerFont === "normal" ? "active" : ""} aria-label="기본 글자" title="기본 글자" aria-pressed={readerFont === "normal"} onClick={() => changeFont("normal")}>가</button><button type="button" className={readerFont === "large" ? "active" : ""} aria-label="큰 글자" title="큰 글자" aria-pressed={readerFont === "large"} onClick={() => changeFont("large")}>가</button></div><Link href="/#delivery-deck" className="delivered-settings"><Settings2 size={16} /> 알림 설정</Link></div>
@@ -249,6 +250,22 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
     suppressClickRef.current = false;
   };
 
+  const handleTrackKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      moveTo(page + 1);
+    } else if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      moveTo(page - 1);
+    } else if (event.key === "Home") {
+      event.preventDefault();
+      moveTo(0);
+    } else if (event.key === "End") {
+      event.preventDefault();
+      moveTo(deckPages.length - 1);
+    }
+  };
+
   const openStoryCard = (storyId: number) => {
     const card = document.getElementById(`briefing-card-${storyId}`);
     const track = document.getElementById("briefing-card-track");
@@ -285,7 +302,7 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
     <div className="briefing-category-toolbar" aria-label="분야별 뉴스 보기">
       <div className="briefing-category-heading">
         <div><span>분야별 브리핑</span><strong>{activeCategory === "전체" ? "모든 분야의 중요한 뉴스" : activeCategory}</strong></div>
-        <small>{visibleStories.length}건 · 분야별 최대 10건</small>
+        <small>{visibleStories.length}건 · {readStories.length}/{briefing.stories.length} 읽음</small>
       </div>
       <nav className="briefing-category-tabs" aria-label="뉴스 분야">
         <button type="button" className={activeCategory === "전체" ? "active" : ""} aria-pressed={activeCategory === "전체"} onClick={() => { setActiveCategory("전체"); setPage(0); }}>
@@ -305,7 +322,9 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
         ref={trackRef}
         role="region"
         aria-roledescription="carousel"
-        aria-label="뉴스 카드 목록"
+        aria-label="뉴스 카드 목록. 포커스 후 좌우 방향키로 이동할 수 있습니다."
+        tabIndex={0}
+        onKeyDown={handleTrackKeyDown}
         onScroll={handleTrackScroll}
         onWheel={handleTrackWheel}
         onMouseDown={handleMouseDown}
@@ -323,7 +342,7 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
             <div className="brief-sheet-card-tools">
               <button type="button" aria-label={`${storyPageIndex + 1}번째 카드 이전`} onClick={() => moveTo(storyPageIndex - 1)} disabled={storyPageIndex === 0}><ChevronLeft size={15} /></button>
               <span className="brief-sheet-card-page"><b>{briefing.dateLabel}</b><small>{storyPageIndex + 1} / {visibleStories.length}</small></span>
-              <button type="button" aria-label={`${storyPageIndex + 1}번째 카드 다음`} onClick={() => moveTo(storyPageIndex + 1)} disabled={storyPageIndex >= orderedStories.length - 1}><ChevronRight size={15} /></button>
+              <button type="button" aria-label={`${storyPageIndex + 1}번째 카드 다음`} onClick={() => moveTo(storyPageIndex + 1)} disabled={storyPageIndex >= deckPages.length - 1}><ChevronRight size={15} /></button>
             </div>
           </header>
           <div className="brief-sheet-rule"><i /></div>
@@ -339,8 +358,8 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
           </div>
         </article>})}
       </div>
-      <div className="brief-sheet-progress" aria-hidden="true"><i style={{ width: `${((page + 1) / Math.max(deckPages.length, 1)) * 100}%` }} /></div>
-      <p className="brief-sheet-swipe-hint"><Check size={12} /> 모바일은 좌우로 밀고, 컴퓨터는 카드 위에서 드래그하세요.</p>
+      <div className="brief-sheet-progress" role="progressbar" aria-label={`뉴스 카드 ${Math.min(page + 1, Math.max(deckPages.length, 1))} / ${Math.max(deckPages.length, 1)}`} aria-valuemin={1} aria-valuemax={Math.max(deckPages.length, 1)} aria-valuenow={Math.min(page + 1, Math.max(deckPages.length, 1))}><i style={{ width: `${((page + 1) / Math.max(deckPages.length, 1)) * 100}%` }} /></div>
+      <p className="brief-sheet-swipe-hint" aria-live="polite"><Check size={12} /> 모바일은 좌우로 밀고, 컴퓨터는 카드 위에서 드래그하세요.</p>
     </div>
   </section>;
 }
