@@ -1418,3 +1418,206 @@ button:disabled { cursor: wait; opacity: .55; }
     bottom: -18px;
   }
 }
+
+
+/* Briefing flow controls */
+.focus-reader-shell .briefing-reader-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  width: min(100%, 1060px);
+  margin: 0 auto 12px;
+  border: 1px solid #d5e4d9;
+  border-radius: 17px;
+  background: rgba(255, 255, 255, .72);
+  padding: 13px 15px;
+  box-shadow: 0 8px 22px rgba(24, 48, 37, .05);
+}
+
+.focus-reader-shell .briefing-reader-status-copy {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.focus-reader-shell .briefing-reader-status-copy span {
+  color: #6d7c74;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.focus-reader-shell .briefing-reader-status-copy strong {
+  color: var(--reader-forest, #123f32);
+  font-size: 14px;
+}
+
+.focus-reader-shell .briefing-reader-status-copy small {
+  color: #829089;
+  font-size: 10px;
+}
+
+.focus-reader-shell .briefing-reader-status-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.focus-reader-shell .briefing-reader-status-actions button,
+.focus-reader-shell .briefing-complete {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  border: 1px solid #cbded1;
+  border-radius: 999px;
+  background: #fff;
+  padding: 0 11px;
+  color: #315247;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.focus-reader-shell .briefing-reader-status-actions button:hover:not(:disabled) {
+  border-color: #80b597;
+  background: #eef8f1;
+}
+
+.focus-reader-shell .briefing-reader-status-actions button:disabled {
+  cursor: default;
+  opacity: .45;
+}
+
+.focus-reader-shell .briefing-complete {
+  border-color: #a9d5bb;
+  background: #eaf7ef;
+  color: #1b6b4c;
+}
+
+.focus-reader-shell .briefing-story-map {
+  display: flex;
+  gap: 8px;
+  width: min(100%, 1060px);
+  margin: 0 auto 18px;
+  overflow-x: auto;
+  padding: 1px 1px 8px;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+}
+
+.focus-reader-shell .briefing-story-map::-webkit-scrollbar {
+  display: none;
+}
+
+.focus-reader-shell .briefing-story-map > button {
+  display: grid;
+  grid-template-columns: 25px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 7px;
+  flex: 0 0 190px;
+  min-height: 52px;
+  border: 1px solid #d7e4da;
+  border-radius: 13px;
+  background: rgba(255, 255, 255, .66);
+  padding: 8px 9px;
+  color: #476158;
+  cursor: pointer;
+  text-align: left;
+  scroll-snap-align: start;
+  transition: border-color .2s ease, background-color .2s ease, transform .2s ease;
+}
+
+.focus-reader-shell .briefing-story-map > button:hover {
+  border-color: #9fc5ab;
+  background: #f5fbf6;
+  transform: translateY(-1px);
+}
+
+.focus-reader-shell .briefing-story-map > button.active {
+  border-color: var(--reader-forest, #123f32);
+  background: var(--reader-forest, #123f32);
+  color: #f6fbf7;
+  box-shadow: 0 6px 14px rgba(18, 63, 50, .16);
+}
+
+.focus-reader-shell .briefing-story-map > button > span {
+  color: #7c9a89;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.focus-reader-shell .briefing-story-map > button.active > span {
+  color: #bce6c4;
+}
+
+.focus-reader-shell .briefing-story-map > button > div {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.focus-reader-shell .briefing-story-map > button b {
+  overflow: hidden;
+  color: #6c8778;
+  font-size: 8px;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focus-reader-shell .briefing-story-map > button.active b {
+  color: #b9d8c4;
+}
+
+.focus-reader-shell .briefing-story-map > button strong {
+  overflow: hidden;
+  color: #25453a;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focus-reader-shell .briefing-story-map > button.active strong {
+  color: #fff;
+}
+
+.focus-reader-shell .briefing-story-map > button > svg {
+  color: #2b9a6b;
+}
+
+.focus-reader-shell .briefing-story-map > button.active > svg {
+  color: #bce6c4;
+}
+
+@media (max-width: 850px) {
+  .focus-reader-shell .briefing-reader-status {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 10px;
+    border-radius: 14px;
+    padding: 12px;
+  }
+
+  .focus-reader-shell .briefing-reader-status-actions {
+    justify-content: flex-start;
+  }
+
+  .focus-reader-shell .briefing-story-map {
+    margin-bottom: 14px;
+    padding-bottom: 6px;
+  }
+
+  .focus-reader-shell .briefing-story-map > button {
+    flex-basis: 164px;
+    min-height: 48px;
+  }
+}
