@@ -42,6 +42,16 @@ class WebPushServiceTest {
     }
 
     @Test
+    fun `오늘자 브리핑이 없어도 정시 발송 구간에는 안내판을 만든다`() {
+        val today = java.time.LocalDate.of(2026, 8, 30)
+
+        assertThat(deliveryFallbackIsRequired(null, today, LocalTime.of(7, 30))).isTrue()
+        assertThat(deliveryFallbackIsRequired(today.minusDays(1), today, LocalTime.of(7, 45))).isTrue()
+        assertThat(deliveryFallbackIsRequired(today, today, LocalTime.of(7, 30))).isFalse()
+        assertThat(deliveryFallbackIsRequired(null, today, LocalTime.of(7, 29))).isFalse()
+    }
+
+    @Test
     fun `regular delivery waits for the final morning pass`() {
         val zone = java.time.ZoneId.of("Asia/Seoul")
         val beforeFinalization = OffsetDateTime.of(2026, 8, 22, 5, 59, 59, 0, ZoneOffset.ofHours(9))

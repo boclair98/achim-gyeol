@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
+import "../enterprise.css";
 
 export const metadata: Metadata = { title: "이용약관 | 아침결", description: "아침결 뉴스 브리핑 서비스 이용약관" };
 

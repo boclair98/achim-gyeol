@@ -10,6 +10,15 @@ class BriefingCoveragePolicyTest {
     private val policy = BriefingCoveragePolicy(minimumStories = 8, minimumCategories = 5)
 
     @Test
+    fun `검증 카드가 없어도 안내 브리핑 발송은 차단하지 않는다`() {
+        val decision = policy.evaluate(emptyList())
+
+        assertThat(decision.ready).isTrue()
+        assertThat(decision.targetMet).isFalse()
+        assertThat(decision.reasons).contains("생성된 뉴스 카드가 없습니다")
+    }
+
+    @Test
     fun `두 건이거나 한 분야에 몰린 브리핑은 목표를 채우지 못한다`() {
         val decision = policy.evaluate(listOf(story(Category.TECH), story(Category.TECH)))
 

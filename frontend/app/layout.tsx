@@ -3,8 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { PwaRegister } from "@/components/PwaRegister";
 
 import "./globals.css";
-import "./enterprise.css";
-import "./landing.css";
+import "./chrome.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://morningnews.coders.kr";
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";

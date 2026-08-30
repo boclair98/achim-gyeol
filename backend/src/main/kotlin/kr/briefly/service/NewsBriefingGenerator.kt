@@ -401,12 +401,7 @@ class NewsBriefingGenerator(
         }
         editionRepository.save(edition)
 
-        if (!coverage.ready) {
-            log.warn(
-                "Morning briefing is held because a hard delivery requirement is missing: date={}, stories={}, categories={}, reasons={}",
-                briefingDate, coverage.storyCount, coverage.categoryCount, coverage.reasons.joinToString(),
-            )
-        } else if (!coverage.targetMet) {
+        if (!coverage.targetMet) {
             log.warn(
                 "Morning briefing will be delivered below the soft coverage target: date={}, stories={}, categories={}, reasons={}",
                 briefingDate, coverage.storyCount, coverage.categoryCount, coverage.reasons.joinToString(),
@@ -736,12 +731,8 @@ class NewsBriefingGenerator(
         categoryCounts = stories.groupingBy { it.category.name }.eachCount().toSortedMap(),
         minimumDeliveryStories = coverage.minimumStories,
         minimumDeliveryCategories = coverage.minimumCategories,
-        deliveryReady = stories.isNotEmpty() && coverage.ready,
-        deliveryBlockReasons = if (coverage.ready) {
-            emptyList()
-        } else {
-            coverage.reasons.ifEmpty { listOf("생성된 뉴스 카드가 없습니다") }
-        },
+        deliveryReady = true,
+        deliveryBlockReasons = emptyList(),
         coverageTargetMet = coverage.targetMet,
         coverageWarnings = (coverage.reasons + generationWarnings).distinct(),
         editorialPassApplied = editorialPass.applied,

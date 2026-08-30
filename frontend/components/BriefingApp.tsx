@@ -195,7 +195,7 @@ function HeroNewsCarousel({ stories, readMinutes }: { stories: Story[]; readMinu
           const state = index === activeIndex ? "active" : index === previousIndex ? "leaving" : "waiting";
           return (
             <article key={`${story.id}-${index}`} className={`hero-news-card ${state}`} aria-hidden={state !== "active"}>
-              <StoryVisual story={story} variant="hero" />
+              <StoryVisual story={story} variant="hero" priority={index === 0} />
               <div><span>{story.category}</span><b>원문 포함</b></div>
               <h2>{story.title}</h2>
               <p>{story.summary}</p>
