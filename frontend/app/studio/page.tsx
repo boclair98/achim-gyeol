@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { OperationsConsole } from "@/components/OperationsConsole";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
+import "../enterprise.css";
 
 export const metadata: Metadata = {
   title: "운영 스튜디오 | 아침결",

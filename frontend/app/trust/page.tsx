@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { BookOpenCheck, CheckCircle2, FileClock, Flag, Newspaper, ShieldCheck } from "lucide-react";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
+import "../enterprise.css";
 
 export const metadata: Metadata = {
   title: "서비스 원칙 | 아침결",

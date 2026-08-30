@@ -124,6 +124,9 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
   const [digestSize, setDigestSize] = useState<"compact" | "standard" | "deep">("standard");
   const [activeCategory, setActiveCategory] = useState<BriefingCategory | "전체">("전체");
   const trackRef = useRef<HTMLDivElement>(null);
+  const storyMapRef = useRef<HTMLElement>(null);
+  const readStoriesRef = useRef<Set<number>>(new Set());
+  const scrollFrameRef = useRef<number | null>(null);
   const mouseDragRef = useRef<{ startX: number; startScrollLeft: number; moved: boolean } | null>(null);
   const suppressClickRef = useRef(false);
   const orderedStories = useMemo(() => {
@@ -140,29 +143,55 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
     [activeCategory, orderedStories],
   );
   const deckPages = useMemo(() => visibleStories.map((story) => ({ kind: "story" as const, story })), [visibleStories]);
-  const readCount = briefing.stories.reduce((count, story) => count + (readStories.includes(story.id) ? 1 : 0), 0);
-  const nextUnreadIndex = visibleStories.findIndex((story) => !readStories.includes(story.id));
+  const storyPositions = useMemo(() => new Map(briefing.stories.map((story, index) => [story.id, index + 1])), [briefing.stories]);
+  const readStoryIds = useMemo(() => new Set(readStories), [readStories]);
+  const readCount = briefing.stories.reduce((count, story) => count + (readStoryIds.has(story.id) ? 1 : 0), 0);
+  const nextUnreadIndex = visibleStories.findIndex((story) => !readStoryIds.has(story.id));
+  const currentStory = visibleStories[Math.min(page, Math.max(visibleStories.length - 1, 0))];
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const savedRead = safeJsonParse<number[]>(window.localStorage.getItem(`achim-gyeol-read-${briefing.id}`), []);
       const savedPreferences = safeJsonParse<{ categories?: string[]; digestSize?: "compact" | "standard" | "deep" }>(window.localStorage.getItem("achim-gyeol-reader-preferences"), {});
-      setReadStories(savedRead);
+      const availableStoryIds = new Set(briefing.stories.map((story) => story.id));
+      const validSavedRead = savedRead.filter((storyId) => availableStoryIds.has(storyId));
+      readStoriesRef.current = new Set(validSavedRead);
+      setReadStories(validSavedRead);
       setPreferredCategories(savedPreferences.categories ?? []);
       setDigestSize(savedPreferences.digestSize ?? "standard");
       setPage(0);
     }, 0);
     if (reportingEnabled) void trackReaderEvent("BRIEFING_OPEN", briefing.id);
     return () => window.clearTimeout(timer);
-  }, [briefing.id, reportingEnabled]);
+  }, [briefing.id, briefing.stories, reportingEnabled]);
+
+  useEffect(() => {
+    const storyMap = storyMapRef.current;
+    const activeItem = storyMap?.querySelector<HTMLElement>("[aria-current='true']");
+    if (!storyMap || !activeItem) return;
+    const centeredLeft = activeItem.offsetLeft - (storyMap.clientWidth - activeItem.clientWidth) / 2;
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    storyMap.scrollTo({ left: Math.max(0, centeredLeft), behavior: reduceMotion ? "auto" : "smooth" });
+  }, [activeCategory, page]);
+
+  useEffect(() => () => {
+    if (scrollFrameRef.current !== null) window.cancelAnimationFrame(scrollFrameRef.current);
+  }, []);
 
   const moveTo = (nextPage: number) => {
     const safePage = Math.max(0, Math.min(deckPages.length - 1, nextPage));
     const track = trackRef.current;
     if (!track) return;
     const target = track.querySelector<HTMLElement>(`[data-page-index="${safePage}"]`);
-    if (target) track.scrollTo({ left: Math.max(0, target.offsetLeft - track.offsetLeft - 14), behavior: "smooth" });
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (target) track.scrollTo({ left: Math.max(0, target.offsetLeft - track.offsetLeft - 14), behavior: reduceMotion ? "auto" : "smooth" });
     setPage(safePage);
+  };
+
+  const selectCategory = (category: BriefingCategory | "전체") => {
+    setActiveCategory(category);
+    setPage(0);
+    window.requestAnimationFrame(() => trackRef.current?.scrollTo({ left: 0, behavior: "auto" }));
   };
 
   const pageForTrackScroll = (track: HTMLDivElement) => {
@@ -217,9 +246,13 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
   const handleTrackScroll = (event: ReactUIEvent<HTMLDivElement>) => {
     const track = event.currentTarget;
     if (!track.clientWidth) return;
-    const nextPage = pageForTrackScroll(track);
-    const selected = deckPages[nextPage];
-    if (nextPage !== page && selected) markRead(selected.story.id, nextPage);
+    if (scrollFrameRef.current !== null) window.cancelAnimationFrame(scrollFrameRef.current);
+    scrollFrameRef.current = window.requestAnimationFrame(() => {
+      const nextPage = pageForTrackScroll(track);
+      const selected = deckPages[nextPage];
+      if (nextPage !== page && selected) markRead(selected.story.id, nextPage);
+      scrollFrameRef.current = null;
+    });
   };
 
   const handleTrackWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
@@ -281,13 +314,14 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
   };
 
   const markRead = (storyId: number, pageIndex: number) => {
-    setReadStories((current) => {
-      const next = current.includes(storyId) ? current : [...current, storyId];
+    if (!readStoriesRef.current.has(storyId)) {
+      readStoriesRef.current.add(storyId);
+      const next = [...readStoriesRef.current];
       window.localStorage.setItem(`achim-gyeol-read-${briefing.id}`, JSON.stringify(next));
       if (reportingEnabled && next.length === briefing.stories.length) void trackReaderEvent("COMPLETE", briefing.id);
-      return next;
-    });
-    if (reportingEnabled && !readStories.includes(storyId)) void trackReaderEvent("CARD_VIEW", briefing.id, storyId);
+      if (reportingEnabled) void trackReaderEvent("CARD_VIEW", briefing.id, storyId);
+      setReadStories(next);
+    }
     setPage(pageIndex);
   };
 
@@ -307,11 +341,11 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
         <small>{visibleStories.length}건 · {readCount}/{briefing.stories.length} 읽음</small>
       </div>
       <nav className="briefing-category-tabs" aria-label="뉴스 분야">
-        <button type="button" className={activeCategory === "전체" ? "active" : ""} aria-pressed={activeCategory === "전체"} onClick={() => { setActiveCategory("전체"); setPage(0); }}>
+        <button type="button" className={activeCategory === "전체" ? "active" : ""} aria-pressed={activeCategory === "전체"} onClick={() => selectCategory("전체")}>
           전체 <b>{briefing.stories.length}</b>
         </button>
         {availableCategories.map((category) => (
-          <button key={category} type="button" className={activeCategory === category ? "active" : ""} aria-pressed={activeCategory === category} onClick={() => { setActiveCategory(category); setPage(0); }}>
+          <button key={category} type="button" className={activeCategory === category ? "active" : ""} aria-pressed={activeCategory === category} onClick={() => selectCategory(category)}>
             {category} <b>{briefing.stories.filter((story) => story.category === category).length}</b>
           </button>
         ))}
@@ -321,7 +355,7 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
       <div className="briefing-reader-status-copy">
         <span>읽는 흐름</span>
         <strong>{readCount} / {briefing.stories.length} 읽음</strong>
-        <small>약 {briefing.readMinutes}분</small>
+        <small>{currentStory ? `${page + 1}/${visibleStories.length} · ${currentStory.category} · 약 ${briefing.readMinutes}분` : `약 ${briefing.readMinutes}분`}</small>
       </div>
       <div className="briefing-reader-status-actions">
         {readCount === briefing.stories.length ? (
@@ -332,12 +366,12 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
         <button type="button" onClick={() => moveTo(0)} disabled={page === 0}>처음부터</button>
       </div>
     </div>
-    <nav className="briefing-story-map" aria-label="뉴스 빠른 이동">
+    <nav className="briefing-story-map" aria-label="뉴스 빠른 이동" ref={storyMapRef}>
       {visibleStories.map((story, storyIndex) => (
         <button type="button" key={story.id} className={page === storyIndex ? "active" : ""} aria-current={page === storyIndex ? "true" : undefined} onClick={() => moveTo(storyIndex)}>
           <span>{String(storyIndex + 1).padStart(2, "0")}</span>
           <div><b>{story.category}</b><strong>{story.title}</strong></div>
-          {readStories.includes(story.id) && <Check size={14} aria-label="읽음" />}
+          {readStoryIds.has(story.id) && <Check size={14} aria-label="읽음" />}
         </button>
       ))}
     </nav>
@@ -361,7 +395,7 @@ function DailyBriefingSheets({ briefing, reportingEnabled }: { briefing: Briefin
       >
         {visibleStories.map((story, storyPageIndex) => {
           const pageIndex = storyPageIndex;
-          const storyIndex = briefing.stories.findIndex((item) => item.id === story.id) + 1;
+          const storyIndex = storyPositions.get(story.id) ?? storyPageIndex + 1;
           return <article className={`brief-sheet ${digestSize}`} id={`briefing-card-${story.id}`} data-page-index={pageIndex} aria-label={`${storyPageIndex + 1}번째 뉴스, ${story.title}`} tabIndex={-1} key={`sheet-${story.id}`}>
           <header>
             <div><span>ACHIMGYEOL</span><strong>어제 뉴스 · 오늘 아침 한 번에</strong></div>

@@ -101,7 +101,12 @@ test("news reader shows an available article image and accessible context", asyn
     });
   });
   await page.goto("/briefing/");
-  await expect(page.getByRole("img", { name: /기준금리 결정이 생활비에 미치는 영향 관련 기사 대표 이미지/ }).first()).toBeVisible();
+  const leadImage = page.getByRole("img", { name: /기준금리 결정이 생활비에 미치는 영향 관련 기사 대표 이미지/ }).first();
+  await expect(leadImage).toBeVisible();
+  await expect(leadImage).toHaveAttribute("loading", "lazy");
+  await expect(leadImage).toHaveAttribute("decoding", "async");
+  await expect(page.getByRole("navigation", { name: "뉴스 빠른 이동" })).toBeVisible();
+  await expect(page.getByRole("progressbar", { name: /뉴스 카드 1 \/ 1/ })).toBeVisible();
   await expect(page.getByText("기사 이해를 돕는 배경")).toBeVisible();
   await expect(page.getByText(/대출 이자와 예금 금리의 기준이 달라질 수 있습니다/).first()).toBeVisible();
 });

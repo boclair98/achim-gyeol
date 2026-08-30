@@ -22,7 +22,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 data class MorningRunResult(val generationStarted: Boolean, val generationJob: GenerationJobSnapshot, val delivery: PushDeliverySummary?)
-data class MorningStatusResponse(val date: LocalDate?, val coverageReady: Boolean, val productionReady: Boolean, val stories: Int, val categories: Int, val minimumStories: Int, val minimumCategories: Int, val blockReasons: List<String>, val activeSubscriptions: Int, val generationJob: GenerationJobSnapshot)
+data class MorningStatusResponse(val date: LocalDate?, val coverageReady: Boolean, val productionReady: Boolean, val stories: Int, val categories: Int, val minimumStories: Int, val minimumCategories: Int, val blockReasons: List<String>, val coverageWarnings: List<String>, val activeSubscriptions: Int, val generationJob: GenerationJobSnapshot)
 data class OperatorTestRequest(val expectedActiveSubscriptions: Int)
 data class WelcomePreviewRequest(val expectedNewSubscriptions: Int, val expectedTotalSubscriptions: Int)
 data class ForceRegenerationRequest(val expectedBriefingDate: LocalDate)
@@ -136,6 +136,7 @@ class GenerationController(
             minimumStories = current?.minimumStories ?: 0,
             minimumCategories = current?.minimumCategories ?: 0,
             blockReasons = current?.blockReasons ?: listOf("오늘 브리핑이 없습니다"),
+            coverageWarnings = current?.coverageWarnings ?: emptyList(),
             activeSubscriptions = webPushService.activeSubscriptionCount(),
             generationJob = generationJob.status(),
         )

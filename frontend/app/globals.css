@@ -1621,3 +1621,38 @@ button:disabled { cursor: wait; opacity: .55; }
     min-height: 48px;
   }
 }
+
+/* Rendering and reader performance refinements. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body { text-rendering: optimizeLegibility; }
+
+.focus-reader-shell .brief-sheet-track {
+  scroll-padding-inline: max(14px, calc((100% - 1060px) / 2));
+}
+
+.focus-reader-shell .brief-sheet {
+  isolation: isolate;
+}
+
+@supports (content-visibility: auto) {
+  .focus-reader-shell .brief-sheet {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 1500px;
+  }
+}
+
+@media (max-width: 850px) {
+  @supports (content-visibility: auto) {
+    .focus-reader-shell .brief-sheet { contain-intrinsic-size: auto 1200px; }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .focus-reader-shell .brief-sheet-track,
+  .focus-reader-shell .briefing-story-map { scroll-behavior: auto; }
+}

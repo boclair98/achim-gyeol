@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
+import "../enterprise.css";
 
 export const metadata: Metadata = { title: "개인정보처리방침 | 아침결", description: "아침결 구독 및 발송 서비스의 개인정보 처리 원칙" };
 

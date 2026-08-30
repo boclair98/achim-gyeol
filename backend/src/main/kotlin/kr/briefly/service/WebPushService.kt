@@ -132,6 +132,9 @@ private fun decodeBase64Url(value: String): ByteArray {
 internal fun deliveryIsDue(current: LocalTime, scheduled: LocalTime = fixedDeliveryTime): Boolean =
     !current.isBefore(scheduled) && !current.isAfter(lastDeliveryTime)
 
+internal fun deliveryFallbackIsRequired(briefingDate: LocalDate?, today: LocalDate, current: LocalTime): Boolean =
+    briefingDate != today && deliveryIsDue(current)
+
 internal fun parseFinalizationTime(value: String): LocalTime =
     runCatching { LocalTime.parse(value.trim()) }.getOrDefault(fixedFinalizationTime)
 
@@ -152,6 +155,7 @@ internal fun finalizationIsComplete(
 class WebPushService(
     private val repository: PushSubscriptionRepository,
     private val briefingService: BriefingService,
+    private val newsBriefingGenerator: NewsBriefingGenerator,
     private val briefingEditionRepository: BriefingEditionRepository,
     private val metricsService: SubscriptionMetricsService,
     private val deliveryAttemptRepository: PushDeliveryAttemptRepository,
@@ -253,11 +257,22 @@ class WebPushService(
     @Synchronized
     fun deliverDueBriefings(): PushDeliverySummary {
         if (!isConfigured()) return PushDeliverySummary("PUSH_DISABLED", 0, 0, 0, 0, "웹 푸시가 설정되지 않았습니다.")
-        val briefing = runCatching { briefingService.latest() }.getOrElse {
+        val today = LocalDate.now(ZoneId.of("Asia/Seoul"))
+        val currentTime = OffsetDateTime.now(ZoneId.of("Asia/Seoul")).toLocalTime()
+        var briefing = runCatching { briefingService.latest() }.getOrNull()
+        if (deliveryFallbackIsRequired(briefing?.briefingDate, today, currentTime)) {
+            runCatching {
+                newsBriefingGenerator.persistUnavailableEdition(
+                    today,
+                    "07:30 발송 시점까지 오늘자 에디션이 없어 자동 안내판을 생성했습니다.",
+                )
+            }.onFailure { logger.error("Could not create the on-time delivery fallback edition", it) }
+            briefing = runCatching { briefingService.latest() }.getOrNull()
+        }
+        if (briefing == null) {
             logger.info("Push delivery skipped: briefing is not available")
             return PushDeliverySummary("BRIEFING_UNAVAILABLE", repository.findAllByActiveTrue().size, 0, 0, 0, "발송할 브리핑이 없습니다.")
         }
-        val today = LocalDate.now(ZoneId.of("Asia/Seoul"))
         if (briefing.briefingDate != today || !briefing.productionReady) {
             logger.info("Push delivery skipped: today's pipeline-generated briefing is not ready")
             return PushDeliverySummary("BRIEFING_NOT_READY", repository.findAllByActiveTrue().size, 0, 0, 0, "오늘의 실제 브리핑이 아직 준비되지 않았습니다.")
