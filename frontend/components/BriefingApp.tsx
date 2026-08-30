@@ -63,7 +63,7 @@ export function BriefingApp() {
         <div className="landing-hero-copy">
           <span className="landing-kicker"><Sparkles size={15} /> 바쁜 사람을 위한 아침 뉴스 브리핑</span>
           <h1>어제 뉴스를,<br /><em>매일 아침 한 번에.</em></h1>
-          <p>하루 종일 뉴스를 따라가지 않아도 괜찮아요. 꼭 알아야 할 흐름과 원문 출처를 읽기 편한 모바일 뉴스 브리핑으로 정리해 드립니다.</p>
+          <p>가장 중요한 3건부터 전체 흐름까지. 한 줄 결론, 쉬운 이해 포인트, 원문 출처를 한 화면에 정리해 드립니다.</p>
           <div className="landing-hero-actions">
             <SubscriptionTrigger className="landing-primary"><BellRing size={18} /> 무료 알림 받기</SubscriptionTrigger>
             <Link className="landing-text-link" href="/briefing">오늘의 뉴스 읽기 <ArrowRight size={16} /></Link>
@@ -87,8 +87,8 @@ export function BriefingApp() {
 
       <section className="landing-proof" aria-label="서비스 핵심 특징">
         <div><strong>07:30</strong><span>매일 아침 정규 도착</span></div>
-        <div><strong>10개</strong><span>폭넓은 뉴스 분야</span></div>
-        <div><strong>3줄</strong><span>뉴스별 핵심 요약</span></div>
+        <div><strong>TOP 3</strong><span>먼저 보는 핵심 뉴스</span></div>
+        <div><strong>10+</strong><span>하루의 주요 흐름</span></div>
         <div><strong>0원</strong><span>회원가입 없이 무료</span></div>
       </section>
 

@@ -103,8 +103,14 @@ test("news reader shows an available article image and accessible context", asyn
   await page.goto("/briefing/");
   const leadImage = page.getByRole("img", { name: /기준금리 결정이 생활비에 미치는 영향 관련 기사 대표 이미지/ }).first();
   await expect(leadImage).toBeVisible();
-  await expect(leadImage).toHaveAttribute("loading", "lazy");
+  await expect(leadImage).toHaveAttribute("loading", "eager");
   await expect(leadImage).toHaveAttribute("decoding", "async");
+  await expect(page.getByRole("heading", { name: "오늘 아침, 이 3가지부터" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /첫 번째 핵심 뉴스 읽기/ })).toBeVisible();
+  const readingDepth = page.getByRole("group", { name: "뉴스 읽기 깊이" });
+  await expect(readingDepth.getByRole("button", { name: "기본" })).toHaveAttribute("aria-pressed", "true");
+  await readingDepth.getByRole("button", { name: "짧게" }).click();
+  await expect(readingDepth.getByRole("button", { name: "짧게" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("navigation", { name: "뉴스 빠른 이동" })).toBeVisible();
   await expect(page.getByRole("progressbar", { name: /뉴스 카드 1 \/ 1/ })).toBeVisible();
   await expect(page.getByText("기사 이해를 돕는 배경")).toBeVisible();
