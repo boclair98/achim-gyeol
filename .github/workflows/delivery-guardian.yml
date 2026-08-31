@@ -1,0 +1,134 @@
+name: 07:30 delivery guardian
+
+on:
+  schedule:
+    # Redundant off-peak starts from 03:37 to 06:07 KST. A newer start
+    # replaces the older guardian and keeps the sleeping backend awake until
+    # the exact 07:30 dispatch. Multiple starts are safe because recovery is
+    # persisted and deduplicated per edition and device.
+    - cron: "37 18 * * *"
+    - cron: "7 19 * * *"
+    - cron: "37 19 * * *"
+    - cron: "7 20 * * *"
+    - cron: "37 20 * * *"
+    - cron: "7 21 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: morning-delivery-guardian
+  cancel-in-progress: true
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: Keep backend awake until 07:30 KST
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          target="$(TZ=Asia/Seoul date -d "$(TZ=Asia/Seoul date +%F) 07:30:00" +%s)"
+          stale_cutoff="$(TZ=Asia/Seoul date -d "$(TZ=Asia/Seoul date +%F) 10:00:00" +%s)"
+          now="$(date +%s)"
+          if (( now > stale_cutoff )); then
+            echo "Guardian started after the 10:00 KST recovery cutoff" >&2
+            exit 1
+          fi
+          while (( now < target )); do
+            curl --fail --silent --show-error --max-time 45 \
+              --retry 3 --retry-all-errors \
+              "https://morningnews.coders.kr/api/push/public-key" >/dev/null
+            remaining=$((target - now))
+            if (( remaining > 45 )); then sleep 45; else sleep "$remaining"; fi
+            now="$(date +%s)"
+          done
+
+      - name: Dispatch and recover only missed devices
+        id: delivery
+        shell: bash
+        env:
+          ADMIN_TOKEN: ${{ secrets.BRIEFING_ADMIN_TOKEN }}
+        run: |
+          set -Eeuo pipefail
+          test -n "$ADMIN_TOKEN"
+          briefing_date="$(TZ=Asia/Seoul date +%F)"
+
+          initial="$(curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-all-errors --max-time 180 \
+            -X POST "https://morningnews.coders.kr/api/admin/briefings/dispatch" \
+            -H "X-Briefing-Admin-Token: $ADMIN_TOKEN")"
+          active="$(curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-all-errors --max-time 90 \
+            "https://morningnews.coders.kr/api/admin/briefings/subscriptions" \
+            -H "X-Briefing-Admin-Token: $ADMIN_TOKEN" | jq -r '.activeSubscriptions')"
+          recovery="$(curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-all-errors --max-time 180 \
+            -X POST "https://morningnews.coders.kr/api/admin/briefings/recover-missed" \
+            -H "X-Briefing-Admin-Token: $ADMIN_TOKEN" \
+            -H "Content-Type: application/json" \
+            --data "{\"expectedBriefingDate\":\"${briefing_date}\",\"expectedActiveSubscriptions\":${active}}")"
+
+          initial_delivered="$(jq -r '.delivered // 0' <<< "$initial")"
+          recovered="$(jq -r '.delivered // 0' <<< "$recovery")"
+          failed="$(jq -r '.failed // 0' <<< "$recovery")"
+          due="$(jq -r '.dueSubscriptions // 0' <<< "$recovery")"
+          status="$(jq -r '.status // "UNKNOWN"' <<< "$recovery")"
+          total_delivered=$((initial_delivered + recovered))
+          echo "date=$briefing_date" >> "$GITHUB_OUTPUT"
+          echo "active=$active" >> "$GITHUB_OUTPUT"
+          echo "due=$due" >> "$GITHUB_OUTPUT"
+          echo "delivered=$total_delivered" >> "$GITHUB_OUTPUT"
+          echo "failed=$failed" >> "$GITHUB_OUTPUT"
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          {
+            echo "### 07:30 보호 발송"
+            echo ""
+            echo "- 기준일: ${briefing_date}"
+            echo "- 활성 기기: ${active}대"
+            echo "- 이번 발송 성공: ${total_delivered}대"
+            echo "- 누락 복구 대상: ${due}대"
+            echo "- 최종 실패: ${failed}대"
+            echo "- 복구 상태: ${status}"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if (( failed > 0 )); then exit 1; fi
+
+      - name: Report guardian result on Telegram
+        if: always()
+        shell: bash
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          JOB_STATUS: ${{ job.status }}
+          BRIEFING_DATE: ${{ steps.delivery.outputs.date }}
+          ACTIVE: ${{ steps.delivery.outputs.active }}
+          DUE: ${{ steps.delivery.outputs.due }}
+          DELIVERED: ${{ steps.delivery.outputs.delivered }}
+          FAILED: ${{ steps.delivery.outputs.failed }}
+          RECOVERY_STATUS: ${{ steps.delivery.outputs.status }}
+          RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -Eeuo pipefail
+          test -n "$TELEGRAM_BOT_TOKEN"
+          test -n "$TELEGRAM_CHAT_ID"
+          if [[ "$JOB_STATUS" == "success" ]]; then icon="✅"; else icon="🚨"; fi
+          message="${icon} 아침결 07:30 보호 발송
+
+          기준일: ${BRIEFING_DATE:-확인 불가}
+          작업 결과: ${JOB_STATUS}
+          활성 기기: ${ACTIVE:-0}대
+          이번 발송 성공: ${DELIVERED:-0}대
+          누락 복구 대상: ${DUE:-0}대
+          최종 실패: ${FAILED:-0}대
+          복구 상태: ${RECOVERY_STATUS:-실행 실패}
+          작업 확인: ${RUN_URL}"
+          response="$(curl --fail-with-body --silent --show-error \
+            --retry 3 --retry-all-errors --max-time 30 \
+            -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "text=${message}" \
+            --data-urlencode "disable_web_page_preview=true" \
+            --data-urlencode "protect_content=true")"
+          jq -e '.ok == true' <<< "$response" >/dev/null
