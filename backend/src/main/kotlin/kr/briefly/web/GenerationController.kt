@@ -79,6 +79,18 @@ class GenerationController(
         )
     }
 
+    @PostMapping("/recover-missed")
+    fun recoverMissed(
+        @RequestHeader("X-Briefing-Admin-Token", required = false) suppliedToken: String?,
+        @RequestBody request: ForceDispatchRequest,
+    ): PushDeliverySummary {
+        adminAuthorizer.authorize(suppliedToken)
+        return webPushService.recoverMissedDelivery(
+            request.expectedBriefingDate,
+            request.expectedActiveSubscriptions,
+        )
+    }
+
     @PostMapping("/test-push")
     fun testPush(
         @RequestHeader("X-Briefing-Admin-Token", required = false) suppliedToken: String?,

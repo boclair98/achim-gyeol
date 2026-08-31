@@ -6,6 +6,9 @@ import nl.martijndwars.webpush.Encoding
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
 import java.time.LocalTime
+import java.time.LocalDate
+import java.time.ZoneId
+import kr.briefly.domain.DeliveryState
 
 class WebPushServiceTest {
     @Test
@@ -95,6 +98,19 @@ class WebPushServiceTest {
         assertThat(forcedDispatchCountIsSafe(expected = 15, current = 14)).isTrue()
         assertThat(forcedDispatchCountIsSafe(expected = 14, current = 15)).isFalse()
         assertThat(forcedDispatchCountIsSafe(expected = 0, current = 0)).isTrue()
+    }
+
+    @Test
+    fun `recovery skips devices already delivered by attempt or successful send date`() {
+        val zone = ZoneId.of("Asia/Seoul")
+        val date = LocalDate.of(2026, 9, 1)
+        val sentToday = OffsetDateTime.of(2026, 9, 1, 7, 30, 0, 0, ZoneOffset.ofHours(9))
+        val sentYesterday = sentToday.minusDays(1)
+
+        assertThat(deliveryAlreadyCompleted(DeliveryState.DELIVERED, null, date, zone)).isTrue()
+        assertThat(deliveryAlreadyCompleted(DeliveryState.FAILED, sentToday, date, zone)).isTrue()
+        assertThat(deliveryAlreadyCompleted(DeliveryState.FAILED, sentYesterday, date, zone)).isFalse()
+        assertThat(deliveryAlreadyCompleted(null, null, date, zone)).isFalse()
     }
 
     @Test

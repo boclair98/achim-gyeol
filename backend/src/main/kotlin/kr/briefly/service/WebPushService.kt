@@ -54,6 +54,15 @@ data class PushRegistration(
  */
 internal fun forcedDispatchCountIsSafe(expected: Int, current: Int): Boolean =
     expected >= 0 && current in 0..expected
+
+internal fun deliveryAlreadyCompleted(
+    state: DeliveryState?,
+    lastSentAt: OffsetDateTime?,
+    briefingDate: LocalDate,
+    zone: ZoneId,
+): Boolean = state == DeliveryState.DELIVERED ||
+    lastSentAt?.atZoneSameInstant(zone)?.toLocalDate() == briefingDate
+
 data class PushConfigResponse(val enabled: Boolean, val publicKey: String)
 data class PushResult(
     val delivered: Boolean,
@@ -305,7 +314,7 @@ class WebPushService(
             val subscriptionId = requireNotNull(subscription.id)
             val attempt = deliveryAttemptRepository.findByEditionIdAndSubscriptionId(editionId, subscriptionId)
                 ?: PushDeliveryAttempt(editionId = editionId, subscriptionId = subscriptionId)
-            val alreadySentToday = attempt.state == DeliveryState.DELIVERED || subscription.lastSentAt?.atZoneSameInstant(zone)?.toLocalDate() == now.toLocalDate()
+            val alreadySentToday = deliveryAlreadyCompleted(attempt.state, subscription.lastSentAt, now.toLocalDate(), zone)
             val scheduledTime = fixedDeliveryTime
             val retryable = attempt.state in setOf(DeliveryState.PENDING, DeliveryState.FAILED) && attempt.attempts < 3
             if (deliveryIsDue(now.toLocalTime(), scheduledTime) && !alreadySentToday && retryable) {
@@ -407,6 +416,88 @@ class WebPushService(
             delivered = delivered,
             failed = failed,
             message = "오늘 브리핑을 기존 발송 여부에 관계없이 전체 활성 기기에 보냈습니다.",
+            failureReasons = failureReasons,
+        )
+    }
+
+    /**
+     * Recovers a missed morning run without sending a duplicate to devices that
+     * already received this edition. This endpoint is safe for redundant
+     * watchdogs: every invocation re-checks the persisted delivery attempt and
+     * the subscription's last successful delivery date before sending.
+     */
+    @Transactional
+    @Synchronized
+    fun recoverMissedDelivery(expectedBriefingDate: LocalDate, expectedActiveSubscriptions: Int): PushDeliverySummary {
+        requireConfigured()
+        val today = LocalDate.now(ZoneId.of("Asia/Seoul"))
+        require(expectedBriefingDate == today) {
+            "누락 발송 복구 기준일이 오늘과 다릅니다. 예상 $expectedBriefingDate, 오늘 $today"
+        }
+        val briefing = briefingService.latest()
+        require(briefing.briefingDate == today && briefing.productionReady) {
+            "오늘의 브리핑이 아직 복구 발송 가능한 상태가 아닙니다"
+        }
+        val subscriptions = repository.findAllByActiveTrue()
+        require(forcedDispatchCountIsSafe(expectedActiveSubscriptions, subscriptions.size)) {
+            "등록 기기 수가 예상과 다릅니다. 예상 ${expectedActiveSubscriptions}대, 현재 ${subscriptions.size}대"
+        }
+
+        val lead = briefing.stories.firstOrNull()
+        val title = if (briefing.stories.isEmpty()) {
+            "아침결 · 오늘 브리핑 안내"
+        } else {
+            "아침결 · 어제 핵심 ${briefing.stories.size}건 · 약 ${briefing.readMinutes}분"
+        }
+        val body = lead?.let { "${it.category} 1순위 · ${it.oneLineSummary.take(82)}" }
+            ?: "오늘은 자동 검증을 통과한 뉴스 카드가 아직 없습니다. 수집과 검증을 계속 진행하고 있어요."
+        var due = 0
+        var delivered = 0
+        var failed = 0
+        val failureReasons = mutableListOf<String>()
+
+        subscriptions.forEach { subscription ->
+            val zone = runCatching { ZoneId.of(subscription.timezone) }.getOrDefault(ZoneId.of("Asia/Seoul"))
+            val subscriptionId = requireNotNull(subscription.id)
+            val attempt = deliveryAttemptRepository.findByEditionIdAndSubscriptionId(briefing.id, subscriptionId)
+                ?: PushDeliveryAttempt(editionId = briefing.id, subscriptionId = subscriptionId)
+            if (deliveryAlreadyCompleted(attempt.state, subscription.lastSentAt, today, zone)) return@forEach
+
+            due += 1
+            if (attempt.attempts >= 5) {
+                failed += 1
+                failureReasons += "${classifyDeviceClient(subscription.userAgent).deviceType}: 복구 재시도 한도 초과"
+                return@forEach
+            }
+            attempt.attempts += 1
+            attempt.lastAttemptAt = OffsetDateTime.now()
+            val result = send(subscription, title, body, false)
+            if (result.delivered) {
+                delivered += 1
+                attempt.state = DeliveryState.DELIVERED
+                attempt.deliveredAt = OffsetDateTime.now()
+                attempt.error = null
+            } else {
+                failed += 1
+                attempt.state = if (subscription.active) DeliveryState.FAILED else DeliveryState.EXPIRED
+                attempt.error = subscription.lastError?.take(600) ?: result.message.take(600)
+                failureReasons += failureReason(subscription, result)
+            }
+            deliveryAttemptRepository.save(attempt)
+        }
+
+        return PushDeliverySummary(
+            status = when {
+                failed > 0 -> "RECOVERY_PARTIAL_FAILURE"
+                due == 0 -> "RECOVERY_NOT_NEEDED"
+                else -> "RECOVERY_COMPLETED"
+            },
+            activeSubscriptions = subscriptions.size,
+            dueSubscriptions = due,
+            delivered = delivered,
+            failed = failed,
+            message = if (due == 0) "오늘 브리핑은 모든 활성 기기에 이미 발송됐습니다."
+            else "오늘 브리핑을 아직 받지 못한 활성 기기에만 복구 발송했습니다.",
             failureReasons = failureReasons,
         )
     }
