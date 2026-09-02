@@ -353,7 +353,9 @@ class WebPushService(
         val due = outcomes.count { it.due }
         val delivered = outcomes.count { it.delivered }
         val failed = outcomes.count { it.failed }
-        val failureReasons = outcomes.mapNotNull { it.failureReason }
+        // Keep operator responses bounded even if a provider outage affects the
+        // entire audience; aggregate counts still describe the full fan-out.
+        val failureReasons = outcomes.mapNotNull { it.failureReason }.take(MAX_FAILURE_REASONS)
         return PushDeliverySummary(
             if (finalizationComplete) "COMPLETED" else "COMPLETED_WITH_DEADLINE_FALLBACK",
             subscriptions.size,
@@ -417,7 +419,7 @@ class WebPushService(
         }
         val delivered = outcomes.count { it.delivered }
         val failed = outcomes.count { it.failed }
-        val failureReasons = outcomes.mapNotNull { it.failureReason }
+        val failureReasons = outcomes.mapNotNull { it.failureReason }.take(MAX_FAILURE_REASONS)
         return PushDeliverySummary(
             status = if (failed == 0) "FORCED_DELIVERY_COMPLETED" else "FORCED_DELIVERY_PARTIAL_FAILURE",
             activeSubscriptions = subscriptions.size,
@@ -492,7 +494,7 @@ class WebPushService(
         val due = outcomes.count { it.due }
         val delivered = outcomes.count { it.delivered }
         val failed = outcomes.count { it.failed }
-        val failureReasons = outcomes.mapNotNull { it.failureReason }
+        val failureReasons = outcomes.mapNotNull { it.failureReason }.take(MAX_FAILURE_REASONS)
 
         return PushDeliverySummary(
             status = when {
@@ -771,6 +773,8 @@ class WebPushService(
     private fun requireConfigured() = check(isConfigured()) { "웹푸시가 아직 설정되지 않았습니다." }
 
     companion object {
+        private const val MAX_FAILURE_REASONS = 100
+
         fun endpointHash(endpoint: String): String = MessageDigest.getInstance("SHA-256")
             .digest(endpoint.toByteArray(StandardCharsets.UTF_8)).joinToString("") { "%02x".format(it) }
     }
