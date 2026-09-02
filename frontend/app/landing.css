@@ -334,7 +334,7 @@ body {
 .landing-shell .archive-nav button { border: 1px solid var(--landing-line); border-radius: 999px; background: white; padding: 9px 18px; color: #718078; }
 .landing-shell .archive-nav button.active { border-color: var(--landing-green); background: var(--landing-green); color: white; box-shadow: none; }
 .landing-shell .story-list { gap: 15px; }
-.landing-shell .story-row { border: 1px solid var(--landing-line); border-radius: 18px; background: white; box-shadow: 0 10px 28px rgba(31,63,48,.045); content-visibility: auto; contain-intrinsic-size: 0 460px; }
+.landing-shell .story-row { border: 1px solid var(--landing-line); border-radius: 18px; background: white; box-shadow: 0 10px 28px rgba(31,63,48,.045); }
 .landing-shell .story-row:focus-within { outline: 3px solid rgba(24,183,121,.32); outline-offset: 3px; }
 .landing-shell .story-row:first-child { background: linear-gradient(145deg,#fff 55%,#effaf4); }
 .landing-shell .story-index { color: rgba(24,183,121,.1); }
