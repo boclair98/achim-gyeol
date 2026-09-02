@@ -367,7 +367,6 @@ class WebPushService(
 
     fun activeSubscriptionCount(): Int = repository.countByActiveTrue().toInt()
 
-    @Transactional
     @Synchronized
     fun deliverLatestToAll(expectedBriefingDate: LocalDate, expectedActiveSubscriptions: Int): PushDeliverySummary {
         requireConfigured()
@@ -395,29 +394,30 @@ class WebPushService(
         val title = "[다시 보내드림] 아침결 · 어제 핵심 ${briefing.stories.size}건"
         val body = lead?.let { "${it.category} 1순위 · ${it.oneLineSummary.take(82)}" }
             ?: "오늘 브리핑을 다시 점검해 보내드립니다."
-        var delivered = 0
-        var failed = 0
-        val failureReasons = mutableListOf<String>()
-        subscriptions.forEach { subscription ->
+        val attemptsBySubscription = deliveryAttemptRepository.findAllByEditionId(briefing.id).associateBy { it.subscriptionId }
+        val outcomes = fanOut(subscriptions) { subscription ->
             val subscriptionId = requireNotNull(subscription.id)
-            val attempt = deliveryAttemptRepository.findByEditionIdAndSubscriptionId(briefing.id, subscriptionId)
+            val attempt = attemptsBySubscription[subscriptionId]
                 ?: PushDeliveryAttempt(editionId = briefing.id, subscriptionId = subscriptionId)
             attempt.attempts += 1
             attempt.lastAttemptAt = OffsetDateTime.now()
             val result = send(subscription, title, body, false)
-            if (result.delivered) {
-                delivered += 1
+            val outcome = if (result.delivered) {
                 attempt.state = DeliveryState.DELIVERED
                 attempt.deliveredAt = OffsetDateTime.now()
                 attempt.error = null
+                DeliveryOutcome(due = true, delivered = true)
             } else {
-                failed += 1
                 attempt.state = if (subscription.active) DeliveryState.FAILED else DeliveryState.EXPIRED
                 attempt.error = subscription.lastError?.take(600) ?: result.message.take(600)
-                failureReasons += failureReason(subscription, result)
+                DeliveryOutcome(due = true, failed = true, failureReason = failureReason(subscription, result))
             }
             deliveryAttemptRepository.save(attempt)
+            outcome
         }
+        val delivered = outcomes.count { it.delivered }
+        val failed = outcomes.count { it.failed }
+        val failureReasons = outcomes.mapNotNull { it.failureReason }
         return PushDeliverySummary(
             status = if (failed == 0) "FORCED_DELIVERY_COMPLETED" else "FORCED_DELIVERY_PARTIAL_FAILURE",
             activeSubscriptions = subscriptions.size,
