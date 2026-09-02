@@ -113,7 +113,7 @@ export function BriefingApp() {
           <p>짧게 읽고 더 궁금한 뉴스만 원문으로 이어서 확인할 수 있습니다.</p>
         </div>
         <nav className="archive-nav" aria-label="뉴스 분야">
-          {categories.map((item) => <button key={item} className={category === item ? "active" : ""} onClick={() => setCategory(item)}>{item}</button>)}
+          {categories.map((item) => <button key={item} className={category === item ? "active" : ""} aria-pressed={category === item} onClick={() => setCategory(item)}>{item}</button>)}
         </nav>
         <div className="story-list">
           {loading ? <LoadingRows /> : stories.length ? stories.slice(0, 4).map((story, index) => <StoryRow key={story.id} story={story} index={index + 1} onNotice={setNotice} />) : <div className="empty">오늘 이 분야에 선정된 브리핑은 없습니다.</div>}
