@@ -60,6 +60,8 @@ interface StoryCorrectionRepository : JpaRepository<StoryCorrection, Long> {
 
 interface PushDeliveryAttemptRepository : JpaRepository<PushDeliveryAttempt, Long> {
     fun findByEditionIdAndSubscriptionId(editionId: Long, subscriptionId: Long): PushDeliveryAttempt?
+    /** Load the complete edition snapshot once before a push fan-out. */
+    fun findAllByEditionId(editionId: Long): List<PushDeliveryAttempt>
     fun countByEditionIdAndState(editionId: Long, state: DeliveryState): Long
     fun findTop200ByOrderByCreatedAtDesc(): List<PushDeliveryAttempt>
     fun findAllByEditionIdAndState(editionId: Long, state: DeliveryState): List<PushDeliveryAttempt>

@@ -24,6 +24,7 @@ import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import tools.jackson.module.kotlin.jacksonObjectMapper
+import jakarta.annotation.PreDestroy
 import java.nio.charset.StandardCharsets
 import java.math.BigInteger
 import java.security.MessageDigest
@@ -35,6 +36,8 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.time.ZoneId
 import java.time.zone.ZoneRulesException
 import java.util.Base64
+import java.util.concurrent.Callable
+import java.util.concurrent.Executors
 
 data class PushKeys(val p256dh: String, val auth: String)
 data class PushRegistration(
@@ -88,6 +91,13 @@ data class WelcomePreviewStatus(
     val operatorIncluded: Boolean,
     val newSubscriptions: Int,
     val totalTargets: Int,
+)
+
+private data class DeliveryOutcome(
+    val due: Boolean = false,
+    val delivered: Boolean = false,
+    val failed: Boolean = false,
+    val failureReason: String? = null,
 )
 
 internal data class WelcomePreviewTargets(
@@ -174,11 +184,19 @@ class WebPushService(
     @Value("\${app.push.subject:https://morningnews.coders.kr}") private val subject: String,
     @Value("\${app.push.public-url:https://morningnews.coders.kr}") private val publicUrl: String,
     @Value("\${app.pipeline.finalization-time:07:00}") finalizationTimeValue: String,
+    @Value("\${app.push.delivery-concurrency:16}") deliveryConcurrencyValue: Int,
 ) {
     private val logger = LoggerFactory.getLogger(javaClass)
     private val mapper = jacksonObjectMapper()
     private val vapidKey = runCatching { resolveVapidKey(publicKey, privateKey) }.getOrNull()
     private val finalizationTime = parseFinalizationTime(finalizationTimeValue)
+    private val deliveryConcurrency = deliveryConcurrencyValue.coerceIn(4, 32)
+    private val deliveryExecutor = Executors.newFixedThreadPool(deliveryConcurrency)
+
+    @PreDestroy
+    fun shutdownDeliveryExecutor() {
+        deliveryExecutor.shutdownNow()
+    }
 
     init {
         if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) Security.addProvider(BouncyCastleProvider())
@@ -257,12 +275,10 @@ class WebPushService(
     }
 
     @Scheduled(cron = "0 * * * * *")
-    @Transactional
     fun deliverScheduledBriefings() {
         deliverDueBriefings()
     }
 
-    @Transactional
     @Synchronized
     fun deliverDueBriefings(): PushDeliverySummary {
         if (!isConfigured()) return PushDeliverySummary("PUSH_DISABLED", 0, 0, 0, 0, "웹 푸시가 설정되지 않았습니다.")
@@ -303,48 +319,41 @@ class WebPushService(
             logger.error("Final morning briefing pass missed the cutoff; sending the latest completed edition on time")
         }
         val subscriptions = repository.findAllByActiveTrue()
-        var due = 0
-        var delivered = 0
-        var failed = 0
-        val failureReasons = mutableListOf<String>()
-        subscriptions.forEach { subscription ->
+        val attemptsBySubscription = deliveryAttemptRepository.findAllByEditionId(briefing.id).associateBy { it.subscriptionId }
+        val lead = briefing.stories.firstOrNull()
+        val body = lead?.let { "${it.category} 1순위 · ${it.oneLineSummary.take(82)}" }
+            ?: "오늘은 자동 검증을 통과한 뉴스 카드가 아직 없습니다. 수집과 검증을 계속 진행하고 있어요."
+        val title = if (briefing.stories.isEmpty()) "아침결 · 오늘 브리핑 안내"
+        else "아침결 · 어제 핵심 ${briefing.stories.size}건 · 약 ${briefing.readMinutes}분"
+        val outcomes = fanOut(subscriptions) delivery@{ subscription ->
             val zone = runCatching { ZoneId.of(subscription.timezone) }.getOrDefault(ZoneId.of("Asia/Seoul"))
             val now = OffsetDateTime.now(zone)
-            val editionId = briefing.id
             val subscriptionId = requireNotNull(subscription.id)
-            val attempt = deliveryAttemptRepository.findByEditionIdAndSubscriptionId(editionId, subscriptionId)
-                ?: PushDeliveryAttempt(editionId = editionId, subscriptionId = subscriptionId)
+            val attempt = attemptsBySubscription[subscriptionId]
+                ?: PushDeliveryAttempt(editionId = briefing.id, subscriptionId = subscriptionId)
             val alreadySentToday = deliveryAlreadyCompleted(attempt.state, subscription.lastSentAt, now.toLocalDate(), zone)
-            val scheduledTime = fixedDeliveryTime
             val retryable = attempt.state in setOf(DeliveryState.PENDING, DeliveryState.FAILED) && attempt.attempts < 3
-            if (deliveryIsDue(now.toLocalTime(), scheduledTime) && !alreadySentToday && retryable) {
-                due += 1
-                val lead = briefing.stories.firstOrNull()
-                val body = lead?.let {
-                    "${it.category} 1순위 · ${it.oneLineSummary.take(82)}"
-                } ?: "오늘은 자동 검증을 통과한 뉴스 카드가 아직 없습니다. 수집과 검증을 계속 진행하고 있어요."
-                val title = if (briefing.stories.isEmpty()) {
-                    "아침결 · 오늘 브리핑 안내"
-                } else {
-                    "아침결 · 어제 핵심 ${briefing.stories.size}건 · 약 ${briefing.readMinutes}분"
-                }
-                attempt.attempts += 1
-                attempt.lastAttemptAt = OffsetDateTime.now()
-                val result = send(subscription, title, body, false)
-                if (result.delivered) {
-                    delivered += 1
-                    attempt.state = DeliveryState.DELIVERED
-                    attempt.deliveredAt = OffsetDateTime.now()
-                    attempt.error = null
-                } else {
-                    failed += 1
-                    attempt.state = if (subscription.active) DeliveryState.FAILED else DeliveryState.EXPIRED
-                    attempt.error = subscription.lastError?.take(600) ?: result.message.take(600)
-                    failureReasons += failureReason(subscription, result)
-                }
-                deliveryAttemptRepository.save(attempt)
+            if (!deliveryIsDue(now.toLocalTime(), fixedDeliveryTime) || alreadySentToday || !retryable) return@delivery DeliveryOutcome()
+            attempt.attempts += 1
+            attempt.lastAttemptAt = OffsetDateTime.now()
+            val result = send(subscription, title, body, false)
+            val outcome = if (result.delivered) {
+                attempt.state = DeliveryState.DELIVERED
+                attempt.deliveredAt = OffsetDateTime.now()
+                attempt.error = null
+                DeliveryOutcome(due = true, delivered = true)
+            } else {
+                attempt.state = if (subscription.active) DeliveryState.FAILED else DeliveryState.EXPIRED
+                attempt.error = subscription.lastError?.take(600) ?: result.message.take(600)
+                DeliveryOutcome(due = true, failed = true, failureReason = failureReason(subscription, result))
             }
+            deliveryAttemptRepository.save(attempt)
+            outcome
         }
+        val due = outcomes.count { it.due }
+        val delivered = outcomes.count { it.delivered }
+        val failed = outcomes.count { it.failed }
+        val failureReasons = outcomes.mapNotNull { it.failureReason }
         return PushDeliverySummary(
             if (finalizationComplete) "COMPLETED" else "COMPLETED_WITH_DEADLINE_FALLBACK",
             subscriptions.size,
@@ -426,7 +435,6 @@ class WebPushService(
      * watchdogs: every invocation re-checks the persisted delivery attempt and
      * the subscription's last successful delivery date before sending.
      */
-    @Transactional
     @Synchronized
     fun recoverMissedDelivery(expectedBriefingDate: LocalDate, expectedActiveSubscriptions: Int): PushDeliverySummary {
         requireConfigured()
@@ -451,40 +459,40 @@ class WebPushService(
         }
         val body = lead?.let { "${it.category} 1순위 · ${it.oneLineSummary.take(82)}" }
             ?: "오늘은 자동 검증을 통과한 뉴스 카드가 아직 없습니다. 수집과 검증을 계속 진행하고 있어요."
-        var due = 0
-        var delivered = 0
-        var failed = 0
-        val failureReasons = mutableListOf<String>()
-
-        subscriptions.forEach { subscription ->
+        val attemptsBySubscription = deliveryAttemptRepository.findAllByEditionId(briefing.id).associateBy { it.subscriptionId }
+        val outcomes = fanOut(subscriptions) delivery@{ subscription ->
             val zone = runCatching { ZoneId.of(subscription.timezone) }.getOrDefault(ZoneId.of("Asia/Seoul"))
             val subscriptionId = requireNotNull(subscription.id)
-            val attempt = deliveryAttemptRepository.findByEditionIdAndSubscriptionId(briefing.id, subscriptionId)
+            val attempt = attemptsBySubscription[subscriptionId]
                 ?: PushDeliveryAttempt(editionId = briefing.id, subscriptionId = subscriptionId)
-            if (deliveryAlreadyCompleted(attempt.state, subscription.lastSentAt, today, zone)) return@forEach
-
-            due += 1
+            if (deliveryAlreadyCompleted(attempt.state, subscription.lastSentAt, today, zone)) return@delivery DeliveryOutcome()
             if (attempt.attempts >= 5) {
-                failed += 1
-                failureReasons += "${classifyDeviceClient(subscription.userAgent).deviceType}: 복구 재시도 한도 초과"
-                return@forEach
+                return@delivery DeliveryOutcome(
+                    due = true,
+                    failed = true,
+                    failureReason = "${classifyDeviceClient(subscription.userAgent).deviceType}: 복구 재시도 한도 초과",
+                )
             }
             attempt.attempts += 1
             attempt.lastAttemptAt = OffsetDateTime.now()
             val result = send(subscription, title, body, false)
-            if (result.delivered) {
-                delivered += 1
+            val outcome = if (result.delivered) {
                 attempt.state = DeliveryState.DELIVERED
                 attempt.deliveredAt = OffsetDateTime.now()
                 attempt.error = null
+                DeliveryOutcome(due = true, delivered = true)
             } else {
-                failed += 1
                 attempt.state = if (subscription.active) DeliveryState.FAILED else DeliveryState.EXPIRED
                 attempt.error = subscription.lastError?.take(600) ?: result.message.take(600)
-                failureReasons += failureReason(subscription, result)
+                DeliveryOutcome(due = true, failed = true, failureReason = failureReason(subscription, result))
             }
             deliveryAttemptRepository.save(attempt)
+            outcome
         }
+        val due = outcomes.count { it.due }
+        val delivered = outcomes.count { it.delivered }
+        val failed = outcomes.count { it.failed }
+        val failureReasons = outcomes.mapNotNull { it.failureReason }
 
         return PushDeliverySummary(
             status = when {
@@ -500,6 +508,39 @@ class WebPushService(
             else "오늘 브리핑을 아직 받지 못한 활성 기기에만 복구 발송했습니다.",
             failureReasons = failureReasons,
         )
+    }
+
+    /**
+     * Push providers are network-bound. A bounded pool keeps one slow endpoint
+     * from serialising the entire morning delivery while protecting the DB and
+     * provider from an unbounded fan-out.
+     */
+    private fun fanOut(
+        subscriptions: List<PushSubscription>,
+        action: (PushSubscription) -> DeliveryOutcome,
+    ): List<DeliveryOutcome> {
+        val outcomes = mutableListOf<DeliveryOutcome>()
+        // Submit a bounded batch at a time so a large audience does not turn
+        // into tens of thousands of queued futures or exhaust provider/DB
+        // resources before the first results are persisted.
+        subscriptions.chunked((deliveryConcurrency * 8).coerceAtLeast(32)).forEach { batch ->
+            val futures = batch.map { subscription ->
+                deliveryExecutor.submit(Callable { action(subscription) })
+            }
+            futures.forEachIndexed { index, future ->
+                try {
+                    outcomes += future.get()
+                } catch (interrupted: InterruptedException) {
+                    Thread.currentThread().interrupt()
+                    logger.error("Push delivery worker interrupted (index={})", index, interrupted)
+                    outcomes += DeliveryOutcome(due = true, failed = true, failureReason = "발송 작업이 중단됐습니다")
+                } catch (exception: Exception) {
+                    logger.error("Push delivery worker failed (index={})", index, exception)
+                    outcomes += DeliveryOutcome(due = true, failed = true, failureReason = "발송 작업 처리 중 오류가 발생했습니다")
+                }
+            }
+        }
+        return outcomes
     }
 
     @Transactional(readOnly = true)

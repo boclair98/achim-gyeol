@@ -18,6 +18,9 @@ services:
       DATABASE_URL: jdbc:postgresql://${db.host}:${db.port}/${db.name}
       DATABASE_USER: ${db.user}
       DATABASE_PASSWORD: ${db.password}
+      DB_POOL_MAX_SIZE: "24"
+      DB_POOL_MIN_IDLE: "4"
+      DB_POOL_CONNECTION_TIMEOUT_MS: "30000"
       BACKUP_ENABLED: "true"
       BACKUP_STORAGE_BUCKET: ${backups.bucket}
       BACKUP_STORAGE_ENDPOINT: ${backups.s3_endpoint}
@@ -55,6 +58,7 @@ services:
       NEWS_MINIMUM_DELIVERY_CATEGORIES: "5"
       NEWS_REQUIRED_CATEGORIES: "SPORTS,ESPORTS"
       WEB_PUSH_ENABLED: "true"
+      WEB_PUSH_DELIVERY_CONCURRENCY: "16"
       PUBLIC_APP_URL: "https://morningnews.coders.kr"
       TRUST_CODERS_USER_HEADER: "false"
       PUBLIC_WRITE_LIMIT_PER_MINUTE: "30"

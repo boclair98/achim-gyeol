@@ -1,5 +1,8 @@
 server:
   port: ${PORT:8080}
+  compression:
+    enabled: true
+    min-response-size: 2048
 spring:
   application:
     name: briefly-api
@@ -7,6 +10,10 @@ spring:
     url: ${DATABASE_URL:jdbc:h2:mem:briefly;MODE=PostgreSQL;DB_CLOSE_DELAY=-1}
     username: ${DATABASE_USER:sa}
     password: ${DATABASE_PASSWORD:}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:24}
+      minimum-idle: ${DB_POOL_MIN_IDLE:4}
+      connection-timeout: ${DB_POOL_CONNECTION_TIMEOUT_MS:30000}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -55,6 +62,7 @@ app:
         read-timeout-seconds: ${OPENAI_EDITOR_READ_TIMEOUT_SECONDS:180}
   push:
     enabled: ${WEB_PUSH_ENABLED:false}
+    delivery-concurrency: ${WEB_PUSH_DELIVERY_CONCURRENCY:16}
     public-key: ${VAPID_PUBLIC_KEY:}
     private-key: ${VAPID_PRIVATE_KEY:}
     subject: ${VAPID_SUBJECT:https://morningnews.coders.kr}
