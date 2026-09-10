@@ -230,30 +230,35 @@ function HeroNewsCarousel({ stories, readMinutes }: { stories: Story[]; readMinu
 function StoryRow({ story, index, personalized = false, onNotice }: { story: Story; index: number; personalized?: boolean; onNotice: (message: string) => void }) {
   const verified = story.verificationStatus === "VERIFIED";
   const evidenceReady = story.evidenceAvailable && Boolean(story.claims?.length);
+  const featuredLayout = index === 1 && Boolean(story.imageUrl);
   return (
-    <article className="story-row">
+    <article className={`story-row${featuredLayout ? " story-row-featured" : ""}`}>
       <div className="story-index">{String(index).padStart(2, "0")}</div>
       <div className="story-body">
-        <StoryVisual story={story} variant="row" />
-        <div className="story-kicker"><span className="category">{story.category}</span>{personalized && <span className="story-personalized"><Sparkles size={12} /> 맞춤 추천</span>}<span className={verified && evidenceReady ? "verified" : "verified developing"}><CheckCircle2 size={13} />{evidenceReady ? (verified ? "출처 보기" : "내용 확인 중") : "원문 제공"}</span></div>
-        <h3>{story.title}</h3>
-        <div className="story-conclusion"><strong>한 줄 결론</strong><p>{story.oneLineSummary || firstSentence(story.summary)}</p></div>
-        <div className="story-easy"><strong>이해 포인트</strong><p>{story.plainExplanation || story.summary}</p></div>
-        <details className="story-details">
-          <summary><span>핵심 내용과 맥락</span><ChevronDown size={16} aria-hidden="true" /></summary>
-          <div className="story-details-content">
-            <div className="story-summary"><strong>핵심 내용</strong>{evidenceReady ? <ul>{story.claims!.slice(0, 3).map((claim, claimIndex) => {
-              const sourceNumbers = claim.sources.map((source) => story.sources.findIndex((item) => item.url === source.url) + 1).filter((number) => number > 0);
-              return <li key={`${claim.statement}-${claimIndex}`}>{claim.statement}{sourceNumbers.length > 0 && <small> [{sourceNumbers.join("·")}]</small>}</li>;
-            })}</ul> : <p className="summary">{story.summary}</p>}</div>
-            <div className="why"><strong>알아야 할 것</strong><span>{story.whyItMatters}</span></div>
-            {story.uncertainty && <div className="story-uncertainty"><strong>더 지켜볼 내용</strong><span>{story.uncertainty}</span></div>}
+        <div className="story-card-main">
+          <StoryVisual story={story} variant="row" />
+          <div className="story-card-copy">
+            <div className="story-kicker"><span className="category">{story.category}</span>{personalized && <span className="story-personalized"><Sparkles size={12} /> 맞춤 추천</span>}<span className={verified && evidenceReady ? "verified" : "verified developing"}><CheckCircle2 size={13} />{evidenceReady ? (verified ? "출처 보기" : "내용 확인 중") : "원문 제공"}</span></div>
+            <h3>{story.title}</h3>
+            <div className="story-conclusion"><strong>한 줄 결론</strong><p>{story.oneLineSummary || firstSentence(story.summary)}</p></div>
+            <div className="story-easy"><strong>이해 포인트</strong><p>{story.plainExplanation || story.summary}</p></div>
+            <details className="story-details">
+              <summary><span>핵심 내용과 맥락</span><ChevronDown size={16} aria-hidden="true" /></summary>
+              <div className="story-details-content">
+                <div className="story-summary"><strong>핵심 내용</strong>{evidenceReady ? <ul>{story.claims!.slice(0, 3).map((claim, claimIndex) => {
+                  const sourceNumbers = claim.sources.map((source) => story.sources.findIndex((item) => item.url === source.url) + 1).filter((number) => number > 0);
+                  return <li key={`${claim.statement}-${claimIndex}`}>{claim.statement}{sourceNumbers.length > 0 && <small> [{sourceNumbers.join("·")}]</small>}</li>;
+                })}</ul> : <p className="summary">{story.summary}</p>}</div>
+                <div className="why"><strong>알아야 할 것</strong><span>{story.whyItMatters}</span></div>
+                {story.uncertainty && <div className="story-uncertainty"><strong>더 지켜볼 내용</strong><span>{story.uncertainty}</span></div>}
+              </div>
+            </details>
           </div>
-        </details>
+        </div>
         <div className="source-row">
           <span>출처 {story.sources.map((source) => source.publisher).join(" · ")}</span>
           <div className="story-actions">
-            <button aria-label="오류 신고" onClick={() => onNotice("오류 신고를 기록했어요. 검수 대기열에서 확인하겠습니다.")}><RefreshCw size={15} /></button>
+            <button type="button" aria-label="오류 신고" onClick={() => onNotice("오류 신고를 기록했어요. 검수 대기열에서 확인하겠습니다.")}><RefreshCw size={15} /></button>
             <a aria-label="첫 번째 원문 열기" href={story.sources[0]?.url ?? "#"} target="_blank" rel="noreferrer">원문 <ExternalLink size={14} /></a>
           </div>
         </div>
