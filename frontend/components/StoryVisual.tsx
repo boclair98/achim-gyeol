@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { Story } from "@/lib/briefing";
 
 type StoryVisualProps = {
@@ -19,11 +19,6 @@ const responsiveSizes = {
 export function StoryVisual({ story, variant = "card", priority = false }: StoryVisualProps) {
   const [failed, setFailed] = useState(false);
   const [imageFit, setImageFit] = useState<"cover" | "contain">("cover");
-
-  useEffect(() => {
-    setFailed(false);
-    setImageFit("cover");
-  }, [story.imageUrl]);
 
   if (!story.imageUrl || failed) return null;
 
