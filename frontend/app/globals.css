@@ -1717,3 +1717,124 @@ body { text-rendering: optimizeLegibility; }
   .focus-reader-shell .brief-sheet-track,
   .focus-reader-shell .briefing-story-map { scroll-behavior: auto; }
 }
+
+/* Card reading refresh: keep the editorial image intact across viewports and
+   make the reader's saved interests visible without adding visual noise. */
+.story-visual {
+  isolation: isolate;
+}
+
+.story-visual img {
+  object-position: center;
+}
+
+.story-visual-contain {
+  background: linear-gradient(135deg, #f1f6f2, #e5eee9);
+}
+
+.story-visual-contain img {
+  box-sizing: border-box;
+  object-fit: contain;
+  padding: clamp(8px, 1.6vw, 18px);
+}
+
+.story-visual-row {
+  aspect-ratio: 16 / 9;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+}
+
+.story-visual-card {
+  aspect-ratio: 16 / 9;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+}
+
+.story-visual-article {
+  aspect-ratio: 16 / 9;
+  height: auto;
+  max-height: 480px;
+}
+
+.brief-sheet-personalized {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  background: #e8f6ef;
+  padding: 5px 8px;
+  color: #137452;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.morning-personalized-note {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  border: 1px solid #406457;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .06);
+  padding: 11px 13px;
+  color: #d7efe0;
+}
+
+.morning-personalized-note > svg {
+  flex: 0 0 auto;
+  color: #b9df70;
+}
+
+.morning-personalized-note > span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.morning-personalized-note strong {
+  font-size: 11px;
+}
+
+.morning-personalized-note small {
+  color: #9fb8aa;
+  font-size: 9px;
+  line-height: 1.45;
+}
+
+@media (max-width: 850px) {
+  .story-visual-card {
+    aspect-ratio: 16 / 10;
+  }
+
+  .story-visual-article {
+    aspect-ratio: 4 / 3;
+    max-height: none;
+  }
+
+  .morning-personalized-note {
+    margin-top: 14px;
+  }
+}
+
+@media (max-width: 600px) {
+  .story-visual-row {
+    aspect-ratio: 16 / 10;
+  }
+
+  .story-visual-card {
+    aspect-ratio: 16 / 10;
+  }
+
+  .story-visual-article {
+    aspect-ratio: 4 / 3;
+  }
+
+  .morning-personalized-note {
+    align-items: flex-start;
+    padding: 10px 11px;
+  }
+}

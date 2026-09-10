@@ -9,6 +9,7 @@ import {
   Check,
   CheckCircle2,
   Clock3,
+  ChevronDown,
   ExternalLink,
   Newspaper,
   RefreshCw,
@@ -29,6 +30,7 @@ export function BriefingApp() {
   const [category, setCategory] = useState("전체");
   const [loading, setLoading] = useState(true);
   const [notice, setNotice] = useState("오늘의 아침 뉴스를 불러오고 있어요.");
+  const [preferredCategories, setPreferredCategories] = useState<string[]>([]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -46,9 +48,25 @@ export function BriefingApp() {
     return () => controller.abort();
   }, []);
 
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      const stored = safeJsonParse<{ categories?: unknown }>(window.localStorage.getItem("achim-gyeol-reader-preferences"), {});
+      setPreferredCategories(Array.isArray(stored.categories) ? stored.categories.filter((value): value is string => typeof value === "string") : []);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   const stories = useMemo(
-    () => category === "전체" ? briefing.stories : briefing.stories.filter((story) => story.category === category),
-    [briefing, category],
+    () => {
+      const editorialStories = briefing.stories.length <= 3 || preferredCategories.length === 0
+        ? briefing.stories
+        : [
+            ...briefing.stories.slice(0, 3),
+            ...briefing.stories.slice(3).sort((a, b) => Number(preferredCategories.includes(b.category)) - Number(preferredCategories.includes(a.category))),
+          ];
+      return category === "전체" ? editorialStories : editorialStories.filter((story) => story.category === category);
+    },
+    [briefing, category, preferredCategories],
   );
   const categories = useMemo(
     () => ["전체", ...briefingCategoryOrder.filter((item) => briefing.stories.some((story) => story.category === item))],
@@ -115,8 +133,9 @@ export function BriefingApp() {
         <nav className="archive-nav" aria-label="뉴스 분야">
           {categories.map((item) => <button key={item} className={category === item ? "active" : ""} aria-pressed={category === item} onClick={() => setCategory(item)}>{item}</button>)}
         </nav>
+        {preferredCategories.length > 0 && <div className="archive-personalized-note" role="status"><Sparkles size={14} /><span><strong>내 관심 분야를 먼저 보여드려요</strong><small>{preferredCategories.slice(0, 3).join(" · ")}</small></span></div>}
         <div className="story-list">
-          {loading ? <LoadingRows /> : stories.length ? stories.slice(0, 4).map((story, index) => <StoryRow key={story.id} story={story} index={index + 1} onNotice={setNotice} />) : <div className="empty">오늘 이 분야에 선정된 브리핑은 없습니다.</div>}
+          {loading ? <LoadingRows /> : stories.length ? stories.slice(0, 4).map((story, index) => <StoryRow key={story.id} story={story} index={index + 1} personalized={preferredCategories.includes(story.category)} onNotice={setNotice} />) : <div className="empty">오늘 이 분야에 선정된 브리핑은 없습니다.</div>}
         </div>
         <div className="archive-more"><Link href="/archive">지난 브리핑 전체 보기 <ArrowRight size={15} /></Link></div>
       </section>
@@ -208,7 +227,7 @@ function HeroNewsCarousel({ stories, readMinutes }: { stories: Story[]; readMinu
   );
 }
 
-function StoryRow({ story, index, onNotice }: { story: Story; index: number; onNotice: (message: string) => void }) {
+function StoryRow({ story, index, personalized = false, onNotice }: { story: Story; index: number; personalized?: boolean; onNotice: (message: string) => void }) {
   const verified = story.verificationStatus === "VERIFIED";
   const evidenceReady = story.evidenceAvailable && Boolean(story.claims?.length);
   return (
@@ -216,13 +235,21 @@ function StoryRow({ story, index, onNotice }: { story: Story; index: number; onN
       <div className="story-index">{String(index).padStart(2, "0")}</div>
       <div className="story-body">
         <StoryVisual story={story} variant="row" />
-        <div className="story-kicker"><span className="category">{story.category}</span><span className={verified && evidenceReady ? "verified" : "verified developing"}><CheckCircle2 size={13} />{evidenceReady ? (verified ? "출처 보기" : "내용 확인 중") : "원문 제공"}</span></div>
+        <div className="story-kicker"><span className="category">{story.category}</span>{personalized && <span className="story-personalized"><Sparkles size={12} /> 맞춤 추천</span>}<span className={verified && evidenceReady ? "verified" : "verified developing"}><CheckCircle2 size={13} />{evidenceReady ? (verified ? "출처 보기" : "내용 확인 중") : "원문 제공"}</span></div>
         <h3>{story.title}</h3>
         <div className="story-conclusion"><strong>한 줄 결론</strong><p>{story.oneLineSummary || firstSentence(story.summary)}</p></div>
         <div className="story-easy"><strong>이해 포인트</strong><p>{story.plainExplanation || story.summary}</p></div>
-        <div className="story-summary"><strong>핵심 내용</strong>{evidenceReady ? <ul>{story.claims!.slice(0, 3).map((claim, claimIndex) => <li key={`${claim.statement}-${claimIndex}`}>{claim.statement} <small>[{claim.sources.map((source) => story.sources.findIndex((item) => item.url === source.url) + 1).filter((number) => number > 0).join("·")}]</small></li>)}</ul> : <p className="summary">{story.summary}</p>}</div>
-        <div className="why"><strong>알아야 할 것</strong><span>{story.whyItMatters}</span></div>
-        {story.uncertainty && <div className="story-uncertainty"><strong>더 지켜볼 내용</strong><span>{story.uncertainty}</span></div>}
+        <details className="story-details">
+          <summary><span>핵심 내용과 맥락</span><ChevronDown size={16} aria-hidden="true" /></summary>
+          <div className="story-details-content">
+            <div className="story-summary"><strong>핵심 내용</strong>{evidenceReady ? <ul>{story.claims!.slice(0, 3).map((claim, claimIndex) => {
+              const sourceNumbers = claim.sources.map((source) => story.sources.findIndex((item) => item.url === source.url) + 1).filter((number) => number > 0);
+              return <li key={`${claim.statement}-${claimIndex}`}>{claim.statement}{sourceNumbers.length > 0 && <small> [{sourceNumbers.join("·")}]</small>}</li>;
+            })}</ul> : <p className="summary">{story.summary}</p>}</div>
+            <div className="why"><strong>알아야 할 것</strong><span>{story.whyItMatters}</span></div>
+            {story.uncertainty && <div className="story-uncertainty"><strong>더 지켜볼 내용</strong><span>{story.uncertainty}</span></div>}
+          </div>
+        </details>
         <div className="source-row">
           <span>출처 {story.sources.map((source) => source.publisher).join(" · ")}</span>
           <div className="story-actions">
@@ -237,6 +264,11 @@ function StoryRow({ story, index, onNotice }: { story: Story; index: number; onN
 
 function firstSentence(summary: string) {
   return summary.trim().split(/(?<=[.!?])\s+/)[0] || summary;
+}
+
+function safeJsonParse<T>(value: string | null, fallback: T): T {
+  if (!value) return fallback;
+  try { return JSON.parse(value) as T; } catch { return fallback; }
 }
 
 function LoadingRows() {
