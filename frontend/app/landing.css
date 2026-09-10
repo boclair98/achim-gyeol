@@ -333,6 +333,10 @@ body {
 .landing-shell .archive-nav { justify-content: center; margin: 28px 0 23px; }
 .landing-shell .archive-nav button { border: 1px solid var(--landing-line); border-radius: 999px; background: white; padding: 9px 18px; color: #718078; }
 .landing-shell .archive-nav button.active { border-color: var(--landing-green); background: var(--landing-green); color: white; box-shadow: none; }
+.landing-shell .briefing-error { display: grid; gap: 8px; place-items: center; color: var(--landing-muted); }
+.landing-shell .briefing-error strong { color: var(--landing-ink); font-size: 15px; }
+.landing-shell .briefing-error span { font-size: 13px; line-height: 1.6; }
+.landing-shell .briefing-error button { min-height: 44px; margin-top: 6px; border: 0; border-radius: 12px; background: var(--landing-green); color: white; padding: 0 16px; cursor: pointer; font-weight: 850; }
 .landing-shell .story-list { gap: 15px; }
 .landing-shell .story-row { border: 1px solid var(--landing-line); border-radius: 18px; background: white; box-shadow: 0 10px 28px rgba(31,63,48,.045); }
 .landing-shell .story-row:focus-within { outline: 3px solid rgba(24,183,121,.32); outline-offset: 3px; }
