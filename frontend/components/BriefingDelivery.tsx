@@ -334,6 +334,7 @@ function DailyBriefingSheets({ briefing, reportingEnabled, selectedDate, onChoos
         </div>
         <div className="morning-core-date"><strong>{briefing.dateLabel}</strong><span>어제 뉴스 기준</span></div>
       </header>
+      {(preferredCategories.length > 0 || briefing.personalized) && <div className="morning-personalized-note" role="status"><Sparkles size={15} /><span><strong>내 아침결에 맞춰 정리했어요</strong><small>{preferredCategories.length > 0 ? `${preferredCategories.slice(0, 3).join(" · ")} 관련 카드를 먼저 보여드려요.` : "최근 관심 반응을 다음 카드 순서에 반영했어요."}</small></span></div>}
 
       <div className="morning-core-grid">
         {featuredStories[0] && <button type="button" className="morning-lead" onClick={() => openFeaturedStory(featuredStories[0].id)}>
@@ -448,7 +449,7 @@ function DailyBriefingSheets({ briefing, reportingEnabled, selectedDate, onChoos
           <div className="brief-sheet-stories">
             <section className="brief-sheet-story">
               <div className="brief-sheet-section-label brief-sheet-summary-label"><span>상단 · 핵심 요약</span><small>제목부터 중요한 사실과 맥락까지 먼저 읽어보세요.</small></div>
-              <CoreStoryCard story={story} index={storyIndex} digestSize={digestSize} />
+              <CoreStoryCard story={story} index={storyIndex} digestSize={digestSize} personalized={preferredCategories.includes(story.category)} />
               <div className="brief-sheet-section-label brief-sheet-detail-label"><span>하단 · 기사형 상세</span><small>여러 출처에서 확인된 내용을 한 흐름으로 정리했습니다.</small></div>
               <OriginalStoryCard story={story} index={storyIndex} reportingEnabled={reportingEnabled} onBackToCard={openStoryCard} />
               {reportingEnabled && <StoryInterestControls key={`${story.id}-${story.viewerInterest ?? "none"}`} story={story} />}
@@ -496,12 +497,12 @@ function StoryInterestControls({ story }: { story: Story }) {
   </section>;
 }
 
-function CoreStoryCard({ story, index, digestSize }: { story: Story; index: number; digestSize: "compact" | "standard" | "deep" }) {
+function CoreStoryCard({ story, index, digestSize, personalized = false }: { story: Story; index: number; digestSize: "compact" | "standard" | "deep"; personalized?: boolean }) {
   const evidenceReady = story.evidenceAvailable && Boolean(story.claims?.length);
   const verified = story.verificationStatus === "VERIFIED";
   const claims = evidenceReady ? story.claims!.slice(0, digestSize === "deep" ? 4 : 3) : summaryPoints(story.summary).slice(0, 3).map((statement) => ({ statement, sources: [] }));
   return <section className={`brief-sheet-core-card ${digestSize}`} aria-label="핵심 내용 카드">
-    <div className="brief-sheet-meta"><b>{String(index).padStart(2, "0")}</b><span>{story.category}</span><i className={verified && evidenceReady ? "priority" : ""}>{verified && evidenceReady ? "교차 확인" : "내용 정리"}</i><em className={verified && evidenceReady ? "confirmed" : "checking"}>{story.sources.length}개 출처</em></div>
+    <div className="brief-sheet-meta"><b>{String(index).padStart(2, "0")}</b><span>{story.category}</span>{personalized && <span className="brief-sheet-personalized"><Sparkles size={11} /> 내 관심</span>}<i className={verified && evidenceReady ? "priority" : ""}>{verified && evidenceReady ? "교차 확인" : "내용 정리"}</i><em className={verified && evidenceReady ? "confirmed" : "checking"}>{story.sources.length}개 출처</em></div>
     <h2>{story.title}</h2>
     <StoryVisual story={story} variant="card" />
     <div className="brief-sheet-conclusion"><strong>한 줄 결론</strong><p>{story.oneLineSummary || summaryPoints(story.summary)[0] || story.title}</p></div>

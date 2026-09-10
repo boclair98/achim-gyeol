@@ -18,10 +18,12 @@ const responsiveSizes = {
 
 export function StoryVisual({ story, variant = "card", priority = false }: StoryVisualProps) {
   const [failed, setFailed] = useState(false);
+  const [imageFit, setImageFit] = useState<"cover" | "contain">("cover");
+
   if (!story.imageUrl || failed) return null;
 
   return (
-    <figure className={`story-visual story-visual-${variant}`}>
+    <figure className={`story-visual story-visual-${variant}${imageFit === "contain" ? " story-visual-contain" : ""}`}>
       {/* Remote news domains vary daily, so the verified source URL is rendered without Next image-host restrictions. */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
@@ -32,6 +34,13 @@ export function StoryVisual({ story, variant = "card", priority = false }: Story
         decoding="async"
         sizes={responsiveSizes[variant]}
         referrerPolicy="no-referrer"
+        onLoad={(event) => {
+          const { naturalWidth, naturalHeight } = event.currentTarget;
+          const ratio = naturalWidth / Math.max(naturalHeight, 1);
+          // Preserve infographics and unusually tall/wide source images instead
+          // of cropping away the context readers need on another viewport.
+          if (variant !== "hero" && (ratio < 0.78 || ratio > 2.25)) setImageFit("contain");
+        }}
         onError={() => setFailed(true)}
       />
       {variant !== "hero" && <figcaption><span>{story.category}</span>{story.imagePublisher ? `${story.imagePublisher} 기사 이미지` : "기사 대표 이미지"}</figcaption>}
