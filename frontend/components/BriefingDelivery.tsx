@@ -347,6 +347,7 @@ function DailyBriefingSheets({ briefing, reportingEnabled, selectedDate, onChoos
         <div className="morning-secondary-list">
           {featuredStories.slice(1).map((story, index) => <button type="button" key={story.id} onClick={() => openFeaturedStory(story.id)}>
             <b>0{index + 2}</b>
+            <div className="morning-secondary-thumb" aria-hidden="true"><StoryVisual story={story} variant="hero" /></div>
             <span><small>{story.category}</small><strong>{story.title}</strong><p>{story.oneLineSummary || story.summary}</p></span>
             <ChevronRight size={17} />
           </button>)}
