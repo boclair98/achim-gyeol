@@ -1838,3 +1838,78 @@ body { text-rendering: optimizeLegibility; }
     padding: 10px 11px;
   }
 }
+
+/* Featured secondary stories use a small, quiet thumbnail so the morning
+   overview feels visual without competing with the lead story. */
+.morning-secondary-list button {
+  grid-template-columns: 34px 74px minmax(0, 1fr) 18px;
+}
+
+.morning-secondary-thumb {
+  width: 74px;
+  height: 74px;
+  overflow: hidden;
+  border: 1px solid #4a675b;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #284b3e, #1b352c);
+}
+
+.morning-secondary-thumb .story-visual-hero {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  border-radius: inherit;
+}
+
+.morning-secondary-thumb .story-visual-hero img {
+  object-fit: cover;
+}
+
+.morning-secondary-thumb .story-visual-contain img {
+  padding: 6px;
+}
+
+.morning-secondary-thumb-placeholder {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 25% 20%, rgba(185, 223, 112, .2), transparent 52%),
+    linear-gradient(135deg, #284b3e, #1b352c);
+}
+
+.morning-secondary-thumb-placeholder span {
+  color: #b9df70;
+  font-family: Georgia, "Noto Serif KR", serif;
+  font-size: 25px;
+  font-weight: 900;
+  letter-spacing: -.04em;
+}
+
+@media (max-width: 850px) {
+  .morning-secondary-list button {
+    grid-template-columns: 34px 72px minmax(0, 1fr) 18px;
+  }
+
+  .morning-secondary-thumb {
+    width: 72px;
+    height: 72px;
+  }
+}
+
+@media (max-width: 600px) {
+  .morning-secondary-list button {
+    grid-template-columns: 30px 68px minmax(0, 1fr) 18px;
+    gap: 9px;
+    padding: 16px 13px;
+  }
+
+  .morning-secondary-list button > b {
+    font-size: 17px;
+  }
+
+  .morning-secondary-thumb {
+    width: 68px;
+    height: 68px;
+    border-radius: 10px;
+  }
+}

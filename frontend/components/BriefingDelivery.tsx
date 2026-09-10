@@ -347,6 +347,9 @@ function DailyBriefingSheets({ briefing, reportingEnabled, selectedDate, onChoos
         <div className="morning-secondary-list">
           {featuredStories.slice(1).map((story, index) => <button type="button" key={story.id} onClick={() => openFeaturedStory(story.id)}>
             <b>0{index + 2}</b>
+            <div className={`morning-secondary-thumb${story.imageUrl ? "" : " morning-secondary-thumb-placeholder"}`} aria-hidden="true">
+              {story.imageUrl ? <StoryVisual story={story} variant="hero" /> : <span>{story.category === "e스포츠" ? "e" : story.category.slice(0, 1)}</span>}
+            </div>
             <span><small>{story.category}</small><strong>{story.title}</strong><p>{story.oneLineSummary || story.summary}</p></span>
             <ChevronRight size={17} />
           </button>)}
