@@ -68,7 +68,7 @@ app:
     subject: ${VAPID_SUBJECT:https://morningnews.coders.kr}
     public-url: ${PUBLIC_APP_URL:https://morningnews.coders.kr}
   demo:
-    enabled: ${DEMO_DATA_ENABLED:true}
+    enabled: ${DEMO_DATA_ENABLED:false}
   pipeline:
     enabled: ${NEWS_PIPELINE_ENABLED:false}
     generate-on-startup: ${NEWS_GENERATE_ON_STARTUP:false}

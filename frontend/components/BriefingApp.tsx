@@ -21,14 +21,16 @@ import { DeliveryDeck } from "@/components/DeliveryDeck";
 import { StoryVisual } from "@/components/StoryVisual";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
 import { SubscriptionExperience, SubscriptionTrigger } from "@/components/SubscriptionExperience";
-import { briefingCategoryOrder, demoBriefing, type Briefing, type Story } from "@/lib/briefing";
+import { briefingCategoryOrder, demoBriefing, unavailableBriefing, type Briefing, type Story } from "@/lib/briefing";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 
 export function BriefingApp() {
-  const [briefing, setBriefing] = useState<Briefing>(demoBriefing);
+  const [briefing, setBriefing] = useState<Briefing>(unavailableBriefing);
   const [category, setCategory] = useState("전체");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [requestVersion, setRequestVersion] = useState(0);
   const [notice, setNotice] = useState("오늘의 아침 뉴스를 불러오고 있어요.");
   const [preferredCategories, setPreferredCategories] = useState<string[]>([]);
 
@@ -41,12 +43,18 @@ export function BriefingApp() {
       })
       .then((data: Briefing) => {
         setBriefing(data);
+        setLoadError(false);
         setNotice(data.productionReady ? "" : "현재는 사용법을 보여드리는 화면 예시입니다. 준비된 뉴스는 매일 오전 7시 30분에 보내드립니다.");
       })
-      .catch(() => setNotice("오늘의 브리핑을 불러오지 못해 예시 뉴스 카드를 보여드리고 있어요. 잠시 후 다시 확인해 주세요."))
+      .catch((error: unknown) => {
+        if (error instanceof Error && error.name === "AbortError") return;
+        setBriefing(unavailableBriefing);
+        setLoadError(true);
+        setNotice("오늘의 브리핑을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.");
+      })
       .finally(() => setLoading(false));
     return () => controller.abort();
-  }, []);
+  }, [requestVersion]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -135,7 +143,7 @@ export function BriefingApp() {
         </nav>
         {preferredCategories.length > 0 && <div className="archive-personalized-note" role="status"><Sparkles size={14} /><span><strong>내 관심 분야를 먼저 보여드려요</strong><small>{preferredCategories.slice(0, 3).join(" · ")}</small></span></div>}
         <div className="story-list">
-          {loading ? <LoadingRows /> : stories.length ? stories.slice(0, 4).map((story, index) => <StoryRow key={story.id} story={story} index={index + 1} personalized={preferredCategories.includes(story.category)} onNotice={setNotice} />) : <div className="empty">오늘 이 분야에 선정된 브리핑은 없습니다.</div>}
+          {loading ? <LoadingRows /> : loadError ? <div className="empty briefing-error" role="alert"><strong>오늘의 브리핑을 불러오지 못했어요.</strong><span>실제 뉴스 대신 예시 데이터를 보여주지 않습니다.</span><button type="button" onClick={() => setRequestVersion((version) => version + 1)}>다시 시도</button></div> : stories.length ? stories.slice(0, 4).map((story, index) => <StoryRow key={story.id} story={story} index={index + 1} personalized={preferredCategories.includes(story.category)} onNotice={setNotice} />) : <div className="empty">오늘 이 분야에 선정된 브리핑은 없습니다.</div>}
         </div>
         <div className="archive-more"><Link href="/archive">지난 브리핑 전체 보기 <ArrowRight size={15} /></Link></div>
       </section>
@@ -174,6 +182,7 @@ export function BriefingApp() {
 
 function HeroNewsCarousel({ stories, readMinutes }: { stories: Story[]; readMinutes: number }) {
   const previewStories = useMemo(() => (stories.length ? stories : demoBriefing.stories).slice(0, 5), [stories]);
+  const hasLiveStories = stories.length > 0;
   const [cycle, setCycle] = useState(0);
   const [visible, setVisible] = useState(true);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -207,7 +216,7 @@ function HeroNewsCarousel({ stories, readMinutes }: { stories: Story[]; readMinu
       </div>
       <div className="push-mockup">
         <div className="push-app-icon"><Newspaper size={19} /></div>
-        <div><strong>아침결</strong><span>지금</span><p>어제 핵심 뉴스 {stories.length}건이 도착했어요</p></div>
+        <div><strong>아침결</strong><span>지금</span><p>{hasLiveStories ? `어제 핵심 뉴스 ${stories.length}건이 도착했어요` : "예시 뉴스 카드 미리보기"}</p></div>
       </div>
       <div className="hero-news-window">
         {previewStories.map((story, index) => {

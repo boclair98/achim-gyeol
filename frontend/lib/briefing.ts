@@ -29,6 +29,17 @@ export type Story = {
 };
 export type Briefing = { id: number; briefingDate?: string; productionReady?: boolean; editorialState?: "AUTO_APPROVED" | "REVIEW" | "APPROVED" | "HELD" | "PUBLISHED"; humanReviewed?: boolean; dateLabel: string; lead: string; readMinutes: number; verifiedCount: number; lastVerifiedAt: string; stories: Story[]; personalized?: boolean };
 
+export const unavailableBriefing: Briefing = {
+  id: 0,
+  productionReady: false,
+  dateLabel: "오늘의 브리핑 준비 중",
+  lead: "오늘의 브리핑을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
+  readMinutes: 0,
+  verifiedCount: 0,
+  lastVerifiedAt: "",
+  stories: [],
+};
+
 export const demoBriefing: Briefing = {
   id: 1,
   productionReady: false,

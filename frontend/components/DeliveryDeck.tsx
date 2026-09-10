@@ -3,7 +3,7 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { BellRing, ChevronLeft, ChevronRight, Images } from "lucide-react";
-import type { Briefing } from "@/lib/briefing";
+import { demoBriefing, type Briefing } from "@/lib/briefing";
 import { buildBriefingCards, type BriefingCard } from "@/lib/briefing-card";
 import { defaultBrand } from "@/lib/product";
 import { SubscriptionTrigger } from "@/components/SubscriptionExperience";
@@ -14,7 +14,8 @@ type Props = {
 };
 
 export function DeliveryDeck({ briefing }: Props) {
-  const cards = useMemo(() => buildBriefingCards(briefing, defaultBrand), [briefing]);
+  const previewOnly = briefing.stories.length === 0;
+  const cards = useMemo(() => buildBriefingCards(previewOnly ? demoBriefing : briefing, defaultBrand), [briefing, previewOnly]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const currentCard = cards[currentIndex];
 
@@ -28,7 +29,7 @@ export function DeliveryDeck({ briefing }: Props) {
 
       <div className="delivery-layout subscription-layout">
         <div className="deck-preview">
-          <div className="deck-counter"><Images size={15} /> 공유용 뉴스 카드 미리보기 · {currentIndex + 1}/{cards.length}</div>
+          <div className="deck-counter"><Images size={15} /> {previewOnly ? "예시 뉴스 카드 미리보기" : "공유용 뉴스 카드 미리보기"} · {currentIndex + 1}/{cards.length}</div>
           <div className="card-stack" aria-live="polite">
             <div className="stack-sheet stack-two" aria-hidden="true" />
             <div className="stack-sheet stack-one" aria-hidden="true" />
