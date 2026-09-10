@@ -1869,6 +1869,22 @@ body { text-rendering: optimizeLegibility; }
   padding: 6px;
 }
 
+.morning-secondary-thumb-placeholder {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 25% 20%, rgba(185, 223, 112, .2), transparent 52%),
+    linear-gradient(135deg, #284b3e, #1b352c);
+}
+
+.morning-secondary-thumb-placeholder span {
+  color: #b9df70;
+  font-family: Georgia, "Noto Serif KR", serif;
+  font-size: 25px;
+  font-weight: 900;
+  letter-spacing: -.04em;
+}
+
 @media (max-width: 850px) {
   .morning-secondary-list button {
     grid-template-columns: 34px 72px minmax(0, 1fr) 18px;
