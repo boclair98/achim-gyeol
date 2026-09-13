@@ -1,16 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Activity, AlertTriangle, BarChart3, Check, FileCheck2, History, LockKeyhole, PauseCircle, RefreshCw, Save, Send, ShieldCheck, Smartphone, X } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, Check, FileCheck2, History, LockKeyhole, PauseCircle, RefreshCw, Save, Send, ShieldCheck, Smartphone, Sparkles, X } from "lucide-react";
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? "";
 type EditorialState = "AUTO_APPROVED" | "REVIEW" | "APPROVED" | "HELD" | "PUBLISHED";
 type QueueStory = { id: number; order: number; category: string; title: string; oneLineSummary?: string; summary: string; whyItMatters: string; whatToWatch?: string; uncertainty?: string; verificationStatus: string; qualityScore: number; editorialState: EditorialState; claims: number; sources: number };
 type Queue = { editionId: number; briefingDate: string; state: EditorialState; approvedAt?: string; stories: QueueStory[] };
-type Metrics = { activeSubscriptions: number; uniqueReaders30d: number; returningReaders30d: number; loyalReaders7d: number; loyalReaders14d: number; loyalReaders30d: number; averageActiveDays30d: number; opens30d: number; completed30d: number; sourceOpens30d: number; shares30d: number; recentDelivered: number; recentFailed: number };
+type Metrics = { activeSubscriptions: number; uniqueReaders30d: number; returningReaders30d: number; loyalReaders7d: number; loyalReaders14d: number; loyalReaders30d: number; averageActiveDays30d: number; opens30d: number; completed30d: number; sourceOpens30d: number; shares30d: number; premiumIntent30d?: number; premiumFeatureVotes30d?: Record<string, number>; recentDelivered: number; recentFailed: number };
 type Audit = { id: number; action: string; targetType?: string; targetId?: number; actor: string; detail?: string; createdAt: string };
 type Delivery = { id: number; editionId: number; subscriptionId: number; state: string; attempts: number; lastAttemptAt?: string; deliveredAt?: string; error?: string };
 type BuildStatus = { date?: string; coverageReady: boolean; productionReady: boolean; stories: number; categories: number; minimumStories: number; minimumCategories: number; blockReasons: string[]; coverageWarnings?: string[]; generationJob: { state: string; result?: { collectedArticles: number; candidateClusters: number; rejectedCandidates: number; categoryCounts: Record<string, number>; deliveryReady: boolean } } };
+const discoveryFeatureLabels: Record<string, string> = { deep_briefing: "심화 브리핑·주간 리포트", custom_topics: "내가 고른 주제·키워드", team_digest: "팀·가족과 함께 보기" };
 
 export function OperationsConsole() {
   const [token, setToken] = useState("");
@@ -25,6 +26,7 @@ export function OperationsConsole() {
   const [busy, setBusy] = useState(false);
 
   const headers = useMemo(() => ({ "Content-Type": "application/json", "X-Briefing-Admin-Token": token }), [token]);
+  const demandVotes = useMemo(() => Object.entries(metrics?.premiumFeatureVotes30d ?? {}).sort(([, left], [, right]) => right - left), [metrics?.premiumFeatureVotes30d]);
 
   const request = async <T,>(path: string, init?: RequestInit): Promise<T> => {
     const response = await fetch(`${apiBase}${path}`, { cache: "no-store", ...init, headers: { ...headers, ...(init?.headers ?? {}) } });
@@ -110,6 +112,7 @@ export function OperationsConsole() {
         <article><span>거의 매일</span><strong>{metrics.loyalReaders30d}</strong><small>최근 30일 중 20일 이상</small></article>
         <article><span>평균 방문일</span><strong>{Number(metrics.averageActiveDays30d ?? 0).toFixed(1)}</strong><small>독자 1명 기준</small></article>
       </div>
+      <section className="ops-demand-card" aria-label="다음 기능 수요 신호"><header><div><span>VALUE DISCOVERY</span><h3>결제보다 먼저, 필요한 기능을 확인합니다.</h3><p>독자가 직접 선택한 다음 기능을 익명 집계해 제품 우선순위를 정합니다.</p></div><div className="ops-demand-intent"><Sparkles size={17} /><strong>{metrics.premiumIntent30d ?? 0}</strong><span>관심 표시</span></div></header>{demandVotes.length > 0 ? <div className="ops-demand-list">{demandVotes.map(([key, value]) => <div key={key}><span>{discoveryFeatureLabels[key] ?? key}</span><strong>{value}</strong></div>)}</div> : <p className="ops-demand-empty">아직 선택된 기능이 없습니다. 독자 화면의 ‘다음에 생기면 좋을 기능’에서 수요를 모읍니다.</p>}<footer><ShieldCheck size={14} /> 현재 뉴스·알림은 무료로 유지되며, 이 지표만 다음 기능 판단에 사용합니다.</footer></section>
 
       <div className="ops-grid"><section className="ops-queue"><header><span>번호</span><span>발행 후보</span><span>근거</span><span>상태</span></header>{queue.stories.map((story) => <article key={story.id}><b>{String(story.order).padStart(2, "0")}</b><button onClick={() => setSelected(story)}><small>{story.category} · 품질 {story.qualityScore}</small><strong>{story.title}</strong><p>{story.oneLineSummary}</p></button><span>{story.claims}문장<br />{story.sources}출처</span><em className={story.editorialState.toLowerCase()}>{story.editorialState}</em></article>)}</section><aside className="ops-side"><section><header><History /><strong>감사 로그</strong></header>{audits.slice(0, 8).map((item) => <p key={item.id}><time>{new Date(item.createdAt).toLocaleString("ko-KR")}</time><b>{item.action}</b><span>{item.actor}</span></p>)}</section><section><header><Send /><strong>최근 발송 시도</strong></header>{deliveries.slice(0, 8).map((item) => <p key={item.id}><time>에디션 {item.editionId}</time><b>{item.state} · {item.attempts}회</b><span>{item.error || item.deliveredAt || "대기"}</span></p>)}</section></aside></div>
     </section> : <section className="ops-locked"><LockKeyhole /><h2>운영 데이터는 공개하지 않습니다</h2><p>위에서 운영 서버의 관리자 토큰을 입력하면 실제 활성 기기·뉴스 후보·발송 결과가 표시됩니다.</p></section>}

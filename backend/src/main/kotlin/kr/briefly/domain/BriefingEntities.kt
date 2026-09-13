@@ -10,7 +10,16 @@ enum class FeedbackType { INCORRECT, BIASED, UNCLEAR, HELPFUL, INTERESTED, NOT_I
 enum class StoryInterest { INTERESTED, NOT_INTERESTED }
 enum class EditorialState { AUTO_APPROVED, REVIEW, APPROVED, HELD, PUBLISHED }
 enum class DeliveryState { PENDING, DELIVERED, FAILED, EXPIRED }
-enum class ReaderEventType { BRIEFING_OPEN, CARD_VIEW, STORY_DETAIL, SOURCE_OPEN, SHARE, COMPLETE }
+enum class ReaderEventType {
+    BRIEFING_OPEN,
+    CARD_VIEW,
+    STORY_DETAIL,
+    SOURCE_OPEN,
+    SHARE,
+    COMPLETE,
+    PREMIUM_INTENT,
+    PREMIUM_FEATURE_VOTE,
+}
 
 @Entity
 @Table(name = "briefing_editions")
@@ -196,5 +205,6 @@ class ReaderEvent(
     @Column var storyId: Long? = null,
     @Column(nullable = false, length = 64) var actorHash: String,
     @Column(nullable = false) var createdAt: OffsetDateTime = OffsetDateTime.now(),
+    @Column(name = "event_key", length = 80) var eventKey: String? = null,
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY) var id: Long? = null,
 )

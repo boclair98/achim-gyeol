@@ -45,6 +45,7 @@ data class EditorialStoryUpdate(
 )
 
 data class CorrectionInput(val afterText: String, val reason: String)
+private val discoveryFeatureEventKeys = setOf("deep_briefing", "custom_topics", "team_digest")
 data class OperationMetric(
     val activeSubscriptions: Int,
     val uniqueReaders30d: Int,
@@ -57,6 +58,8 @@ data class OperationMetric(
     val completed30d: Int,
     val sourceOpens30d: Int,
     val shares30d: Int,
+    val premiumIntent30d: Int,
+    val premiumFeatureVotes30d: Map<String, Int>,
     val recentDelivered: Long,
     val recentFailed: Long,
 )
@@ -175,6 +178,12 @@ class EditorialOperationsService(
             }
         val latestEdition = editionRepository.findFirstByOrderByBriefingDateDesc()
         val editionId = latestEdition?.id
+        val premiumFeatureVotes = events.asSequence()
+            .filter { it.type == ReaderEventType.PREMIUM_FEATURE_VOTE }
+            .mapNotNull { it.eventKey?.trim()?.takeIf(String::isNotBlank) }
+            .groupingBy { it }
+            .eachCount()
+            .toSortedMap()
         return OperationMetric(
             activeSubscriptions = pushRepository.countByActiveTrue().toInt(),
             uniqueReaders30d = activeDaysByReader.size,
@@ -187,6 +196,8 @@ class EditorialOperationsService(
             completed30d = events.count { it.type == ReaderEventType.COMPLETE },
             sourceOpens30d = events.count { it.type == ReaderEventType.SOURCE_OPEN },
             shares30d = events.count { it.type == ReaderEventType.SHARE },
+            premiumIntent30d = events.count { it.type == ReaderEventType.PREMIUM_INTENT },
+            premiumFeatureVotes30d = premiumFeatureVotes,
             recentDelivered = editionId?.let { deliveryRepository.countByEditionIdAndState(it, DeliveryState.DELIVERED) } ?: 0,
             recentFailed = editionId?.let { deliveryRepository.countByEditionIdAndState(it, DeliveryState.FAILED) } ?: 0,
         )
@@ -212,7 +223,7 @@ class ReaderExperienceService(
     data class PreferenceExport(val categories: List<String>, val digestSize: String, val consent: Boolean, val updatedAt: OffsetDateTime)
     data class SubscriptionExport(val active: Boolean, val timezone: String, val deliveryTime: String, val createdAt: OffsetDateTime, val updatedAt: OffsetDateTime, val lastSentAt: OffsetDateTime?)
     data class FeedbackExport(val storyId: Long, val type: FeedbackType, val detail: String?, val createdAt: OffsetDateTime)
-    data class EventExport(val type: ReaderEventType, val editionId: Long, val storyId: Long?, val createdAt: OffsetDateTime)
+    data class EventExport(val type: ReaderEventType, val editionId: Long, val storyId: Long?, val eventKey: String?, val createdAt: OffsetDateTime)
     data class ReaderDataExport(val exportedAt: OffsetDateTime, val preferences: PreferenceExport?, val subscriptions: List<SubscriptionExport>, val feedback: List<FeedbackExport>, val events: List<EventExport>)
     data class ReaderDataDeletion(val deletedPreferences: Int, val deletedSubscriptions: Int, val deletedFeedback: Int, val deletedEvents: Int)
 
@@ -246,10 +257,18 @@ class ReaderExperienceService(
     }
 
     @Transactional
-    fun recordEvent(ownerId: String, type: ReaderEventType, editionId: Long, storyId: Long?) {
+    fun recordEvent(ownerId: String, type: ReaderEventType, editionId: Long, storyId: Long?, eventKey: String? = null) {
         val actorHash = ownerHash(ownerId)
-        if (eventRepository.existsByTypeAndEditionIdAndStoryIdAndActorHash(type, editionId, storyId, actorHash)) return
-        eventRepository.save(ReaderEvent(type, editionId, storyId, actorHash))
+        val normalizedEventKey = eventKey?.trim()?.takeIf(String::isNotBlank)?.take(80)
+        if (type == ReaderEventType.PREMIUM_INTENT && normalizedEventKey != "discovery_card") return
+        if (type == ReaderEventType.PREMIUM_FEATURE_VOTE && normalizedEventKey !in discoveryFeatureEventKeys) return
+        val alreadyRecorded = if (normalizedEventKey == null) {
+            eventRepository.existsByTypeAndEditionIdAndStoryIdAndActorHash(type, editionId, storyId, actorHash)
+        } else {
+            eventRepository.existsByTypeAndEditionIdAndStoryIdAndEventKeyAndActorHash(type, editionId, storyId, normalizedEventKey, actorHash)
+        }
+        if (alreadyRecorded) return
+        eventRepository.save(ReaderEvent(type = type, editionId = editionId, storyId = storyId, actorHash = actorHash, eventKey = normalizedEventKey))
     }
 
     @Transactional(readOnly = true)
@@ -261,7 +280,7 @@ class ReaderExperienceService(
             SubscriptionExport(it.active, it.timezone, "%02d:%02d".format(it.deliveryHour, it.deliveryMinute), it.createdAt, it.updatedAt, it.lastSentAt)
         }
         val feedback = feedbackRepository.findAllByUserId(ownerId).map { FeedbackExport(it.storyId, it.type, it.detail, it.createdAt) }
-        val events = eventRepository.findAllByActorHash(ownerHash(ownerId)).map { EventExport(it.type, it.editionId, it.storyId, it.createdAt) }
+        val events = eventRepository.findAllByActorHash(ownerHash(ownerId)).map { EventExport(it.type, it.editionId, it.storyId, it.eventKey, it.createdAt) }
         return ReaderDataExport(OffsetDateTime.now(), preference, subscriptions, feedback, events)
     }
 

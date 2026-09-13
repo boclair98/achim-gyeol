@@ -15,6 +15,28 @@ test("privacy center exposes data download and complete deletion", async ({ page
   await expect(page.getByRole("button", { name: "전체 데이터 삭제" })).toBeVisible();
 });
 
+test("preference center validates future feature demand without payment", async ({ page }) => {
+  await page.route("**/api/reader/events", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ recorded: true }) });
+  });
+  await page.goto("/preferences/");
+  const discovery = page.locator(".preference-block").filter({ hasText: "다음에 생기면 좋을 기능" });
+  await expect(discovery).toBeVisible();
+  await expect(discovery).toContainText("지금은 계속 무료입니다");
+  await discovery.getByRole("checkbox", { name: "내가 고른 주제·키워드" }).click();
+  await discovery.getByRole("button", { name: "관심 기능 저장" }).click();
+  await expect(discovery.getByRole("status")).toContainText("기록했어요");
+});
+
+test("future feature choices stay readable at product viewports", async ({ page }) => {
+  for (const viewport of [{ width: 360, height: 800 }, { width: 390, height: 844 }, { width: 768, height: 1024 }, { width: 1440, height: 900 }]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/preferences/");
+    await expect(page.locator(".discovery-options")).toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1)).toBe(true);
+  }
+});
+
 test("complete deletion clears every app-owned device key", async ({ page }) => {
   await page.route("**/api/reader/data", async (route) => {
     await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ deletedPreferences: 1 }) });

@@ -2,6 +2,7 @@ package kr.briefly.web
 
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.Size
 import kr.briefly.domain.ReaderEventType
 import kr.briefly.service.*
 import org.springframework.beans.factory.annotation.Value
@@ -32,7 +33,7 @@ data class StoryEditRequest(val actor: String, val update: EditorialStoryUpdate)
 data class CorrectionRequest(val actor: String, val afterText: String, val reason: String)
 data class EditorialIncidentRequest(@field:NotBlank val actor: String, @field:NotBlank val reason: String)
 data class ReaderPreferenceRequest(val categories: Set<String>, val digestSize: String, val consent: Boolean)
-data class ReaderEventRequest(val type: ReaderEventType, val editionId: Long, val storyId: Long? = null)
+data class ReaderEventRequest(val type: ReaderEventType, val editionId: Long, val storyId: Long? = null, @field:Size(max = 80) val eventKey: String? = null)
 
 @RestController
 @RequestMapping("/api/admin/editorial")
@@ -54,7 +55,7 @@ class EditorialController(private val service: EditorialOperationsService, priva
 class ReaderExperienceController(private val service: ReaderExperienceService, private val requesterIdentity: RequesterIdentity) {
     @GetMapping("/preferences") fun preferences(@RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("X-Achim-Device", required = false) device: String?) = service.preferences(requesterIdentity.resolve(user, device))
     @PutMapping("/preferences") fun save(@RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("X-Achim-Device", required = false) device: String?, @Valid @RequestBody request: ReaderPreferenceRequest) = service.savePreferences(requesterIdentity.resolve(user, device), request.categories, request.digestSize, request.consent)
-    @PostMapping("/events") fun event(@RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("X-Achim-Device", required = false) device: String?, @RequestBody request: ReaderEventRequest) = service.recordEvent(requesterIdentity.resolve(user, device), request.type, request.editionId, request.storyId).let { mapOf("recorded" to true) }
+    @PostMapping("/events") fun event(@RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("X-Achim-Device", required = false) device: String?, @Valid @RequestBody request: ReaderEventRequest) = service.recordEvent(requesterIdentity.resolve(user, device), request.type, request.editionId, request.storyId, request.eventKey).let { mapOf("recorded" to true) }
     @GetMapping("/data") fun exportData(@RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("X-Achim-Device", required = false) device: String?) = service.exportData(requesterIdentity.resolve(user, device))
     @DeleteMapping("/data") fun deleteData(@RequestHeader("X-Coders-User", required = false) user: String?, @RequestHeader("X-Achim-Device", required = false) device: String?) = service.deleteData(requesterIdentity.resolve(user, device))
 }

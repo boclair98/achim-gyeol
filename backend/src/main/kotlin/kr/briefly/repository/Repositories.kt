@@ -76,6 +76,7 @@ interface ReaderEventRepository : JpaRepository<ReaderEvent, Long> {
     fun findAllByCreatedAtAfter(createdAt: OffsetDateTime): List<ReaderEvent>
     fun findAllByCreatedAtBefore(createdAt: OffsetDateTime): List<ReaderEvent>
     fun existsByTypeAndEditionIdAndStoryIdAndActorHash(type: kr.briefly.domain.ReaderEventType, editionId: Long, storyId: Long?, actorHash: String): Boolean
+    fun existsByTypeAndEditionIdAndStoryIdAndEventKeyAndActorHash(type: kr.briefly.domain.ReaderEventType, editionId: Long, storyId: Long?, eventKey: String, actorHash: String): Boolean
     fun findAllByActorHash(actorHash: String): List<ReaderEvent>
     fun deleteAllByActorHash(actorHash: String)
 }
