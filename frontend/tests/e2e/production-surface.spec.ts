@@ -116,25 +116,27 @@ test("news reader shows an available article image and accessible context", asyn
           evidenceAvailable: true,
           claims: [{ statement: "기준금리 결정이 발표됐습니다.", sources: [{ publisher: "한국은행", url: "https://www.bok.or.kr", publishedAt: "2026-08-16T09:00:00+09:00" }] }],
           sources: [{ publisher: "한국은행", url: "https://www.bok.or.kr", publishedAt: "2026-08-16T09:00:00+09:00", primarySource: true }],
-          imageUrl: "/og-v2.png",
+          imageUrl: "http://127.0.0.1:4173/og-v2.png",
           imagePublisher: "한국은행",
         }],
       }),
     });
   });
   await page.goto("/briefing/");
-  const leadImage = page.getByRole("img", { name: /기준금리 결정이 생활비에 미치는 영향 관련 기사 대표 이미지/ }).first();
+  const leadImage = page.getByRole("img", { name: /기준금리 결정이 생활비에 미치는 영향 관련 기사 사진/ }).first();
   await expect(leadImage).toBeVisible();
   await expect(leadImage).toHaveAttribute("loading", "eager");
   await expect(leadImage).toHaveAttribute("decoding", "async");
-  await expect(page.getByRole("heading", { name: "오늘 아침, 이 3가지부터" })).toBeVisible();
-  await expect(page.getByRole("button", { name: /첫 번째 핵심 뉴스 읽기/ })).toBeVisible();
-  const readingDepth = page.getByRole("group", { name: "뉴스 읽기 깊이" });
-  await expect(readingDepth.getByRole("button", { name: "기본" })).toHaveAttribute("aria-pressed", "true");
-  await readingDepth.getByRole("button", { name: "짧게" }).click();
-  await expect(readingDepth.getByRole("button", { name: "짧게" })).toHaveAttribute("aria-pressed", "true");
-  await expect(page.getByRole("navigation", { name: "뉴스 빠른 이동" })).toBeVisible();
-  await expect(page.getByRole("progressbar", { name: /뉴스 카드 1 \/ 1/ })).toBeVisible();
-  await expect(page.getByText("기사 이해를 돕는 배경")).toBeVisible();
+  const contents = page.getByRole("navigation", { name: "이번 편의 전체 뉴스 목차" });
+  await expect(contents).toBeVisible();
+  await expect(page.locator('[data-story-id]')).toHaveCount(1);
+  await contents.getByRole('link', { name: /기준금리 결정이/ }).click();
+  await expect(page).toHaveURL(/#news-701$/);
+  await expect(page.getByRole('heading', { name: '알고 읽으면 쉬워요' })).toBeVisible();
+  await page.getByRole('link', { name: '목차로 돌아가기', exact: true }).first().click();
+  await expect(page).toHaveURL(/#mail-contents$/);
+  const fontSize = page.getByRole('group', { name: '글자 크기' });
+  await fontSize.getByRole('button', { name: '큰 글자', exact: true }).click();
+  await expect(fontSize.getByRole('button', { name: '큰 글자', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByText(/대출 이자와 예금 금리의 기준이 달라질 수 있습니다/).first()).toBeVisible();
 });

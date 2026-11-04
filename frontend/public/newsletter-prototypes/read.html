@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko" class="article-reader">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>아침결 | 뉴스 한 편씩 읽기</title>
+  <link rel="stylesheet" href="read.css">
+</head>
+<body class="reader-page">
+  <a class="skip" href="#reading">기사로 바로가기</a>
+  <div class="notice">보관 기사로 만든 디자인 미리보기 · 실제 발송 없음</div>
+  <header class="article-toolbar"><a class="back-to-list" href="mail.html" aria-label="전체 뉴스 메일로"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg><span>전체 메일</span></a><span class="toolbar-label">뉴스 읽기</span><button id="copy-link" type="button" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg><span>링크 복사</span></button></header>
+  <div class="copy-feedback" hidden><p id="copy-status" role="status"></p><div id="manual-copy" hidden><label for="article-url">기사 링크를 직접 복사해 주세요</label><input id="article-url" type="url" readonly></div></div>
+  <main class="reader-main" id="reading" tabindex="-1">
+    <div id="reader-error" class="reader-error" role="alert" hidden><p id="reader-error-text">기사를 불러오지 못했어요.</p><button id="retry" type="button">다시 불러오기</button><a href="letter.html">전체 메일로 읽기</a></div>
+    <p id="article-notice" class="article-notice" role="status" hidden></p>
+    <iframe id="article-frame" src="about:blank" title="기사 한 편 전체 읽기" loading="eager" hidden></iframe>
+    <nav id="article-navigation" class="article-navigation bottom-navigation" aria-label="다른 기사 읽기"><button type="button" data-step="-1" disabled>이전 기사</button><span data-count role="status" aria-live="polite">기사를 불러오는 중</span><button type="button" data-step="1" disabled>다음 기사</button></nav>
+    <div class="reader-links"><a id="standalone" href="letter.html" target="_blank" rel="noopener">이 기사만 새 창으로</a><a href="letter.html">모든 기사 이어 읽기</a></div>
+    <noscript><p>기사 이동에는 JavaScript가 필요합니다. <a href="letter.html">전체 메일에서 모든 기사를 읽을 수 있어요.</a></p></noscript>
+  </main>
+  <script src="preview-frames.js"></script>
+  <script src="preview-data.js"></script>
+  <script src="read.js"></script>
+</body>
+</html>

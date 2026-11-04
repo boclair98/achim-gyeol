@@ -1,5 +1,5 @@
-import { BriefingDelivery } from "@/components/BriefingDelivery";
+import { DailyBriefingLetter } from "@/components/DailyBriefingLetter";
 
 export default function BriefingPage() {
-  return <BriefingDelivery />;
+  return <DailyBriefingLetter />;
 }

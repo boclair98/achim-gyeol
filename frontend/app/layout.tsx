@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 import { PwaRegister } from "@/components/PwaRegister";
 
 import "./globals.css";
@@ -7,6 +8,16 @@ import "./chrome.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://morningnews.coders.kr";
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+const suit = localFont({
+  src: [
+    { path: "../public/newsletter-prototypes/fonts/SUIT-Regular.woff2", weight: "400", style: "normal" },
+    { path: "../public/newsletter-prototypes/fonts/SUIT-SemiBold.woff2", weight: "600", style: "normal" },
+    { path: "../public/newsletter-prototypes/fonts/SUIT-Bold.woff2", weight: "700", style: "normal" },
+  ],
+  variable: "--font-suit",
+  display: "swap",
+  preload: false,
+});
 const socialImageUrl = new URL("og-v2.png", `${siteUrl.replace(/\/$/, "")}/`).toString();
 
 export const metadata: Metadata = {
@@ -45,7 +56,7 @@ export default function RootLayout({
   children: ReactNode;
 }) {
   return (
-    <html lang="ko">
+    <html lang="ko" className={suit.variable}>
       <body>
         <PwaRegister />
         {children}

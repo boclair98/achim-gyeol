@@ -1,0 +1,18 @@
+@import url("theme.css");
+.compare-page { --page-width: 1280px; }
+.comparison-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; align-items: start; border-top: 1px solid var(--line); padding-top: 32px; }
+.comparison-column { min-width: 0; }
+.comparison-heading { padding: 0 4px 20px; }
+.comparison-heading h2 { font-size: 28px; font-weight: 700; letter-spacing: -.03em; line-height: 1.4; margin: 8px 0; }
+.comparison-heading > p:not(.section-kicker) { font-size: 15px; color: var(--muted); }
+.comparison-heading .text-action { margin-top: 8px; }
+.comparison-column iframe { width: 100%; min-height: 300px; display: block; border: 1px solid var(--line); border-radius: 12px; background: #f6f8fb; }
+.comparison-note { font-size: 12px; line-height: 1.7; color: var(--subtle); padding: 24px 0 40px; }
+@media (max-width: 1000px) {
+  .comparison-grid { grid-template-columns: minmax(0, 640px); justify-content: center; gap: 40px; }
+  .comparison-heading { padding-bottom: 16px; }
+}
+@media (max-width: 700px) {
+  .comparison-grid { padding-top: 24px; }
+  .comparison-heading h2 { font-size: 26px; }
+}

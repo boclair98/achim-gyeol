@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>아침결 | 메일 디자인 3가지</title>
+  <link rel="stylesheet" href="gallery.css">
+</head>
+<body>
+  <a class="skip" href="#preview">메일 시안으로 바로가기</a>
+  <div class="notice">디자인 검토용입니다. 배포하거나 메일을 발송하지 않습니다.</div>
+  <header class="header"><a class="brand" href="./">아침결<span>.</span></a><span class="header-label">아침을 여는 뉴스 브리핑</span><span class="preview-tag">미리보기</span><a class="header-link" href="compare.html">한눈에 비교</a></header>
+  <main>
+    <section class="intro"><div><p class="context">하루의 시작을, 아침결과</p><h1>어제의 뉴스가,<br><span>오늘의 이해가 되도록.</span></h1><p class="intro-copy">핵심은 짧게, 배경은 쉽게.<br>한 통에 담은 뉴스를 편하게 이어 읽어보세요.</p></div><div class="scope-note"><strong>알림 한 번, 뉴스 메일 한 통</strong><p>2026년 9월 16일 보관 기사 6건을 한 통에 담았습니다. 아래 세 가지 비교는 디자인 검토용입니다.</p><a class="reader-entry" href="notifications.html">알림에서 전체 메일 열어보기 →</a></div></section>
+    <section class="workspace" aria-label="메일 디자인 비교">
+      <aside>
+        <div class="choices" role="tablist" aria-label="메일 디자인" aria-orientation="vertical">
+          <button type="button" role="tab" id="tab-letter" aria-controls="preview" aria-selected="true" data-variant="letter"><span class="choice-top"><b>아침편지</b><small>추천</small></span><span>인사부터 배경 설명까지,<br>차분하게 읽는 뉴스레터.</span><em>편지형 · 읽기 좋은 기본형</em></button>
+          <button type="button" role="tab" id="tab-brief" aria-controls="preview" aria-selected="false" tabindex="-1" data-variant="brief"><span class="choice-top"><b>모닝브리프</b></span><span>핵심만 훑고,<br>필요한 이야기만 골라 읽기.</span><em>요약형 · 빠른 탐색</em></button>
+          <button type="button" role="tab" id="tab-magazine" aria-controls="preview" aria-selected="false" tabindex="-1" data-variant="magazine"><span class="choice-top"><b>데일리픽</b></span><span>사진 한 장을 시작으로,<br>이야기의 맥락까지 함께.</span><em>매거진형 · 비주얼 중심</em></button>
+        </div>
+        <div class="download-panel"><h2>직접 확인하기</h2><a id="download" href="letter.html" download="achim-letter-preview.html">메일 HTML 다운로드</a><a id="plaintext" href="letter.txt" target="_blank" rel="noopener">텍스트 버전 보기</a><p>메일에는 스크립트나 추적 픽셀이 없습니다. 실제 메일앱 발송 검증은 다음 단계입니다.</p></div>
+      </aside>
+      <section class="preview" id="preview" role="tabpanel" aria-labelledby="tab-letter" tabindex="0">
+        <div class="preview-toolbar"><div class="width-options" role="group" aria-label="미리보기 너비"><button type="button" data-width="phone" aria-pressed="true">휴대폰</button><button type="button" data-width="desktop" aria-pressed="false">컴퓨터</button></div><a id="open-window" href="letter.html" target="_blank" rel="noopener">새 창으로 보기 <span aria-hidden="true">↗</span></a></div>
+        <div class="mail-header"><p><strong id="subject">아침결 | 아침편지 디자인 미리보기</strong></p><span>보내는 사람: 아침결 <small>가상 메일 미리보기</small></span></div>
+        <div class="frame-stage"><iframe id="mail-frame" class="phone" src="letter.html" title="아침편지 HTML 메일 미리보기" loading="eager"></iframe></div>
+        <p class="client-note">처음부터 마지막 이야기까지, 생략 없이 이어집니다.<br>실제 메일앱에 따라 글꼴이 달라질 수 있습니다.</p>
+      </section>
+    </section>
+    <section class="next-step"><div><span>다음으로 다듬을 경험</span><h2>받는 순간부터,<br>다시 읽는 순간까지.</h2></div><div><p><strong>짧은 결론 + 쉬운 배경</strong><br>요약만 나열하지 않고 왜 알아야 하는지 연결합니다.</p><p><strong>사진이 없어도 읽히는 구조</strong><br>이미지가 차단되어도 제목·설명·원문은 그대로 남습니다.</p><p><strong>내가 고른 방식으로</strong><br>시안 선택 후 실제 구독·수신 설정·발송 안정성을 연결합니다.</p></div></section>
+  </main>
+  <footer><strong>아침결.</strong><span>프로토타입만 제작했습니다. 운영 서비스에 적용하지 않았습니다.</span></footer>
+  <script src="preview-frames.js"></script>
+  <script src="gallery.js"></script>
+</body>
+</html>

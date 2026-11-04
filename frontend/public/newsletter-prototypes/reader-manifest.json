@@ -1,0 +1,43 @@
+{
+  "briefingDate": "2026-09-16",
+  "dateLabel": "2026년 9월 16일",
+  "preview": true,
+  "stories": [
+    {
+      "id": 1284,
+      "title": "원·달러 환율 12.1원 올라 1,359.4원",
+      "category": "금융",
+      "file": "story-1284.html"
+    },
+    {
+      "id": 1289,
+      "title": "중국, 2030년까지 반도체 산업망 발전 추진",
+      "category": "테크",
+      "file": "story-1289.html"
+    },
+    {
+      "id": 1291,
+      "title": "한국 남자축구, 아시안게임 첫 경기서 카타르 4-1 완파",
+      "category": "스포츠",
+      "file": "story-1291.html"
+    },
+    {
+      "id": 1286,
+      "title": "이태원 특조위, 활동 1년 연장하고 10월 중간보고회 개최",
+      "category": "생활",
+      "file": "story-1286.html"
+    },
+    {
+      "id": 1287,
+      "title": "폐업 후 실업급여를 받는 자영업자 7개월 만에 3,000명 육박",
+      "category": "경제",
+      "file": "story-1287.html"
+    },
+    {
+      "id": 1293,
+      "title": "사기·해킹에 따른 주민등록번호 변경 신청 증가",
+      "category": "테크",
+      "file": "story-1293.html"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+[
+  {
+    "variant": "letter",
+    "subject": "[디자인 미리보기] 아침결 | 2026년 9월 16일 수요일 6개의 이야기",
+    "preheader": "원·달러 환율이 12.1원 올라 1,359.4원을 기록했다 / 중국이 2030년까지 고밀도 메모리 등 반도체 산업망 발전을 추진한다. / 한국이 엄지성의 해트트릭을 앞세워 카타르를 4-1로 이겼다.",
+    "storyCount": 6,
+    "bytes": 41075,
+    "preview": true,
+    "fontFamily": "SUIT",
+    "fontStatus": "bundled-open-font"
+  },
+  {
+    "variant": "brief",
+    "subject": "[디자인 미리보기] 아침결 | 2026년 9월 16일 수요일 6개의 이야기",
+    "preheader": "원·달러 환율이 12.1원 올라 1,359.4원을 기록했다 / 중국이 2030년까지 고밀도 메모리 등 반도체 산업망 발전을 추진한다. / 한국이 엄지성의 해트트릭을 앞세워 카타르를 4-1로 이겼다.",
+    "storyCount": 6,
+    "bytes": 19563,
+    "preview": true,
+    "fontFamily": "SUIT",
+    "fontStatus": "bundled-open-font"
+  },
+  {
+    "variant": "magazine",
+    "subject": "[디자인 미리보기] 아침결 | 2026년 9월 16일 수요일 6개의 이야기",
+    "preheader": "원·달러 환율이 12.1원 올라 1,359.4원을 기록했다 / 중국이 2030년까지 고밀도 메모리 등 반도체 산업망 발전을 추진한다. / 한국이 엄지성의 해트트릭을 앞세워 카타르를 4-1로 이겼다.",
+    "storyCount": 6,
+    "bytes": 18340,
+    "preview": true,
+    "fontFamily": "SUIT",
+    "fontStatus": "bundled-open-font"
+  }
+]

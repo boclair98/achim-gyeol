@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:unit": "node --experimental-strip-types --test tests/daily-letter.test.mjs tests/newsletter-renderer.test.mjs tests/reader-article-renderer.test.mjs",
     "test:e2e": "playwright test",
     "test:load": "node scripts/load-smoke.mjs"
   },

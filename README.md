@@ -84,6 +84,35 @@ backend/    브리핑·출처·알림·정정 API와 운영 로직
 docs/       백업·복구 및 장애 대응 문서
 ```
 
+## 메일 디자인 프로토타입 (미배포)
+
+### 운영 읽기 화면에 적용한 디자인
+
+승인한 편지형 디자인은 실제 [뉴스 읽기 화면](https://morningnews.coders.kr/briefing/)에 연결합니다. 기존 웹 알림 한 번을 누르면 같은 날짜의 전체 뉴스가 한 화면에 이어집니다. SUIT 공개 서체(OFL-1.1), 최대640px 읽기 폭, 모바일20px 여백, 원본 비율 사진, 기사별 핵심·쉬운 설명·배경·중요성·원문과 같은 문서 목차 복귀를 사용합니다. 큰 글자, 날짜별 뉴스, 공유·관심도·오류 신고·정정·근거 확인도 유지합니다. 기존 홈/설정/보관함, 뉴스 수집과 평일07:30 알림·구독자·API/모델 설정은 이 UI 변경으로 바꾸지 않습니다.
+
+운영 `/briefing/`은 실제 `/api/briefings/today` 또는 `/api/briefings/YYYY-MM-DD`만 읽습니다. 실패하면 날짜를 표시한 저장된 실제 브리핑이나 재시도 안내를 보여주며, 보관 시안/가상 기사를 오늘 뉴스로 대신하지 않습니다. 서비스워커 캐시 버전은 새 UI 배포를 위해 갱신하되 알림 구독을 삭제하지 않습니다. 아래 정적 디자인 시안은 여전히 실제 이메일 발송과 별개입니다.
+
+`frontend/public/newsletter-prototypes/`에는 아침편지·모닝브리프·데일리픽 시안과 정적 비교 화면이 있습니다. 2026년 9월 16일 보관 기사 6건을 사용하며 최신 뉴스나 실제 수신함이 아닙니다. 현재 운영 채널은 웹 푸시이고 이메일 발송 서비스는 연결 전입니다.
+
+```bash
+cd frontend
+node scripts/export-newsletter-prototypes.mjs
+node --test tests/newsletter-renderer.test.mjs
+pnpm build
+```
+
+로컬 서버에서 `/newsletter-prototypes/`를 열어 비교할 수 있습니다. HTML·텍스트 렌더러는 발송 기능이나 키를 포함하지 않습니다. 실제 서비스 연결과 미확인 항목은 [메일 서비스 계획](docs/newsletter-service-plan.md)을 참고하세요. 이 프로토타입 제작은 배포·발송 승인이 아닙니다.
+
+제목은 전체 폭으로 읽히며 사진은 원본 비율을 유지합니다. 비교 화면은 메일 본문 길이에 맞춰 늘어나 끝까지 읽을 수 있습니다. 네이버 뉴스·뉴닉·어피티·토스피드의 읽기 화면을 관찰한 [서체·가독성 조사](docs/newsletter-reference-audit.md)를 바탕으로 공식 SUIT(OFL-1.1)를 로컬에 포함했습니다. 폰트·라이선스·고정 커밋·해시는 `fonts/`에 있으며, 토스 전용 폰트와는 다릅니다. 아이폰 WebKit 캡처에서 가변 파일의 굵기가 지나치게 얇게 보이는 차이를 발견해 Regular·SemiBold·Bold 세 정적 파일을 사용합니다. 기본 아침편지의 쉬운 설명은18px/1.75, 배경은16px/1.75이며 모바일 안쪽 여백은20px입니다. 다른 메일 대안은 기존16–17px 기준을 유지하고 웹폰트 차단 시 기기 서체로 읽힙니다. 실제 사용자 선호 조사와 실제 메일앱 검증은 아직 진행하지 않았습니다.
+
+후속 시안은 상단 제목·설명·분류·버튼까지 `theme.css`의 같은 서체를 사용하고, 밝은 바탕과 블루 포인트로 전체 위계를 통일했습니다. `/newsletter-prototypes/compare.html`에서는 이미지 합성 대신 세 메일 HTML을 마지막 이야기까지 직접 비교합니다. 갤러리와 비교 화면 사이를 이동할 수 있으며, 이 블루 디자인 탐색은 운영 화면이나 운영 브랜드를 바꾸지 않습니다.
+
+독자용 최신 시안은 **알림 하나 → 뉴스 메일 한 통 → 그 안에서 모든 기사 이어 읽기**입니다. `/newsletter-prototypes/notifications.html`에는 기사별 알림 대신 전체 메일 알림이 하나만 표시되고, `mail.html?date=2026-09-16`을 열면 `letter.html`의 모든 기사가 한 문서에 이어집니다. 각 기사에는 제목·원본 비율 사진·핵심 요약·쉬운 설명·배경/중요성·원문이 있으며, 목차를 누르면 별도 기사 화면이 아니라 같은 메일 안의 해당 부분으로 이동합니다. 처음부터 끝까지 스크롤해서 읽어도 됩니다. 메일 맨 아래에는 처음으로 돌아가기 링크가 있습니다.
+
+이전의 `read.html`/`story-<id>.html`은 개별 기사 디자인을 살펴본 로컬 참고 파일일 뿐 기본 알림의 목적지가 아닙니다. 세 열 비교도 디자인 검토용으로만 남습니다. 메일 시안은 발송 기능을 포함하지 않으며, 실제 OS 알림 표시·구독자·평일07:30 운영 설정을 바꾸지 않습니다. 실제 이메일 발송은 별도 연결 전입니다.
+
+최신 디자인 보완은 중복된 세 줄 요약 패널과 긴 안내를 덜어내고, 하나의 간결한 목차 다음에 모든 기사를 보여줍니다. 기사 안에서는 분야·실제 읽기 순서 → 제목 → 핵심 한 줄 → 원본 비율 사진 → 쉬운 설명 → 차분한 배경 → 중요성·원문으로 위계를 정리했습니다. 파란 잉크의 머리글과 이 시안에서만 쓰는 블루·옐로 메일 아이콘으로 톤을 맞췄으며 운영 로고는 바꾸지 않았습니다. 기존 frontend-design·UI/UX Pro Max 가이드를 읽고 읽기 폭·줄 높이·제목 줄바꿈을 점검했습니다. 이후 설치된 Product Design 워크플로로 현재 로컬 화면을 새로 캡처·검토했고, 각 기사 끝에 같은 메일의 `목차로 돌아가기` 링크를 추가했습니다. 새 페이지나 추가 알림은 생기지 않습니다. 검토 기록과 한계는 `frontend/test-results/product-design-audit-20261104/notes.md`에 있습니다. 별도 유료 디자인 서비스나 뉴스 생성 API는 새로 연결하지 않았습니다.
+
 ## 품질 기준
 
 변경 사항은 프런트 린트·빌드·브라우저 E2E와 백엔드 검증을 통과한 뒤 운영에 반영합니다. 콘텐츠를 추가하거나 고칠 때도 다음을 확인합니다.
@@ -93,6 +122,47 @@ docs/       백업·복구 및 장애 대응 문서
 - 출처와 불확실성이 숨겨지지 않았는가
 - 모바일·데스크톱에서 이미지와 본문이 안정적으로 보이는가
 - 알림 등록과 해지 흐름이 한 번에 이해되는가
+
+### 실행·검증·운영 구성
+
+Next.js16/React19 정적 프런트(nginx) → 같은 출처 `/api` 프록시 → Kotlin/Spring Boot4/JPA → PostgreSQL 구조입니다. `frontend/components/DailyBriefingLetter.tsx`와 해당 CSS Module은 실제 독자 화면, `frontend/lib/daily-letter.ts`는 데이터·날짜·캐시·링크 검증을 담당합니다. `frontend/lib/newsletter/`는 별도의 정적 메일 시안 생성기입니다. 이메일 전송 제공자/SMTP는 연결하지 않았으며 실제 OS 알림 모양은 기기에 따라 달라집니다.
+
+Node22와 패키지에 지정된 pnpm, 백엔드는 JDK21·Maven을 사용합니다.
+
+```bash
+cd frontend
+pnpm install --frozen-lockfile
+pnpm lint
+node --experimental-strip-types --test tests/daily-letter.test.mjs tests/newsletter-renderer.test.mjs tests/reader-article-renderer.test.mjs
+pnpm build
+pnpm dev
+# 별도 터미널: cd backend && mvn --batch-mode verify
+# 로컬 API 실행: cd backend && mvn spring-boot:run
+```
+
+데이터베이스 스키마는 `backend/src/main/resources/db/migration/`의 Flyway 마이그레이션을 사용합니다. 운영 PostgreSQL을 로컬 테스트 DB로 사용하지 마세요. API 건강 상태는 `/actuator/health`로 확인하며 실제 배포 프록시 설정은 `frontend/nginx.conf.template`을 따릅니다. 운영 관리용 API·키·등록 기기 정보는 공개 화면/로그/테스트 증거에 포함하지 않습니다.
+
+| 환경변수 | 용도 | 필요 여부·설정 위치 |
+| --- | --- | --- |
+| `NEXT_PUBLIC_API_BASE_URL` | 별도 출처 API를 쓰는 경우의 공개 URL | 선택; 운영은 같은 출처 프록시 |
+| `NEXT_PUBLIC_BASE_PATH`, `NEXT_PUBLIC_SITE_URL` | 정적 호스팅 경로·공개 사이트 주소 | 선택; Next 빌드 환경 |
+| `BACKEND_URL` | nginx가 연결하는 내부 API 주소 | 운영 필수; Coders 서비스 참조 |
+| `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASSWORD` | 관계형 DB 연결 | 운영 필수; Coders PostgreSQL 리소스 |
+| `OPENAI_API_KEY` | 기존 뉴스 생성 인증 | 생성에 필요; OpenAI Platform 발급 후 서버 비밀 환경변수 |
+| `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET` | 기존 뉴스 검색 인증 | 해당 수집기 사용 시; 네이버 개발자센터 발급 |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | 기존 알림 서명 키 | 알림에 필요; 기존 서버 설정 보존·임의 재발급 금지 |
+| `BRIEFING_ADMIN_TOKEN` | 운영 관리 인증 | 관리 기능에 필요; 서버 비밀 환경변수 |
+
+정확한 전체 변수명·기본값·조건은 `.env.example`, `backend/.env.example`, `backend/src/main/resources/application.yml`, `coders.yaml`이 기준입니다. 위 표에는 값이나 토큰을 기록하지 않습니다. 운영에 이미 있는 인증값은 UI 변경 때문에 새로 발급하거나 덮어쓰지 않습니다.
+
+### GitHub·Coders 배포 절차
+
+- 원본: [boclair98/achim-gyeol](https://github.com/boclair98/achim-gyeol), 기본 브랜치 `main`; `origin`도 원본을 가리킵니다.
+- 조직 포크: [coders-kr/achim-gyeol](https://github.com/coders-kr/achim-gyeol). 실제 부모 관계를 확인하고 원본 푸시 후 `gh repo sync coders-kr/achim-gyeol -b main`으로 동기화합니다. 양쪽 전체 SHA가 일치해야 합니다.
+- 사용자가 배포를 승인한 경우에만 변경분·새 파일·히스토리의 비밀값 검사와 테스트/빌드를 마친 뒤 원본 main→실제 포크 동기화→기존 Coders `morningnews` 프로젝트 순으로 반영합니다.
+- 매번 [Coders 현재 배포 지침](https://coders.kr/llms.txt)을 읽습니다. 현재 API는 `POST /v1/agent/deploys`에 원본 저장소 URL과 기존 프로젝트 이름을 전달하고 `GET /v1/agent/projects/morningnews`의 `last_deployment.status`를 확인합니다. 요청의 User-Agent는 `Coders-Agent/1.0`, 인증은 Git에 포함되지 않는 승인된 저장소/환경변수만 사용합니다.
+- `ready` 확인만으로 끝내지 않고 운영 홈·`/briefing/`·실제 뉴스 API,360×800/390×844/768×1024/1440×900 화면, 원문·목차·글자 크기·날짜·키보드·로딩/실패 상태를 확인합니다. 배포 실패 시 기존 정상 배포를 보존하고 실패 단계를 보고합니다.
+- `.coders/`, 환경파일, 키 파일, DB, 로그, 테스트 캡처는 공개 저장소에 포함하지 않습니다. 백업·복구 절차는 `docs/`를 참고하세요.
 
 ## 저작권과 이용 허가
 

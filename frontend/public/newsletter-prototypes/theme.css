@@ -1,0 +1,73 @@
+@import url("fonts/font-config.css");
+:root {
+  --font-sans: "SUIT", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", sans-serif;
+  --ink: #191f28;
+  --blue: #2563eb;
+  --blue-dark: #1d4ed8;
+  --muted: #4e5968;
+  --subtle: #667085;
+  --line: #e7ebf0;
+  --pale: #eef4ff;
+  --paper: #fff;
+  --canvas: #f4f7fc;
+  --page-width: 1184px;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; color: var(--ink); background: var(--paper); font-family: var(--font-sans); font-weight: 400; line-height: 1.65; letter-spacing: -.015em; word-break: keep-all; overflow-wrap: anywhere; }
+h1, h2, h3, p { margin: 0; }
+button, a { font: inherit; -webkit-tap-highlight-color: transparent; }
+a { color: inherit; }
+button { cursor: pointer; }
+button:focus-visible, a:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+button:active, a:active { opacity: .75; }
+.header, main, footer { width: min(var(--page-width), calc(100% - 48px)); margin: 0 auto; }
+.notice { background: var(--canvas); color: var(--muted); text-align: center; padding: 8px 20px; font-size: 12px; }
+.header { display: flex; align-items: center; gap: 20px; padding: 24px 0; border-bottom: 1px solid var(--line); }
+.brand { text-decoration: none; font-size: 28px; font-weight: 700; letter-spacing: -.04em; white-space: nowrap; }
+.brand span { color: var(--blue); }
+.header-label { font-size: 13px; color: var(--subtle); }
+.preview-tag { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--blue-dark); background: var(--pale); padding: 5px 12px; border-radius: 6px; white-space: nowrap; }
+.header-link { display: inline-flex; align-items: center; min-height: 44px; font-size: 14px; font-weight: 600; text-decoration: none; color: var(--muted); white-space: nowrap; }
+.intro { display: grid; grid-template-columns: 1.5fr 1fr; gap: 48px; align-items: end; padding: 48px 0; }
+.intro > * { min-width: 0; }
+.context { font-size: 14px; color: var(--blue-dark); margin-bottom: 16px; font-weight: 600; }
+.intro h1 { font-size: 44px; line-height: 1.28; letter-spacing: -.035em; font-weight: 700; }
+.intro h1 span { color: var(--blue); }
+.intro-copy { font-size: 18px; line-height: 1.65; color: var(--muted); margin-top: 20px; max-width: 560px; }
+.scope-note { border-left: 2px solid var(--line); padding-left: 24px; max-width: 390px; }
+.scope-note strong { font-size: 15px; font-weight: 600; }
+.scope-note p { font-size: 13px; line-height: 1.7; color: var(--subtle); margin-top: 12px; }
+.text-action { display: inline-flex; align-items: center; min-height: 44px; padding: 8px 0; color: var(--blue-dark); font-size: 14px; font-weight: 600; text-decoration: none; }
+.scope-note .text-action { margin-top: 12px; }
+.reader-entry { display: inline-flex; min-height: 48px; align-items: center; margin-top: 16px; padding: 12px 18px; border-radius: 10px; color: white; background: var(--blue-dark); font-size: 14px; font-weight: 600; text-decoration: none; }
+.section-kicker { font-size: 13px; font-weight: 600; color: var(--blue-dark); }
+footer { display: flex; align-items: flex-start; gap: 24px; border-top: 1px solid var(--line); padding: 24px 0 32px; }
+footer > strong { font-size: 21px; letter-spacing: -.03em; font-weight: 700; flex-shrink: 0; white-space: nowrap; }
+footer > span { font-size: 12px; color: var(--subtle); }
+.skip { position: fixed; top: -100px; left: 12px; padding: 12px 20px; background: var(--blue-dark); color: white; z-index: 5; clip-path: inset(50%); }
+.skip:focus { top: 12px; clip-path: none; }
+@media (max-width: 700px) {
+  .header, main, footer { width: calc(100% - 40px); }
+  .notice { padding: 8px 16px; }
+  .header { padding: 16px 0; gap: 12px; }
+  .brand { font-size: 26px; }
+  .header-label { display: none; }
+  .header-link { font-size: 12px; }
+  .preview-tag { padding: 4px 8px; }
+  .intro { display: block; padding: 32px 0; }
+  .context { font-size: 13px; margin-bottom: 12px; }
+  .intro h1 { font-size: 32px; line-height: 1.3; }
+  .intro-copy { font-size: 17px; margin-top: 16px; }
+  .scope-note { margin-top: 24px; padding-left: 16px; }
+  .scope-note p { font-size: 12px; margin-top: 8px; }
+  .scope-note strong { font-size: 14px; }
+  .scope-note .text-action { margin-top: 8px; }
+  footer { gap: 20px; }
+}
+@media (hover: hover) {
+  .text-action:hover, .header-link:hover { color: var(--blue); text-decoration: underline; text-underline-offset: 4px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { scroll-behavior: auto !important; transition: none !important; }
+}

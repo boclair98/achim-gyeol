@@ -1,0 +1,27 @@
+@import url("theme.css");
+html { scroll-behavior: auto; }
+.mail-page { --page-width: 760px; }
+.mail-toolbar { width: min(700px, calc(100% - 40px)); margin: 0 auto; display: flex; gap: 20px; align-items: center; justify-content: space-between; padding: 12px 0; }
+.mail-toolbar > span { font-size: 12px; font-weight: 400; color: var(--subtle); }
+.back-to-notification { display: inline-flex; align-items: center; min-height: 44px; color: var(--muted); font-size: 14px; text-decoration: none; }
+.back-to-notification svg { width: 20px; height: 20px; margin-right: 4px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.mail-main { width: min(760px, 100%); }
+.mail-envelope { max-width: 640px; margin: 0 auto; padding: 8px 36px 24px; }
+.mail-envelope h1 { font-size: 24px; font-weight: 700; line-height: 1.4; letter-spacing: -.03em; text-wrap: balance; }
+.mail-sender { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+.mail-sender > div { min-width: 0; }
+.mail-sender img { flex-shrink: 0; }
+.mail-sender strong { font-size: 14px; font-weight: 600; }
+.mail-sender p { font-size: 13px; line-height: 1.7; color: var(--subtle); }
+#mail-body { display: block; width: 100%; min-height: 720px; border: 0; background: #f6f8fb; }
+.mail-message { margin: 0 20px 20px; padding: 16px; border-radius: 10px; background: #fff6e7; color: #775019; font-size: 14px; }
+.mail-message[hidden] { display: none; }
+.mail-message button, .mail-message a { display: inline-flex; align-items: center; min-height: 44px; color: inherit; margin: 10px 16px 0 0; }
+.mail-message button { padding: 8px 12px; border: 1px solid #dfceac; border-radius: 8px; background: white; font: inherit; }
+.mail-fallback { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 24px; padding: 16px 20px 24px; }
+.mail-fallback a { display: inline-flex; align-items: center; min-height: 44px; font-size: 13px; color: var(--blue-dark); text-underline-offset: 4px; }
+@media (max-width: 700px) {
+  .mail-toolbar { padding: 8px 0; }
+  .mail-envelope { padding: 8px 20px 20px; }
+  .mail-envelope h1 { font-size: 22px; }
+}

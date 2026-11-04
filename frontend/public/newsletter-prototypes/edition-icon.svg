@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="아침결 뉴스 메일">
+  <rect width="64" height="64" rx="18" fill="#2563eb"/>
+  <circle cx="44" cy="19" r="8" fill="#ffd67c"/>
+  <rect x="12" y="24" width="40" height="28" rx="6" fill="#fff"/>
+  <path d="m14 27 18 14 18-14" fill="none" stroke="#1d4ed8" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m15 49 11-10m23 10L38 39" fill="none" stroke="#dbe7ff" stroke-width="2.8" stroke-linecap="round"/>
+</svg>

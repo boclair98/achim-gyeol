@@ -1,0 +1,24 @@
+/* SUIT by SUNN, unmodified official font; SIL Open Font License 1.1.
+ * See SUIT-LICENSE.txt and font-config.json for source and pinned revision.
+ */
+@font-face {
+  font-family: "SUIT";
+  src: url("SUIT-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SUIT";
+  src: url("SUIT-SemiBold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: "SUIT";
+  src: url("SUIT-Bold.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+}

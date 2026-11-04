@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>아침결 | 전체 뉴스 메일</title><link rel="stylesheet" href="mail.css"></head>
+<body class="mail-page">
+  <a class="skip" href="#mail-body">메일 본문으로 바로가기</a>
+  <div class="notice">보관 기사로 만든 메일 미리보기 · 실제 발송 없음</div>
+  <header class="mail-toolbar"><a href="notifications.html" class="back-to-notification"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg>알림으로</a><span>뉴스 메일 미리보기</span></header>
+  <main class="mail-main">
+    <section class="mail-envelope" aria-labelledby="mail-subject"><h1 id="mail-subject">아침결 뉴스 메일</h1><div class="mail-sender"><img src="edition-icon.svg" width="32" height="32" alt=""><div><strong>아침결</strong><p id="mail-date">보관 기사 · 디자인 미리보기</p></div></div></section>
+    <div id="mail-metadata-error" class="mail-message" role="alert" hidden><p>메일 정보 일부를 불러오지 못했지만 본문은 아래에서 읽을 수 있어요.</p><button id="retry-mail-metadata" type="button">메일 정보 다시 불러오기</button></div>
+    <p id="mail-date-notice" class="mail-message" role="status" hidden></p>
+    <div id="mail-body-error" class="mail-message" role="alert" hidden><p>메일 본문을 불러오지 못했어요. 다시 시도하거나 본문을 직접 열어주세요.</p><button id="retry-mail-body" type="button">본문 다시 불러오기</button><a href="letter.html">메일 본문 직접 열기</a></div>
+    <iframe id="mail-body" src="letter.html" title="한 통에 담긴 아침결 전체 뉴스" loading="eager"></iframe>
+    <div class="mail-fallback"><a href="letter.html">본문이 보이지 않으면 직접 열기</a><a href="notifications.html">알림으로 돌아가기</a></div>
+    <noscript><p class="mail-message">메일 본문은 그대로 읽을 수 있어요. <a href="letter.html">전체 메일을 직접 열 수도 있어요.</a></p></noscript>
+  </main>
+  <script src="preview-frames.js"></script><script src="preview-data.js"></script><script src="mail.js"></script>
+</body></html>
