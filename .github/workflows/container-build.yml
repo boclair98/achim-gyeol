@@ -1,0 +1,20 @@
+name: Validate deployment containers
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [frontend, backend]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the exact production Dockerfile (no push, no secrets)
+        run: docker build --progress=plain -f ${{ matrix.service }}/Dockerfile ${{ matrix.service }}
