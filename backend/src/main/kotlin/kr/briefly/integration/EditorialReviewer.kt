@@ -38,7 +38,7 @@ interface AiEditorialReviewer {
 @ConditionalOnProperty(name = ["app.ai.openai.editor.enabled"], havingValue = "true")
 class OpenAiEditorialReviewer(
     @Value("\${app.ai.openai.api-key}") apiKey: String,
-    @Value("\${app.ai.openai.editor.model:gpt-5.6-sol}") override val modelName: String,
+    @Value("\${app.ai.openai.editor.model:gpt-6.1-sol}") override val modelName: String,
     @Value("\${app.ai.openai.connect-timeout-seconds:10}") connectTimeoutSeconds: Long,
     @Value("\${app.ai.openai.editor.read-timeout-seconds:180}") readTimeoutSeconds: Long,
 ) : AiEditorialReviewer {

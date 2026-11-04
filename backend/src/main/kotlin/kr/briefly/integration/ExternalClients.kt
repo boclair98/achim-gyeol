@@ -140,7 +140,7 @@ class NaverNewsClient(
 @ConditionalOnExpression("T(org.springframework.util.StringUtils).hasText('\${app.ai.openai.api-key:}')")
 class OpenAiSummarizer(
     @Value("\${app.ai.openai.api-key}") private val apiKey: String,
-    @Value("\${app.ai.openai.candidate-model:\${app.ai.openai.model:gpt-5.6-sol}}") private val model: String,
+    @Value("\${app.ai.openai.candidate-model:\${app.ai.openai.model:gpt-6.1-terra}}") private val model: String,
     @Value("\${app.ai.openai.connect-timeout-seconds:10}") connectTimeoutSeconds: Long,
     @Value("\${app.ai.openai.read-timeout-seconds:90}") readTimeoutSeconds: Long,
 ) : AiSummarizer {
@@ -166,7 +166,7 @@ class OpenAiSummarizer(
         val body = mapOf(
             "model" to model,
             "store" to false,
-            // GPT-5 reasoning tokens share this budget with the visible JSON output.
+            // Reasoning tokens share this budget with the visible JSON output.
             // A very small limit can therefore finish before output_text is emitted.
             "max_output_tokens" to 5000,
             "reasoning" to mapOf("effort" to "low"),

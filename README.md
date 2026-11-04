@@ -155,6 +155,14 @@ pnpm dev
 
 정확한 전체 변수명·기본값·조건은 `.env.example`, `backend/.env.example`, `backend/src/main/resources/application.yml`, `coders.yaml`이 기준입니다. 위 표에는 값이나 토큰을 기록하지 않습니다. 운영에 이미 있는 인증값은 UI 변경 때문에 새로 발급하거나 덮어쓰지 않습니다.
 
+### 뉴스 AI 모델 (기존 키 유지)
+
+2026-11-04 승인 조합은 `OPENAI_CANDIDATE_MODEL=gpt-6.1-terra`, `OPENAI_EDITOR_MODEL=gpt-6.1-sol`입니다. 네이버·공식 RSS가 기사를 수집하고, Terra가 후보의 사실 기반 요약·쉬운 설명·중요도를 작성하며 Sol이 최종 기사 선택·중복 제외·순서를 정합니다. Sol 단계가 본문을 새로 쓰거나 AI가 뉴스 원문을 직접 수집하는 구조는 아닙니다. 기존 `OPENAI_API_KEY`·발송·수집 주기·기사 수 설정은 유지합니다.
+
+두 모델의 [Responses/Structured Outputs 지원](https://developers.openai.com/api/docs/guides/latest-model)과 각 모델의 추론 설정을 공식 문서에서 확인했습니다. 기존 `low` 요약/`medium` 편집, 출력 토큰5000/3000, `store:false`와 엄격한 JSON 출력 계약은 유지합니다. 공개 모델 지원 여부는 해당 운영 계정의 실제 접근 권한을 보장하지 않으며, 키를 로컬로 복사하거나 새로 발급하지 않습니다. 운영 적용은 새 배포의 `ready`와 동작 확인 후에만 완료로 판단합니다.
+
+[Terra 가격](https://developers.openai.com/api/docs/models/gpt-6.1-terra)은 Standard100만 입력/출력 토큰당$1/$5, [Sol 가격](https://developers.openai.com/api/docs/models/gpt-6.1-sol)은$2/$10입니다(2026-11-04 확인, 실제 사용 시 최신 가격 참조). 현재 설정은 수집6회+최종화1회에 회당 최대120후보, 최대840회 요약이므로 호출당 입력2000/출력1500토큰 가정 시 요약비만 약$7.98/평일입니다. 이는 실제 사용량 견적·상한·보장 금액이 아니며 최종 편집/추론 토큰·재시도·긴 입력에 따라 달라집니다. 반복 호출 수나 비용 제한을 이번 모델 변경에서 임의로 바꾸지 않았습니다.
+
 ### GitHub·Coders 배포 절차
 
 - 원본: [boclair98/achim-gyeol](https://github.com/boclair98/achim-gyeol), 기본 브랜치 `main`; `origin`도 원본을 가리킵니다.
