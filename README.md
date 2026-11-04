@@ -165,6 +165,8 @@ pnpm dev
 
 ### GitHub·Coders 배포 절차
 
+Dockerfile의 기반 이미지는 Docker Hub 공식 이미지의 전체 주소(`docker.io/library/...:tag`)를 사용합니다. 버전은 유지하며 Podman/Buildah 서버의 short-name 별칭·검색 레지스트리 설정에 의존하지 않습니다. `node scripts/check-container-images.mjs`를 CI와 수동 컨테이너 빌드 전에 실행해 짧은 이미지명이 다시 들어오는 것을 검사합니다. 이는 실제 컨테이너 빌드나 운영 반영 검증을 대신하지 않습니다.
+
 - 원본: [boclair98/achim-gyeol](https://github.com/boclair98/achim-gyeol), 기본 브랜치 `main`; `origin`도 원본을 가리킵니다.
 - 조직 포크: [coders-kr/achim-gyeol](https://github.com/coders-kr/achim-gyeol). 실제 부모 관계를 확인하고 원본 푸시 후 `gh repo sync coders-kr/achim-gyeol -b main`으로 동기화합니다. 양쪽 전체 SHA가 일치해야 합니다.
 - 사용자가 배포를 승인한 경우에만 변경분·새 파일·히스토리의 비밀값 검사와 테스트/빌드를 마친 뒤 원본 main→실제 포크 동기화→기존 Coders `morningnews` 프로젝트 순으로 반영합니다.

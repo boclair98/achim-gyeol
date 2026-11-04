@@ -16,5 +16,7 @@ jobs:
         service: [frontend, backend]
     steps:
       - uses: actions/checkout@v4
+      - name: Check non-interactive container image references
+        run: node scripts/check-container-images.mjs
       - name: Build the exact production Dockerfile (no push, no secrets)
         run: docker build --progress=plain -f ${{ matrix.service }}/Dockerfile ${{ matrix.service }}

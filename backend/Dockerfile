@@ -1,11 +1,11 @@
-FROM maven:3.9.11-eclipse-temurin-21 AS builder
+FROM docker.io/library/maven:3.9.11-eclipse-temurin-21 AS builder
 WORKDIR /app
 COPY pom.xml ./
 RUN mvn -B -q dependency:go-offline
 COPY src ./src
 RUN mvn -B -q -DskipTests package
 
-FROM eclipse-temurin:21-jre-alpine
+FROM docker.io/library/eclipse-temurin:21-jre-alpine
 WORKDIR /app
 RUN apk add --no-cache openssl postgresql-client \
     && addgroup -S briefly \

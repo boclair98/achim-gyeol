@@ -21,6 +21,8 @@ jobs:
           node-version: 22
           cache: pnpm
           cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Check non-interactive container image references
+        run: node ../scripts/check-container-images.mjs
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm test:unit
