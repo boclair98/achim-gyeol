@@ -23,6 +23,8 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
       - name: Check non-interactive container image references
         run: node ../scripts/check-container-images.mjs
+      - name: Verify preview cannot broadcast to all devices
+        run: node --test ../scripts/morning-operations.test.mjs
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm test:unit

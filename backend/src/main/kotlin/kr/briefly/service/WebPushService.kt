@@ -67,6 +67,24 @@ internal fun deliveryAlreadyCompleted(
     lastSentAt?.atZoneSameInstant(zone)?.toLocalDate() == briefingDate
 
 data class PushConfigResponse(val enabled: Boolean, val publicKey: String)
+
+internal data class BriefingPreviewNotification(val title: String, val body: String, val briefingDate: LocalDate?)
+
+internal fun briefingPreviewNotification(
+    briefingDate: LocalDate?, storyCount: Int, readMinutes: Int, leadSummary: String?,
+): BriefingPreviewNotification = if (briefingDate != null && storyCount > 0) {
+    BriefingPreviewNotification(
+        "아침결 · 어제 핵심 ${storyCount}건 · 약 ${readMinutes}분",
+        leadSummary?.trim()?.takeIf(String::isNotBlank)?.take(110)
+            ?: "${storyCount}개의 소식을 한 통에 담았어요. 눌러서 전체 뉴스를 읽어보세요.",
+        briefingDate,
+    )
+} else {
+    BriefingPreviewNotification("아침결 · 알림 연결 확인", "웹푸시 연결을 확인했어요. 준비된 뉴스는 아침결에서 확인할 수 있어요.", null)
+}
+
+internal fun briefingNotificationUrl(publicUrl: String, briefingDate: LocalDate?): String =
+    "${publicUrl.trimEnd('/')}/briefing/" + (briefingDate?.let { "?date=$it" } ?: "")
 data class PushResult(
     val delivered: Boolean,
     val message: String,
@@ -266,13 +284,17 @@ class WebPushService(
         requireConfigured()
         val subscription = repository.findByEndpointHash(endpointHash(endpoint))
             ?.takeIf { it.active && it.ownerId == ownerId } ?: return PushResult(false, "이 계정의 활성 구독을 찾을 수 없습니다.")
-        val briefing = runCatching { briefingService.latest() }.getOrNull()
-        val count = briefing?.stories?.size ?: 0
+        val briefing = runCatching { briefingService.latest() }.getOrNull()?.takeIf { it.productionReady }
+        val preview = briefingPreviewNotification(
+            briefing?.briefingDate, briefing?.stories?.size ?: 0, briefing?.readMinutes ?: 0,
+            briefing?.stories?.firstOrNull()?.oneLineSummary,
+        )
         return sendWithRetry(
             subscription,
-            title = "[운영자 테스트] 아침결 알림",
-            body = if (count > 0) "연결 확인 완료 · 뉴스 카드 ${count}건을 열어볼 수 있어요." else "웹푸시 연결이 정상적으로 완료됐어요.",
+            title = preview.title,
+            body = preview.body,
             test = true,
+            briefingDate = preview.briefingDate,
         )
     }
 
@@ -341,7 +363,7 @@ class WebPushService(
             if (!deliveryIsDue(now.toLocalTime(), fixedDeliveryTime) || alreadySentToday || !retryable) return@delivery DeliveryOutcome()
             attempt.attempts += 1
             attempt.lastAttemptAt = OffsetDateTime.now()
-            val result = send(subscription, title, body, false)
+            val result = send(subscription, title, body, false, briefing.briefingDate)
             val outcome = if (result.delivered) {
                 attempt.state = DeliveryState.DELIVERED
                 attempt.deliveredAt = OffsetDateTime.now()
@@ -408,7 +430,7 @@ class WebPushService(
                 ?: PushDeliveryAttempt(editionId = briefing.id, subscriptionId = subscriptionId)
             attempt.attempts += 1
             attempt.lastAttemptAt = OffsetDateTime.now()
-            val result = send(subscription, title, body, false)
+            val result = send(subscription, title, body, false, briefing.briefingDate)
             val outcome = if (result.delivered) {
                 attempt.state = DeliveryState.DELIVERED
                 attempt.deliveredAt = OffsetDateTime.now()
@@ -482,7 +504,7 @@ class WebPushService(
             }
             attempt.attempts += 1
             attempt.lastAttemptAt = OffsetDateTime.now()
-            val result = send(subscription, title, body, false)
+            val result = send(subscription, title, body, false, briefing.briefingDate)
             val outcome = if (result.delivered) {
                 attempt.state = DeliveryState.DELIVERED
                 attempt.deliveredAt = OffsetDateTime.now()
@@ -577,7 +599,7 @@ class WebPushService(
             if (subscription == null || !subscription.active || attempt.attempts >= 5) return@forEach
             attempt.attempts += 1
             attempt.lastAttemptAt = OffsetDateTime.now()
-            val result = send(subscription, "[재전송] 아침결 · 오늘 뉴스 ${briefing.stories.size}건", "실패했던 오늘 브리핑을 다시 보내드립니다.", false)
+            val result = send(subscription, "[재전송] 아침결 · 오늘 뉴스 ${briefing.stories.size}건", "실패했던 오늘 브리핑을 다시 보내드립니다.", false, briefing.briefingDate)
             if (result.delivered) {
                 delivered += 1; attempt.state = DeliveryState.DELIVERED; attempt.deliveredAt = OffsetDateTime.now(); attempt.error = null
             } else {
@@ -678,24 +700,25 @@ class WebPushService(
         )
     }
 
-    private fun send(subscription: PushSubscription, title: String, body: String, test: Boolean): PushResult =
-        sendWithRetry(subscription, title, body, test)
+    private fun send(subscription: PushSubscription, title: String, body: String, test: Boolean, briefingDate: LocalDate? = null): PushResult =
+        sendWithRetry(subscription, title, body, test, briefingDate)
 
     private fun sendWithRetry(
         subscription: PushSubscription,
         title: String,
         body: String,
         test: Boolean,
+        briefingDate: LocalDate? = null,
         maxAttempts: Int = 3,
     ): PushResult {
         var attempt = 1
-        var result = sendOnce(subscription, title, body, test)
+        var result = sendOnce(subscription, title, body, test, briefingDate)
         while (!result.delivered && result.retryable && subscription.active && attempt < maxAttempts) {
             // Provider/network hiccups are common during a fan-out. A bounded, short
             // retry prevents a single transient failure from looking like a missed briefing.
             Thread.sleep(250L * attempt)
             attempt += 1
-            result = sendOnce(subscription, title, body, test)
+            result = sendOnce(subscription, title, body, test, briefingDate)
         }
         return result
     }
@@ -706,11 +729,11 @@ class WebPushService(
         return "${client.deviceType}/${client.browser}: ${detail.take(240)}"
     }
 
-    private fun sendOnce(subscription: PushSubscription, title: String, body: String, test: Boolean): PushResult = try {
+    private fun sendOnce(subscription: PushSubscription, title: String, body: String, test: Boolean, briefingDate: LocalDate?): PushResult = try {
         val payload = mapper.writeValueAsString(mapOf(
             "title" to title,
             "body" to body,
-            "url" to "${publicUrl.trimEnd('/')}/briefing/",
+            "url" to briefingNotificationUrl(publicUrl, briefingDate),
             "tag" to if (test) "achim-gyeol-test" else "achim-gyeol-daily",
         ))
         val notification = Notification(subscription.endpoint, subscription.p256dh, subscription.auth, payload, Urgency.NORMAL)

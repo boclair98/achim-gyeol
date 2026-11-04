@@ -155,6 +155,19 @@ pnpm dev
 
 정확한 전체 변수명·기본값·조건은 `.env.example`, `backend/.env.example`, `backend/src/main/resources/application.yml`, `coders.yaml`이 기준입니다. 위 표에는 값이나 토큰을 기록하지 않습니다. 운영에 이미 있는 인증값은 UI 변경 때문에 새로 발급하거나 덮어쓰지 않습니다.
 
+### 실제 요약 확인과 내 기기 알림
+
+수동 운영 작업 `regenerate-only`는 오늘 에디션을 실제 API로 다시 요약하되 알림은 보내지 않습니다. `regenerate-all`은 전체 알림까지 보내는 별도 작업이므로 본인 확인용으로 실행하지 않습니다. 새 결과가 준비되기 전에는 기존 뉴스가 유지되며, 재생성이 빈 결과로 끝나도 기존 읽을 수 있는 뉴스는 지우지 않습니다. 실제 API 사용 비용이 발생하므로 실행 전 운영자 승인이 필요합니다.
+
+알림이 등록된 기기의 설정 화면에서 `내 기기 알림 테스트`를 누르면 그 기기에만 실제 브리핑의 제목·대표 요약과 발행일 링크를 보냅니다. 당일 정기 발송 기록은 소모하지 않으며, 다른 사람의 기기를 오래된 등록 순서만으로 운영자 기기라고 추정하지 않습니다. 알림을 누르면 같은 날짜의 전체 뉴스를 새 편지형 화면에서 읽습니다. 서버의 푸시 제공자 접수 성공과 휴대폰에서의 실제 수신은 구분하며, 최종 수신은 해당 기기에서 확인해야 합니다.
+
+```bash
+# 기존 GitHub Actions의 관리자 시크릿만 사용; 키를 로컬로 복사하지 않음
+gh workflow run morning-briefing.yml -f operation=generation-status -f send_telegram_report=false
+gh workflow run morning-briefing.yml -f operation=regenerate-only -f send_telegram_report=false
+node --test scripts/morning-operations.test.mjs
+```
+
 ### 뉴스 AI 모델 (기존 키 유지)
 
 2026-11-04 승인 조합은 `OPENAI_CANDIDATE_MODEL=gpt-6.1-terra`, `OPENAI_EDITOR_MODEL=gpt-6.1-sol`입니다. 네이버·공식 RSS가 기사를 수집하고, Terra가 후보의 사실 기반 요약·쉬운 설명·중요도를 작성하며 Sol이 최종 기사 선택·중복 제외·순서를 정합니다. Sol 단계가 본문을 새로 쓰거나 AI가 뉴스 원문을 직접 수집하는 구조는 아닙니다. 기존 `OPENAI_API_KEY`·발송·수집 주기·기사 수 설정은 유지합니다.

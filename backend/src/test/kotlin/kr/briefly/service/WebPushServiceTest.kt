@@ -12,6 +12,26 @@ import kr.briefly.domain.DeliveryState
 
 class WebPushServiceTest {
     @Test
+    fun `device preview contains real briefing metadata and its publication date`() {
+        val date = LocalDate.of(2026, 11, 4)
+        val preview = briefingPreviewNotification(date, 15, 19, "실제 원문을 바탕으로 요약한 뉴스")
+        assertThat(preview.title).isEqualTo("아침결 · 어제 핵심 15건 · 약 19분")
+        assertThat(preview.body).isEqualTo("실제 원문을 바탕으로 요약한 뉴스")
+        assertThat(preview.briefingDate).isEqualTo(date)
+        assertThat(briefingNotificationUrl("https://morningnews.coders.kr/", date))
+            .isEqualTo("https://morningnews.coders.kr/briefing/?date=2026-11-04")
+    }
+
+    @Test
+    fun `connection check does not invent a news edition when none is available`() {
+        val preview = briefingPreviewNotification(null, 0, 0, null)
+        assertThat(preview.title).isEqualTo("아침결 · 알림 연결 확인")
+        assertThat(preview.briefingDate).isNull()
+        assertThat(briefingNotificationUrl("https://morningnews.coders.kr", null))
+            .isEqualTo("https://morningnews.coders.kr/briefing/")
+    }
+
+    @Test
     fun `web push always uses modern AES128GCM content encoding`() {
         assertThat(WEB_PUSH_CONTENT_ENCODING).isEqualTo(Encoding.AES128GCM)
     }

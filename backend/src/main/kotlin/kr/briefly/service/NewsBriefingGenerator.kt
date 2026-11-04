@@ -378,6 +378,12 @@ class NewsBriefingGenerator(
                 briefingDate = briefingDate,
                 lead = "",
             )
+        // A failed model/provider pass must not erase an already readable edition.
+        // Throw before mutating the managed entity so its transaction rolls back;
+        // the job's failure notice also preserves existing non-empty editions.
+        check(stories.isNotEmpty() || edition.pipelineGenerated != true || edition.stories.isEmpty()) {
+            "새 요약에서 제공 가능한 기사가 없어 기존 ${edition.stories.size}건을 유지합니다. 뉴스 공급원·요약 오류를 확인해 주세요."
+        }
         edition.lead = if (stories.isEmpty()) {
             "${coverageDate.monthValue}월 ${coverageDate.dayOfMonth}일 뉴스 수집은 완료했지만 자동 검증을 통과한 카드가 아직 없습니다. 원문 수집과 검증을 계속 진행하고 있습니다."
         } else {

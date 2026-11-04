@@ -22,7 +22,9 @@ on:
           - generate
           - dispatch
           - run
+          - regenerate-only
           - regenerate-all
+          - generation-status
           - test-push
           - welcome-preview-status
           - welcome-preview
@@ -125,6 +127,7 @@ jobs:
           exit 1
 
       - name: Wake service and run morning operation
+        id: request
         shell: bash
         env:
           ADMIN_TOKEN: ${{ secrets.BRIEFING_ADMIN_TOKEN }}
@@ -132,7 +135,13 @@ jobs:
           EXPECTED_NEW_SUBSCRIPTIONS: ${{ inputs.preview_new_subscriptions }}
         run: |
           test -n "$ADMIN_TOKEN"
-          if [[ "$OPERATION" == "status" ]]; then
+          if [[ "$OPERATION" == "generation-status" ]]; then
+            curl --fail-with-body --silent --show-error \
+              --retry 2 --retry-all-errors --max-time 90 \
+              "https://morningnews.coders.kr/api/admin/briefings/status" \
+              -H "X-Briefing-Admin-Token: $ADMIN_TOKEN" \
+              | jq '{date, productionReady, stories, categories, generationJob} | walk(if type == "string" then gsub("sk-[A-Za-z0-9_-]{20,}"; "[redacted]") else . end)'
+          elif [[ "$OPERATION" == "status" ]]; then
             status="$(curl --fail-with-body --silent --show-error \
               --retry 3 --retry-all-errors --max-time 90 \
               "https://morningnews.coders.kr/api/admin/briefings/subscriptions" \
@@ -178,10 +187,11 @@ jobs:
               -H "X-Briefing-Admin-Token: $ADMIN_TOKEN" \
               -H "Content-Type: application/json" \
               --data "{\"expectedNewSubscriptions\":${expected_new},\"expectedTotalSubscriptions\":${expected_total}}"
-          elif [[ "$OPERATION" == "regenerate-all" ]]; then
+          elif [[ "$OPERATION" == "regenerate-only" || "$OPERATION" == "regenerate-all" ]]; then
             briefing_date="$(TZ=Asia/Seoul date +%F)"
+            echo "briefing_date=$briefing_date" >> "$GITHUB_OUTPUT"
             curl --fail-with-body --silent --show-error \
-              --retry 3 --retry-all-errors --max-time 90 \
+              --max-time 90 \
               -X POST "https://morningnews.coders.kr/api/admin/briefings/regenerate" \
               -H "X-Briefing-Admin-Token: $ADMIN_TOKEN" \
               -H "Content-Type: application/json" \
@@ -221,11 +231,12 @@ jobs:
           fi
 
       - name: Wait for AI briefing generation
-        if: steps.operation.outputs.operation == 'generate' || steps.operation.outputs.operation == 'run' || steps.operation.outputs.operation == 'regenerate-all'
+        if: steps.operation.outputs.operation == 'generate' || steps.operation.outputs.operation == 'run' || steps.operation.outputs.operation == 'regenerate-all' || steps.operation.outputs.operation == 'regenerate-only'
         shell: bash
         env:
           ADMIN_TOKEN: ${{ secrets.BRIEFING_ADMIN_TOKEN }}
           OPERATION: ${{ steps.operation.outputs.operation }}
+          EXPECTED_BRIEFING_DATE: ${{ steps.request.outputs.briefing_date }}
         run: |
           # The 00:00 generation has ample lead time before the 07:30 dispatch.
           # Candidate count, concurrency and per-request timeouts keep this wait bounded.
@@ -241,16 +252,19 @@ jobs:
             fi
             ready="$(jq -r '.productionReady' <<< "$status")"
             state="$(jq -r '.generationJob.state' <<< "$status")"
-            if [[ "$OPERATION" == "regenerate-all" ]]; then
+            if [[ "$OPERATION" == "regenerate-only" || "$OPERATION" == "regenerate-all" ]]; then
               if [[ "$state" == "FAILED" ]]; then
-                jq -r '.generationJob.error' <<< "$status" >&2
+                jq -r '.generationJob.error | if type == "string" then gsub("sk-[A-Za-z0-9_-]{20,}"; "[redacted]") else . end' <<< "$status" >&2
                 exit 1
               fi
               result_date="$(jq -r '.generationJob.result.briefingDate // empty' <<< "$status")"
               stories="$(jq -r '.stories // 0' <<< "$status")"
-              today="$(TZ=Asia/Seoul date +%F)"
+              today="${EXPECTED_BRIEFING_DATE:-$(TZ=Asia/Seoul date +%F)}"
               if [[ "$state" == "COMPLETED" && "$result_date" == "$today" ]]; then
-                if [[ "$ready" == "true" && "$stories" -gt 0 ]]; then exit 0; fi
+                if [[ "$ready" == "true" && "$stories" -gt 0 ]]; then
+                  jq '{date, productionReady, stories, categories, generationJob} | walk(if type == "string" then gsub("sk-[A-Za-z0-9_-]{20,}"; "[redacted]") else . end)' <<< "$status"
+                  exit 0
+                fi
                 echo "Regenerated briefing has no deliverable stories (stories=${stories})" >&2
                 echo "Regenerated briefing is not publishable" >&2
                 exit 1
