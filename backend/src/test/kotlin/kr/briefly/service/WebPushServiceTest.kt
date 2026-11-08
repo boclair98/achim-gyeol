@@ -19,7 +19,7 @@ class WebPushServiceTest {
         assertThat(preview.body).isEqualTo("실제 원문을 바탕으로 요약한 뉴스")
         assertThat(preview.briefingDate).isEqualTo(date)
         assertThat(briefingNotificationUrl("https://morningnews.coders.kr/", date))
-            .isEqualTo("https://morningnews.coders.kr/briefing/?date=2026-11-04")
+            .isEqualTo("https://morningnews.coders.kr/briefing/delivery/?date=2026-11-04")
     }
 
     @Test
@@ -28,7 +28,7 @@ class WebPushServiceTest {
         assertThat(preview.title).isEqualTo("아침결 · 알림 연결 확인")
         assertThat(preview.briefingDate).isNull()
         assertThat(briefingNotificationUrl("https://morningnews.coders.kr", null))
-            .isEqualTo("https://morningnews.coders.kr/briefing/")
+            .isEqualTo("https://morningnews.coders.kr/briefing/delivery/")
     }
 
     @Test

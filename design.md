@@ -1,6 +1,55 @@
 # OpenUI Design Plan
 
-## 현재 작업 · 2026-11-08 · 뉴스 홈
+## 현재 작업 · 2026-11-08 · 받는 뉴스레터만
+
+사용자가 확정한 범위는 **받는 뉴스의 UI·UX와 메일 미리보기**다. `/`와 기존 `/briefing/`의 코드, 스타일, 시작 주소, 보관함 링크는 그대로 둔다. 이전의 뉴스 홈 계획은 배포 이력으로 보존한다.
+
+### Resolved inputs
+
+- Topic: 아침결의 수신용 하루 뉴스레터와 한 편 읽기.
+- Offer: 평일 아침 받은 한 편에서 제목을 빠르게 훑고, 선택한 기사만 핵심부터 읽는다.
+- Audience: 출근길에 한 손으로 보는 한국어 독자와 데스크톱에서 차분하게 읽는 구독자.
+- Primary user action: 기사 제목 누르기 → 같은 발행일의 `#news-ID`에서 핵심 요약 보기. 다음 동작은 원문 확인 또는 `뉴스 목록`으로 돌아가기.
+- Deliverable: 실제 알림 전용 `/briefing/delivery/`와 메일 HTML·텍스트 미리보기 `/briefing/delivery/preview/`.
+- Style direction: 편지형 에디토리얼. 여백·활자·얇은 구분선으로 정보 위계를 만들고, 사이트 탐색용 필터·큰 대표 사진·홍보 배너는 수신용 화면에 넣지 않는다.
+- Tonal key: 밝음. 백지, 중립적인 남색 잉크, 읽기 행동에만 절제된 블루.
+- Icon policy: 아침결 기존 메일 표식, 이동 방향·외부 원문에만 작은 아이콘. 장식이 텍스트를 대체하지 않는다.
+- Proof assets: 기존 발행 API의 실제 발행일·선택된 기사·원문과 제공된 사진. 배포 전 캡처는 2026-11-06 공개 보관 발행본을 사용한다.
+- Motion intensity: 거의 없음. 선택·포커스 색상만 사용하고, 기사 전환은 즉시 이동한다.
+
+### Composition contract
+
+- Hero archetype: 단일 편지 머리글. 제목과 날짜가 첫 시선을 받고, 그 아래 첫 기사 제목이 곧바로 보인다.
+- First-viewport structure: 메일 표식·아침결·발행일 → `어제의 핵심 뉴스` → 기사 수와 한 줄 안내 → 편집 순서의 제목 목록. PC에도 사이드바나 큰 이미지 없이 같은 한 열을 쓴다.
+- Primary visual/proof artifact: 받은 편지의 실제 제목 목록, 열린 기사에서 제목 직후의 `핵심 요약`과 원본 비율 사진. 사진이 없거나 열리지 않으면 공간 없이 본문으로 이어진다.
+- Interaction behavior: 제목 링크 → 같은 날짜 기사, 이전·다음 기사, 목록에서 눌렀던 행에 키보드 포커스 복귀, 실제 원문 링크와 기존 상세의 의견 기능 연결. 이메일은 스크립트 없이 날짜가 고정된 웹 기사 링크로 연결한다.
+- Reuse boundary: 기존 공개 API, 기기 글자 크기, 실제 알림 한 번, 발행일, 기사 수·편집 순서, 발송 일정, 인증/구독을 유지한다. 알림 페이로드의 목적지만 바꾸고 이미 받은 링크는 계속 열리게 한다. 메일 서버나 이메일 주소 수집은 추가하지 않는다.
+
+### Product evidence and visual system
+
+- 기존 `/briefing/`에는 검색·분류·대표 기사 등 직접 방문을 위한 탐색 요소가 있고, 실제 알림도 같은 주소를 열었다. 이메일 전송 제공자는 없으며 기존 HTML 메일 틀은 큰 배너와 중첩 카드로 길었다. 따라서 기존 페이지는 유지하고, 수신용 편지만 별도로 만들며 이메일은 발송 없는 시안으로 정확히 구분한다.
+- [토스피드 뉴스레터 태그](https://toss.im/tossfeed/tag/%EB%89%B4%EC%8A%A4%EB%A0%88%ED%84%B0), [토스피드 토스-뉴스레터](https://toss.im/tossfeed/tag/%ED%86%A0%EC%8A%A4-%EB%89%B4%EC%8A%A4%EB%A0%88%ED%84%B0), [토스 테크](https://toss.tech/)에서 제목과 짧은 메타 정보가 먼저 읽히는 위계, 상세의 넉넉한 문장 폭과 여백만 참고했다. 토스 글꼴·자산·카피는 복제하지 않는다.
+- SUIT 400/600/700과 Apple SD Gothic Neo·Malgun Gothic 대체 글꼴. 메일 HTML은 웹폰트나 이미지 없이 기기 서체로 완결한다. 웹: 머리글 제목 모바일 32px, PC 최대 44px/1.2, 목록 18–20px/1.45, 상세 제목 28–40px/1.3, 핵심 18–20px/1.6, 본문 17px/1.75. 보조 13–15px. 잉크 `#182334`, 보조 `#536175`, 액션 `#2157b5`, 핵심 바탕 `#edf4ff`, 종이 `#fff`, 배경 `#f3f6fa`, 경계 `#dfe6ef`.
+- 한 열 최대 744px, PC 안쪽 48px, 모바일 20px 및 기기 안전 영역. 8/12/16/24/32/48px 간격, 기사 간 1px 구분선. 링크는 44px 이상, 한국어 keep-all + 긴 문자열 안전 줄바꿈, 제목 말줄임 없음. 이미지 본문은 `max-width:100%; height:auto`로 전체를 보여준다. 메일은 최대 640px과 한 열의 호환성 높은 표·인라인 스타일·텍스트 대체 본문을 제공한다.
+- 명시된 발행일 오류·불일치에는 다른 날짜 뉴스로 대체하지 않는다. 로딩, 발행본 없음, 네트워크 오류, 저장된 동일 발행본은 구분하고 다시 시도 또는 지난 뉴스로 이어진다. HTML 메일이 매우 길어지는 예외에는 잘린 메일 대신 전체 발행본 링크와 기사 수를 보여주며 웹 기사 수는 제한하지 않는다.
+
+### Filled generation prompt · 수신용 편지
+
+Create one responsive reading design for 아침결 수신 뉴스레터, not a replacement homepage. The offer is a dated morning edition whose titles are quick to scan. The audience is Korean mobile and desktop subscribers; the main action is tapping a title and seeing its key point immediately. Deliver the isolated Next.js recipient view, its email-safe HTML/text rendering and an honest browser prototype. Use the existing SUIT and mail mark, a white editorial sheet and one restrained blue, not a copy of Toss assets or type.
+
+Use one composition: quiet dateline and headline, one complete list with no article-count cap, then a focused article view with key point above optional uncropped photography, explanatory paragraphs, corrections/evidence and source links. Keep motion to state feedback, use visible focus and native links, preserve the date and the return position. On mobile keep wide text and 44px targets; on PC center the same legible column. Show actual content and fail honestly. Make the email usable without JS, web fonts or images. Do not invent a real email delivery, resend notifications, change news selection, or modify existing home/navigation.
+
+Output target: `frontend/app/briefing/delivery/`, `frontend/components/ReceivedBriefing*`, `frontend/components/ReceivedMailPreview.tsx`, `frontend/lib/use-received-edition.ts`, `frontend/lib/email-template.ts`, `frontend/lib/newsletter/render-received-mail.mjs`. Integrate the same date-pinned destination into existing web push and service-worker fallbacks without rewriting old payload URLs.
+
+### Verification plan
+
+- 기존 홈과 `/briefing/`에 새 화면·링크가 섞이지 않는지 확인. 본인/정기 푸시가 사용하는 공통 링크 생성과 서비스 워커의 새·기존 URL 처리를 단위 검증하되 실제 알림을 발송하지 않는다.
+- 29건 에디션의 마지막 기사, 날짜가 틀린 응답, 빈 편지·재시도, 이미지 누락·긴 한글, 키보드 열기·이전/다음·목록 포커스·큰 글씨를 확인한다. 메일 시안의 기사 링크·HTML/텍스트·다운로드와 잘림 방지 한계를 테스트한다.
+- 360×800, 390×844, 768×1024, 1440×900에서 실발행본과 메일 시안의 캡처·콘솔·넘침·사진 비율을 확인한 후 원본 → 포크 → 기존 Coders 프로젝트 순서로 배포한다. 실제 수신함의 Gmail·Outlook·Apple Mail 발송 검증은 포함하지 않는다.
+
+---
+
+## 이전 작업 · 2026-11-08 · 뉴스 홈
 
 이 작업의 완성안은 아래 하나다. 뒤의 기존 편지형·메일 시안과 배포 승인 기록은 보존하며, 이 작업의 새 발행이나 배포를 승인하는 문서가 아니다.
 

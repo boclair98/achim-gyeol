@@ -84,7 +84,7 @@ internal fun briefingPreviewNotification(
 }
 
 internal fun briefingNotificationUrl(publicUrl: String, briefingDate: LocalDate?): String =
-    "${publicUrl.trimEnd('/')}/briefing/" + (briefingDate?.let { "?date=$it" } ?: "")
+    "${publicUrl.trimEnd('/')}/briefing/delivery/" + (briefingDate?.let { "?date=$it" } ?: "")
 data class PushResult(
     val delivered: Boolean,
     val message: String,

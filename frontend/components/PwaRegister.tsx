@@ -5,13 +5,14 @@ import { reconcileExistingSubscription } from "@/components/PushControls";
 
 export function PwaRegister() {
   useEffect(() => {
-    // The isolated design preview must never register or reconcile subscriptions.
+    // The design previews must never register or reconcile subscriptions.
     const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
-    if (window.location.pathname.replace(/\/$/, "") === `${basePath}/prototype`) return;
+    const path = window.location.pathname.replace(/\/$/, "");
+    if (path === `${basePath}/prototype` || path === `${basePath}/briefing/delivery/preview`) return;
     if ("serviceWorker" in navigator) {
       const hadController = Boolean(navigator.serviceWorker.controller);
       let refreshing = false;
-      navigator.serviceWorker.register(`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/sw.js?v=13`, { updateViaCache: "none" })
+      navigator.serviceWorker.register(`${basePath}/sw.js?v=14`, { updateViaCache: "none" })
         .then(async (registration) => {
           await registration.update();
           // Subscription controls live in a modal, but stale VAPID recovery must

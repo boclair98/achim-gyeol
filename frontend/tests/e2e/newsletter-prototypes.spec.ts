@@ -61,7 +61,7 @@ for (const variant of ["letter", "brief", "magazine"]) {
     }
     await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
     expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).not.toBe("rgba(0, 0, 0, 0)");
-    const sourceLinks = await page.locator("a").evaluateAll((links) => links.map((link) => link.href));
+    const sourceLinks = await page.locator("a").evaluateAll((links) => links.map((link) => (link as HTMLAnchorElement).href));
     expect(sourceLinks.every((href) => /^https?:\/\//.test(href))).toBe(true);
     expect(errors).toEqual([]);
     expect(writes).toEqual([]);
