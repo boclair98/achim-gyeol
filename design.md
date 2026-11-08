@@ -1,6 +1,52 @@
 # OpenUI Design Plan
 
-## 현재 작업 · 2026-11-08 · 받는 뉴스레터만
+## 현재 작업 · 뉴스 품질과 휴대폰 읽기
+
+### Resolved inputs
+
+- Topic: 아침결 수신용 기사에서 실제로 확인된 핵심과 확인 한계를 한눈에 읽기.
+- Offer: 제목을 반복하는 대신 핵심 사실·쉬운 맥락·원문을 순서대로 제공한다.
+- Audience: 이동 중 휴대폰을 보는 한국어 독자와 같은 편지를 PC에서 여는 독자.
+- Primary user action: 받은 편지의 기사 제목 → 핵심 요약과 확인할 점 → 필요할 때 `자세히 읽기`와 `원문과 출처`.
+- Deliverable: 기존 `/briefing/delivery/`의 상세 읽기 보완과 수집·근거 확인 품질 개선. 새 메인이나 별도 사이트는 만들지 않는다.
+- Style direction: 기존 아침결 편지형 에디토리얼. 한 열, 얇은 선, 섹션별 한 가지 역할. 첫 화면을 정보에 쓴다.
+- Tonal key: 흰색 종이, 잉크 `#182334`, 보조 `#536175`, 액션 `#2157b5`, 핵심 `#edf4ff`, 확인할 점 `#fff6e8`과 짙은 갈색 `#654512`.
+- Icon policy: 기존 메일 아이콘과 방향 아이콘만 재사용한다. 확인 상태는 색뿐 아니라 문구로 표시한다.
+- Proof assets: 11월 6일 실제 발행본의 기존 제목·요약·원본 사진·출처, 별도로 표시한 합성 검증 데이터. 새 사실이나 생성 이미지는 추가하지 않는다.
+- Motion intensity: 없음. 네이티브 펼치기와 기존 키보드 복귀를 사용한다.
+
+### Composition contract
+
+- Hero archetype: 기존 발행일과 기사 제목, 이어지는 작은 핵심 요약 블록. 휴대폰에서 사진이 읽기 시작점을 가로막지 않는다.
+- First-viewport structure: 기사 제목 → 확인된 범위의 핵심 문장 또는 근거가 연결된 추가 사실(최대 두 문장) → 확인할 점이 있으면 첫 문장. 쉬운 맥락을 먼저 읽고 사진은 원본 비율로 이어진다.
+- Primary visual/proof artifact: 같은 기사 내 기존 텍스트에서 고른 완결 문장과 실제 원문 링크. 같은 제목·수치의 반복은 줄이되 시점·수치·단위·확정 여부가 다른 문장은 같은 뜻으로 처리하지 않는다.
+- Interaction behavior: 상세의 `자세히 읽기`는 네이티브 펼치기. 추가 배경·영향·전체 근거에 접근할 수 있고, 확인할 점과 원문은 펼치지 않아도 찾을 수 있다. 목록/이전/다음·글자 크기·정정·근거 링크를 보존한다.
+- Reuse boundary: `/`, 일반 `/briefing/`, 수신 링크, 일정, 키·모델·호출량, 커버리지와 기사 수 기준 그대로. 기존 발행본 재생성·발송 없음. 출처·기사 번호는 데이터로 처리한다.
+
+### Editorial and responsive contract
+
+- 실제 발행본에서 제목과 한 줄 요약이 유사하고, 불확실성은 여러 문단에 흩어졌다. 기존 수집의 URL 비교는 모든 쿼리를 버려 기사 ID가 쿼리에 있는 매체의 서로 다른 기사를 합칠 수 있었다.
+- 수집 시 기사 번호·의미 있는 쿼리를 유지하고 명백한 추적 파라미터만 제외한다. 묶음에는 전날에 수집한 같은 사건의 기사를 쓰고, 같은 사건에 공식 원문이 있으면 요약 입력에 우선 포함한다. 기사 근거의 소스 인덱스는 저장 순서대로 다시 읽는다.
+- 제목·한 줄 요약의 측정 수치는 연결한 원문 발췌의 수치·단위와 대조한다. 두 매체에서 같은 값의 근거를 확인할 수 없으면 해당 수치가 틀렸다고 단정하지 않고 확인 상태를 낮춘다. 이 검사는 기사 탈락·발송 차단·추가 API 호출 조건이 아니다.
+- 수신 상세에만 SUIT 400/600/700, 제목 27–40px, 본문 기본 17px/1.76, 메타·레이블 13–14px를 유지한다. 모바일 좌우 여백 20px, 주요 링크와 펼치기는 44px 이상, PC 본문 최대 폭 744px 유지. 12/16/24/32px 간격, 긴 한글은 keep-all + 안전 줄바꿈, 사진·본문 말줄임 없음.
+- 확인할 점은 제목 가까이에 두고, 원문 링크는 분명히 표기한다. 중복 판정은 보수적이며 확정/예정, 수치가 다른 문장은 보존한다. 정보가 없으면 섹션을 만들지 않는다. API가 빈 날짜나 실패할 때의 기존 안내는 유지한다.
+- 제목을 이해하는 데 필요한 용어가 있으면 한 기사에 하나만 풀이한다. 시작 용어는 [한국거래소의 사이드카 안내](https://global.krx.co.kr/contents/GLB/01/0109/0109000000/guide_to_trading_in_the_korean_stock_market.pdf), [금융위원회의 ELS 설명](https://www.fsc.go.kr/no010107/84076), [질병관리청 조류인플루엔자 문답](https://www.kdca.go.kr/bbs/kdca/42/310672/download.do)으로 근거를 제한한다. 용어 안내 출처는 뉴스 사건의 원문과 구분하고, 애매한 약어만으로는 풀이를 붙이지 않는다.
+
+### Filled generation prompt · 수신 기사 읽기
+
+Create one focused, responsive improvement for 아침결 수신 기사. Offer a fast, evidence-led reading path for a Korean subscriber on a small phone and the same reader on desktop. Make the article title and up to two complete, non-repetitive key points the main proof; keep uncertainty near them, then short plain context, uncropped optional photo, expandable depth and visible real sources. Use existing SUIT, white paper, restrained blue and a clearly labelled warm caveat surface. Keep headlines and facts readable with no fixed truncation or invented explanation. Use native controls with visible focus and 44px touch targets; preserve exact dated links and return focus. Do not change the homepage, delivery schedule, source verification requirement, model or credentials.
+
+Output target: `frontend/components/ReceivedBriefing.tsx`, its existing CSS module, and `frontend/lib/received-reading.ts`. Source checks belong to the existing Kotlin editorial pipeline and do not add network calls or publication blocks.
+
+### Verification
+
+- 전날 기사 URL의 다른 기사 ID 유지, 추적 URL 중복 제거, 공식 원문 우선, 수치·단위 불일치와 동일 매체 중복에서 확인 상태 하향, 발행본·스포츠 유무·15건 초과 회귀를 JDK21 테스트로 확인한다.
+- 동일 제목을 반복하지 않는 핵심, 숫자와 부정·예정 문장 보존, 출처와 확인 문구의 위치, 펼치기, 사진 원본 비율과 날짜 고정 링크를 단위·브라우저에서 확인한다.
+- 360×800, 390×844, 768×1024, 1440×900의 기존 실발행본을 읽기 전용으로 미리 보고, 모바일과 PC 캡처를 비교한다. API 키·실제 요약 호출·커밋·푸시·배포·발송은 이 검증에 포함하지 않는다.
+
+---
+
+## 이전 작업 · 2026-11-08 · 받는 뉴스레터만
 
 사용자가 확정한 범위는 **받는 뉴스의 UI·UX와 메일 미리보기**다. `/`와 기존 `/briefing/`의 코드, 스타일, 시작 주소, 보관함 링크는 그대로 둔다. 이전의 뉴스 홈 계획은 배포 이력으로 보존한다.
 

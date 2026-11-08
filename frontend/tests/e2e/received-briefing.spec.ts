@@ -129,6 +129,48 @@ test("missing images and outdated article links do not hide the remaining headli
   await expect(page.getByRole("link", { name: "지난 뉴스 보기" })).toHaveAttribute("href", "/archive/");
 });
 
+test("a phone sees meaningful facts and uncertainty before the photo, with full detail one tap away", async ({ page }) => {
+  const data = edition(1);
+  const repeated = "서울시가 어린이 버스 지원 대상을 확대했다.";
+  const start = "새 기준은 2027년 3월부터 적용된다.";
+  const caution = "지역별 접수 일정은 아직 확인되지 않았다.";
+  const background = "기존에는 정해진 연령대에만 지원을 제공했다.";
+  const sources = [
+    { publisher: "검증 원문", url: "https://news.example/article" },
+    { publisher: "추가 원문", url: "https://other.example/article" },
+  ];
+  await mockEdition(page, {
+    ...data, stories: data.stories.map(story => ({
+      ...story, title: "서울시 어린이 버스 지원 대상 확대", oneLineSummary: repeated, summary: `${repeated} ${start}`,
+      plainExplanation: "이용할 수 있는 가족이 더 많아진다.", backgroundContext: background, uncertainty: caution,
+      verificationStatus: "DEVELOPING", sources, claims: [{ statement: start, sources }],
+    })),
+  });
+  await page.setViewportSize(viewports[0]);
+  await page.goto(recipient + "#news-700");
+  const article = page.locator("#news-700");
+  await expect(article).toBeFocused();
+  const key = article.getByText(start, { exact: true }).first();
+  await expect(key).toBeInViewport();
+  await expect(article.getByText(repeated, { exact: true })).toHaveCount(0);
+  await expect(article.getByText("추가 확인 중")).toBeVisible();
+  const caveat = article.getByText(caution, { exact: true });
+  await expect(caveat).toBeInViewport();
+  const photo = article.getByRole("img");
+  await expect.poll(() => photo.evaluate(img => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+  expect((await caveat.boundingBox())!.y).toBeLessThan((await photo.boundingBox())!.y);
+  await expect(article.getByText("이용할 수 있는 가족이 더 많아진다.")).toBeVisible();
+  await expect(article.getByText(background)).toBeHidden();
+  await expect(article.getByRole("link", { name: "검증 원문", exact: true })).toBeVisible();
+  const details = article.locator("summary").filter({ hasText: "자세히 읽기" });
+  expect((await details.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await details.press("Enter");
+  await expect(article.getByText(background)).toBeVisible();
+  await details.press("Space");
+  await expect(article.getByText(background)).toBeHidden();
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
 test("email prototype fits the complete message and a title opens the same dated web article", async ({ page }) => {
   const previewCalls: string[] = [];
   const errors: string[] = [];

@@ -6,6 +6,7 @@ import kr.briefly.domain.NewsSource
 import kr.briefly.domain.NewsStory
 import kr.briefly.domain.NewsClaim
 import kr.briefly.domain.EditorialState
+import kr.briefly.domain.VerificationStatus
 import kr.briefly.integration.AiSummarizer
 import kr.briefly.integration.AiEditorialReviewer
 import kr.briefly.integration.ArticleImageResolver
@@ -130,7 +131,7 @@ internal fun selectBalancedCoverageArticles(
         iterators.forEach { iterator ->
             while (selected.size < limit && iterator.hasNext()) {
                 val article = iterator.next()
-                if (seenUrls.add(article.originalUrl)) {
+                if (seenUrls.add(articleIdentity(article.originalUrl))) {
                     selected += article
                     addedThisRound = true
                     break
@@ -172,8 +173,8 @@ class ArticleClusterer {
     fun cluster(category: Category, articles: List<CollectedArticle>, limit: Int = 4): List<ArticleCluster> {
         val unique = articles
             .filter { it.title.isNotBlank() && it.originalUrl.isNotBlank() }
-            .distinctBy { canonicalUrl(it.originalUrl) }
             .sortedByDescending { it.publishedAt }
+            .distinctBy { articleIdentity(it.originalUrl) }
             .map(::indexArticle)
         val groups = mutableListOf<MutableList<IndexedArticle>>()
 
@@ -188,7 +189,11 @@ class ArticleClusterer {
 
         return groups.mapNotNull { group ->
             val groupedArticles = group.map(IndexedArticle::article)
-            val independent = groupedArticles.distinctBy { newsSourceFamily(it.originalUrl) }
+            val independent = groupedArticles.sortedWith(
+                compareByDescending<CollectedArticle> { isPrimaryNewsSource(it.originalUrl) }
+                    .thenByDescending(CollectedArticle::editorialPriority)
+                    .thenByDescending(CollectedArticle::publishedAt),
+            ).distinctBy { newsSourceFamily(it.originalUrl) }
             if (independent.size < 2) return@mapNotNull null
             val selected = independent.take(6)
             val combinedText = groupedArticles.joinToString(" ") { "${it.title} ${it.description}" }
@@ -261,11 +266,6 @@ class ArticleClusterer {
         val normalized = value.lowercase().replace(Regex("[^가-힣a-z0-9]"), "")
         return normalized.windowed(2).toSet()
     }
-
-    private fun canonicalUrl(value: String): String = runCatching {
-        val uri = URI(value)
-        URI(uri.scheme, uri.authority, uri.path, null, null).toString()
-    }.getOrDefault(value)
 }
 
 @Service
@@ -480,11 +480,10 @@ class NewsBriefingGenerator(
             log.info("Morning briefing candidate excluded: category={}, score={}, reason={}", cluster.category, summary.importanceScore, summary.importanceReason)
             return null
         }
-        val factsChecked = summary.keyFacts.isNotEmpty() && summary.keyFacts.all { fact ->
-            val citedArticles = fact.sourceIds.mapNotNull { sourceId ->
-                sourceId.removePrefix("S").toIntOrNull()?.minus(1)?.let(articles::getOrNull)
-            }
-            fact.statement.isNotBlank() && citedArticles.map { newsSourceFamily(it.originalUrl) }.distinct().size >= 2
+        val citedFacts = resolveCitedFacts(summary.keyFacts, articles.size)
+        val factsChecked = citedFacts.isNotEmpty() && citedFacts.all { fact ->
+            fact.statement.isNotBlank() &&
+                fact.sourceIndexes.map { newsSourceFamily(articles[it].originalUrl) }.distinct().size >= 2
         }
         val primarySource = articles.any { isPrimaryNewsSource(it.originalUrl) }
         val independentSourceCount = articles.map { newsSourceFamily(it.originalUrl) }.distinct().size
@@ -502,6 +501,11 @@ class NewsBriefingGenerator(
             "품질 게이트 탈락 sources=$independentSourceCount, factsChecked=$factsChecked, conflict=${summary.sourcesConflict}, reasons=${decision.reasons.joinToString()}"
         }
 
+        val figureNeedsReview = headlineHasUnconfirmedFigure(summary.title, summary.oneLineSummary, citedFacts, articles)
+        val figureCaution = "일부 수치는 서로 다른 두 출처에서 같은 값과 단위로 확인하지 못했어요."
+        val originalCaution = summary.uncertainty?.trim()?.take(600)?.takeIf(String::isNotBlank)
+        val cautionWithFigure = listOfNotNull(originalCaution, figureCaution).joinToString(" ")
+        val uncertainty = if (figureNeedsReview && cautionWithFigure.length <= 600) cautionWithFigure else originalCaution
         val resolvedImage = imageResolver?.resolve(articles)
         val story = NewsStory(
             category = cluster.category,
@@ -510,10 +514,10 @@ class NewsBriefingGenerator(
             oneLineSummary = summary.oneLineSummary.trim().take(60),
             whyItMatters = summary.whyItMatters.trim().take(700),
             whatToWatch = summary.whatToWatch.trim().take(500).ifBlank { null },
-            verificationStatus = decision.status,
-            qualityScore = decision.score,
+            verificationStatus = if (figureNeedsReview && decision.status == VerificationStatus.VERIFIED) VerificationStatus.DEVELOPING else decision.status,
+            qualityScore = if (figureNeedsReview) decision.score.coerceAtMost(79) else decision.score,
             displayOrder = 0,
-            uncertainty = summary.uncertainty?.trim()?.take(600),
+            uncertainty = uncertainty,
             backgroundContext = summary.backgroundContext.trim().take(600),
             plainExplanation = summary.plainExplanation.trim().take(800),
             imageUrl = resolvedImage?.url,
@@ -529,11 +533,8 @@ class NewsBriefingGenerator(
                 ),
             )
         }
-        summary.keyFacts.forEachIndexed { index, fact ->
-            val sourceIndexes = fact.sourceIds.mapNotNull { sourceId ->
-                sourceId.removePrefix("S").toIntOrNull()?.minus(1)?.takeIf { it in articles.indices }
-            }.distinct().sorted()
-            story.addClaim(NewsClaim(fact.statement.trim().take(700), sourceIndexes.joinToString(","), index + 1))
+        citedFacts.forEachIndexed { index, fact ->
+            story.addClaim(NewsClaim(fact.statement.take(700), fact.sourceIndexes.joinToString(","), index + 1))
         }
         return EditorialStory(story, summary.importanceScore, cluster.rank)
     }
@@ -618,8 +619,8 @@ class NewsBriefingGenerator(
     }
 
     private fun sameEditorialEvent(left: EditorialStory, right: EditorialStory): Boolean {
-        val leftUrls = left.story.sources.map(NewsSource::url).toSet()
-        val rightUrls = right.story.sources.map(NewsSource::url).toSet()
+        val leftUrls = left.story.sources.map { articleIdentity(it.url) }.toSet()
+        val rightUrls = right.story.sources.map { articleIdentity(it.url) }.toSet()
         if (leftUrls.intersect(rightUrls).isNotEmpty()) return true
         val sameCategory = left.story.category == right.story.category
         val titleThreshold = if (sameCategory) 0.38 else 0.52
@@ -666,9 +667,9 @@ class NewsBriefingGenerator(
     )
 
     private fun deduplicateClusters(clusters: List<ArticleCluster>): List<ArticleCluster> = clusters.fold(mutableListOf<ArticleCluster>()) { unique, candidate ->
-        val candidateUrls = candidate.articles.map(CollectedArticle::originalUrl).toSet()
+        val candidateUrls = candidate.articles.map { articleIdentity(it.originalUrl) }.toSet()
         val duplicate = unique.any { existing ->
-            val existingUrls = existing.articles.map(CollectedArticle::originalUrl).toSet()
+            val existingUrls = existing.articles.map { articleIdentity(it.originalUrl) }.toSet()
             candidateUrls.intersect(existingUrls).isNotEmpty() ||
                 clusterer.similarity(candidate.articles.first().title, existing.articles.first().title) >= 0.50
         }

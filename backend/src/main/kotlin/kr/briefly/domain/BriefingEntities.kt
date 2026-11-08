@@ -71,6 +71,7 @@ class NewsStory(
     lateinit var edition: BriefingEdition
     @BatchSize(size = 32)
     @OneToMany(mappedBy = "story", cascade = [CascadeType.ALL], orphanRemoval = true)
+    @OrderBy("id ASC") // Claim indexes are assigned in the source insertion order.
     var sources: MutableList<NewsSource> = mutableListOf()
     @BatchSize(size = 32)
     @OneToMany(mappedBy = "story", cascade = [CascadeType.ALL], orphanRemoval = true)

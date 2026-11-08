@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, ArrowUpRight, ChevronRight, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUpRight, ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
 import type { Briefing, Story } from "@/lib/briefing";
-import { distinctText, fragmentStoryId, koreaToday, safeNewsUrl, storyLead } from "@/lib/daily-letter";
+import { fragmentStoryId, koreaToday, safeNewsUrl } from "@/lib/daily-letter";
+import { composeReceivedReading, relatedGlossaryTerm } from "@/lib/received-reading";
 import { readReceivedStorage, receivedApiBase, receivedDeviceHeaders, useReceivedEdition, writeReceivedStorage, type ReceivedEditionResult } from "@/lib/use-received-edition";
 import styles from "./ReceivedBriefing.module.css";
 
@@ -174,29 +175,53 @@ function ReceivedEdition({ briefing, fragment, report }: { briefing: Briefing; f
 function ReceivedStory({ story, dateLabel, date, position, total, publicHref, canReport }: {
   story: Story; dateLabel: string; date?: string; position: number; total: number; publicHref: string; canReport: boolean;
 }) {
-  const lead = storyLead(story);
-  const body = story.plainExplanation?.trim() || story.summary;
+  const { keyPoints, explanation, rest, background, impact, watch, cautions } = composeReceivedReading(story);
+  const term = relatedGlossaryTerm(story);
+  const detailsBody = term ? [...explanation, ...rest] : rest;
+  const more = detailsBody.length + background.length + impact.length + watch.length > 0;
+  const confidence = story.verificationStatus === "CONFLICTING" ? "출처 내용 다름"
+    : story.verificationStatus === "SINGLE_SOURCE" ? "원문 한 곳"
+    : story.verificationStatus === "DEVELOPING" ? "추가 확인 중" : null;
+  const caveat = cautions[0] ?? (story.verificationStatus === "CONFLICTING"
+    ? "출처가 서로 다르게 전한 부분이 있어요. 아래 원문을 함께 확인해 주세요." : null);
   const sources = story.sources.flatMap(source => {
     const href = safeNewsUrl(source.url);
     return href ? [{ href, publisher: source.publisher }] : [];
   });
   return <article id={`news-${story.id}`} tabIndex={-1} aria-labelledby={`received-headline-${story.id}`} className={styles.story}>
     <div className={styles.articleMeta}>
-      <span><strong>{story.category}</strong><time dateTime={date}>{dateLabel}</time></span>
+      <span><strong>{story.category}</strong><time dateTime={date}>{dateLabel}</time>{confidence && <span className={styles.confidence}>{confidence}</span>}</span>
       <span aria-label={`전체 ${total}건 중 ${position}번째`}>{position} / {total}</span>
     </div>
     <h1 id={`received-headline-${story.id}`}>{story.title}</h1>
-    <section className={styles.takeaway} aria-labelledby="received-takeaway"><h2 id="received-takeaway">핵심 요약</h2><p>{lead}</p></section>
-    <ReceivedPhoto story={story} />
-    {(distinctText(body, lead) || distinctText(story.summary, body, lead)) && <section className={styles.storySection}>
-      <h2>쉽게 읽기</h2>
-      {distinctText(body, lead) && <p>{body}</p>}
-      {distinctText(story.summary, body, lead) && <p>{story.summary}</p>}
+    {!!keyPoints.length && <section className={styles.takeaway} aria-labelledby="received-takeaway">
+      <h2 id="received-takeaway">핵심 요약</h2>
+      {keyPoints.length === 1 ? <p>{keyPoints[0]}</p> : <ul>{keyPoints.map(point => <li key={point}>{point}</li>)}</ul>}
     </section>}
-    {distinctText(story.backgroundContext, body, story.summary, lead) && <StorySection label="배경이 궁금하다면" text={story.backgroundContext} />}
-    {distinctText(story.whyItMatters, body, story.summary, lead, story.backgroundContext) && <StorySection label="왜 중요한가요" text={story.whyItMatters} />}
-    {story.whatToWatch && <StorySection label="다음에 살펴볼 점" text={story.whatToWatch} />}
-    {story.uncertainty && <StorySection label="아직 확인이 필요한 점" text={story.uncertainty} />}
+    {caveat && <aside className={styles.caveat} aria-labelledby="received-caveat">
+      <h2 id="received-caveat">확인할 점</h2>
+      <p>{caveat}</p>
+      {cautions.length > 1 && <details>
+        <summary>확인할 점 더 보기</summary>
+        {cautions.slice(1).map(note => <p key={note}>{note}</p>)}
+      </details>}
+    </aside>}
+    {!term && <StorySection label="쉽게 읽기" paragraphs={explanation} />}
+    {term && <aside className={styles.glossary} aria-labelledby="received-term">
+      <h2 id="received-term">용어 풀이 · {term.name}</h2>
+      <p>{term.explanation}</p>
+      <a href={term.url} target="_blank" rel="noopener noreferrer" className={styles.textAction}>
+        {term.publisher} 설명 <ArrowUpRight size={14} aria-hidden="true" />
+      </a>
+    </aside>}
+    <ReceivedPhoto story={story} />
+    {more && <details className={styles.storyDetails}>
+      <summary>자세히 읽기 <ChevronDown size={18} aria-hidden="true" /></summary>
+      <StorySection label={term ? "쉽게 읽기" : "추가로 볼 내용"} paragraphs={detailsBody} />
+      <StorySection label="배경" paragraphs={background} />
+      <StorySection label="왜 중요한가요" paragraphs={impact} />
+      <StorySection label="다음에 살펴볼 점" paragraphs={watch} />
+    </details>}
     {!!story.corrections?.length && <section className={styles.storySection}>
       <h2>바로잡은 내용</h2>
       {story.corrections.map((correction, index) => <p key={index}>{correction.reason} <time>{correction.correctedAt}</time></p>)}
@@ -227,8 +252,11 @@ function ReceivedStory({ story, dateLabel, date, position, total, publicHref, ca
   </article>;
 }
 
-function StorySection({ label, text }: { label: string; text?: string | null }) {
-  return <section className={styles.storySection}><h2>{label}</h2><p>{text}</p></section>;
+function StorySection({ label, paragraphs }: { label: string; paragraphs: string[] }) {
+  if (!paragraphs.length) return null;
+  return <section className={styles.storySection}><h2>{label}</h2>
+    {paragraphs.map(text => <p key={text}>{text}</p>)}
+  </section>;
 }
 
 function ReceivedPhoto({ story }: { story: Story }) {
