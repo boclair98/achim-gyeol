@@ -54,8 +54,14 @@ data class GenerationResult(
 
 data class ArticleCluster(val category: Category, val articles: List<CollectedArticle>, val rank: Int)
 data class EditorialStory(val story: NewsStory, val importanceScore: Int, val clusterRank: Int)
+
+private val editorialOrder = compareByDescending<EditorialStory> { it.importanceScore }
+    .thenByDescending { it.clusterRank }
+    .thenByDescending { it.story.qualityScore }
+private const val EDITORIAL_REVIEW_POOL = 32
+private const val EDITORIAL_HEADLINES = 6
+
 private data class CandidateEvaluation(
-    val cluster: ArticleCluster,
     val candidate: EditorialStory?,
     val failure: String? = null,
 )
@@ -191,8 +197,9 @@ class ArticleClusterer {
             val curatedPriority = selected.maxOfOrNull(CollectedArticle::editorialPriority) ?: 0
             val broadCoverage = independent.size >= 4
             if (!broadCoverage && primarySources == 0 && impactSignals == 0 && curatedPriority < 60) return@mapNotNull null
+            val widerCoverage = (independent.size - selected.size).coerceIn(0, 6) * 25
             val rank = selected.size * 100 + primarySources * 80 + impactSignals.coerceAtMost(5) * 30 +
-                curatedPriority.coerceIn(0, 100) + groupedArticles.size.coerceAtMost(10) * 5
+                curatedPriority.coerceIn(0, 100) + widerCoverage
             ArticleCluster(category, selected, rank)
         }.sortedByDescending(ArticleCluster::rank).take(limit.coerceAtLeast(1))
     }
@@ -292,12 +299,7 @@ class NewsBriefingGenerator(
     @Value("\${app.pipeline.search-max-pages:5}") private var searchMaxPages: Int = 5
     @Value("\${app.pipeline.max-ai-candidates:120}") private var maxAiCandidates: Int = 120
     @Value("\${app.pipeline.ai-concurrency:3}") private var aiConcurrency: Int = 3
-    @Value("\${app.pipeline.max-stories-per-category:15}") private var maxStoriesPerCategory: Int = 15
-    @Value("\${app.pipeline.economy-finance-max-stories-per-category:15}") private var economyFinanceMaxStoriesPerCategory: Int = 15
-    @Value("\${app.pipeline.economy-finance-max-stories-total:15}") private var economyFinanceMaxStoriesTotal: Int = 15
-    @Value("\${app.pipeline.max-stories:30}") private var maxStories: Int = 30
-    @Value("\${app.pipeline.target-stories:24}") private var targetStories: Int = 24
-    @Value("\${app.pipeline.minimum-importance-score:60}") private var minimumImportanceScore: Int = 60
+    @Value("\${app.pipeline.minimum-importance-score:65}") private var minimumImportanceScore: Int = 65
     @Value("\${app.pipeline.require-human-approval:false}") private var requireHumanApproval: Boolean = false
     @Synchronized
     @Transactional
@@ -350,20 +352,14 @@ class NewsBriefingGenerator(
             clusters.size,
             aiConcurrency.coerceIn(1, 6),
         )
-        val failures = mutableListOf<String>()
         val editorialStories = mutableListOf<EditorialStory>()
-        val acceptedByCategory = mutableMapOf<Category, Int>()
-        evaluations.forEach { evaluation ->
-            val cluster = evaluation.cluster
-            if ((acceptedByCategory[cluster.category] ?: 0) >= categoryStoryCap(cluster.category)) return@forEach
-            evaluation.failure?.let(failures::add)
-            val candidate = evaluation.candidate ?: return@forEach
+        val failures = evaluations.mapNotNull(CandidateEvaluation::failure)
+        evaluations.mapNotNull(CandidateEvaluation::candidate).sortedWith(editorialOrder).forEach { candidate ->
             if (editorialStories.any { existing -> sameEditorialEvent(existing, candidate) }) {
                 log.info("Duplicate morning briefing candidate excluded after AI summary: category={}, title={}", candidate.story.category, candidate.story.title)
                 return@forEach
             }
             editorialStories += candidate
-            acceptedByCategory[cluster.category] = (acceptedByCategory[cluster.category] ?: 0) + 1
         }
         val editorialPass = applyEditorialPass(editorialStories)
         val stories = editorialPass.stories
@@ -462,11 +458,11 @@ class NewsBriefingGenerator(
                 Callable {
                     runCatching { buildStory(cluster, summarizer) }
                         .fold(
-                            onSuccess = { CandidateEvaluation(cluster, it) },
+                            onSuccess = { CandidateEvaluation(it) },
                             onFailure = { exception ->
                                 val reason = "${cluster.category}: ${exception.message ?: exception.javaClass.simpleName}"
                                 log.warn("Briefing candidate rejected: {}", reason)
-                                CandidateEvaluation(cluster, null, reason)
+                                CandidateEvaluation(null, reason)
                             },
                         )
                 }
@@ -569,35 +565,15 @@ class NewsBriefingGenerator(
         }
     }
 
-    private fun selectBalancedEditorialStories(candidates: List<EditorialStory>): List<EditorialStory> {
-        val comparator = compareByDescending<EditorialStory> { it.importanceScore }
-            .thenByDescending { it.clusterRank }
-        val limit = maxStories.coerceAtLeast(1)
-        val sorted = candidates.sortedWith(comparator)
-        // Reserve one slot for each required category before filling the rest
-        // by importance. This keeps the digest hot without allowing a crowded
-        // politics/market cycle to erase sports and e-sports entirely.
-        val required = coveragePolicy.requiredCategories
-            .mapNotNull { category -> sorted.firstOrNull { it.story.category == category } }
-            .distinctBy { it.story.category }
-        val remaining = sorted
-            .filterNot(required::contains)
-            .filterWithEconomyFinanceCap()
-        return (required + remaining)
-            .take(limit)
-    }
-
     private fun applyEditorialPass(candidates: List<EditorialStory>): EditorialPassOutcome {
-        val baseline = selectBalancedEditorialStories(candidates)
+        // Candidates are already verified, deduplicated, and ordered. The
+        // editor controls the opening headlines, not what readers can access.
+        val baseline = candidates
         val reviewer = editorialReviewer
             ?: return EditorialPassOutcome(baseline.map(EditorialStory::story), applied = false)
         if (baseline.isEmpty()) return EditorialPassOutcome(emptyList(), applied = false, model = reviewer.modelName)
 
-        val comparator = compareByDescending<EditorialStory> { it.importanceScore }
-            .thenByDescending { it.clusterRank }
-        val pool = (baseline + candidates.filterNot(baseline::contains).sortedWith(comparator))
-            .let(::limitEditorialCandidatesByCategory)
-            .distinct()
+        val pool = baseline.take(EDITORIAL_REVIEW_POOL)
         val byRef = pool.mapIndexed { index, candidate -> "N${index + 1}" to candidate }.toMap()
         val reviewCandidates = byRef.map { (ref, candidate) ->
             EditorialCandidate(
@@ -614,30 +590,20 @@ class NewsBriefingGenerator(
         }
         val startedAt = System.nanoTime()
         return runCatching {
-            val review = reviewer.review(reviewCandidates, maxStories.coerceAtLeast(1))
-            val reviewed = resolveEditorialSelection(byRef, review.orderedRefs)
-                .take(maxStories.coerceAtLeast(1))
-            val reviewedDiverse = ensureEditorialTarget(reviewed, baseline)
-            val baselineCoverage = coveragePolicy.evaluate(baseline.map(EditorialStory::story))
-            val reviewedCoverage = coveragePolicy.evaluate(reviewedDiverse.map(EditorialStory::story))
-            check(
-                if (baselineCoverage.ready) reviewedCoverage.ready
-                else reviewedCoverage.storyCount >= baselineCoverage.storyCount &&
-                    reviewedCoverage.categoryCount >= baselineCoverage.categoryCount,
-            ) {
-                "최종 편집 결과가 기존 안전 선정의 기사·분야 범위를 충족하지 못했습니다 " +
-                    "(stories=${reviewedCoverage.storyCount}, categories=${reviewedCoverage.categoryCount})"
-            }
+            val headlineLimit = minOf(EDITORIAL_HEADLINES, pool.size)
+            val review = reviewer.review(reviewCandidates, headlineLimit)
+            val headlines = resolveEditorialSelection(byRef, review.orderedRefs).take(headlineLimit)
+            val ordered = headlines + baseline.filterNot(headlines.toSet()::contains)
             val elapsed = (System.nanoTime() - startedAt) / 1_000_000
             log.info(
-                "Morning briefing final editorial pass applied: model={}, durationMs={}, selected={}, excluded={}, rationale={}",
+                "Morning briefing headlines ordered: model={}, durationMs={}, headlines={}, published={}, rationale={}",
                 reviewer.modelName,
                 elapsed,
-                reviewedDiverse.joinToString { it.story.title.take(60) },
-                review.excludedRefs.joinToString(),
+                headlines.joinToString { it.story.title.take(60) },
+                ordered.size,
                 review.rationale.take(300),
             )
-            EditorialPassOutcome(reviewedDiverse.map(EditorialStory::story), true, reviewer.modelName, elapsed)
+            EditorialPassOutcome(ordered.map(EditorialStory::story), true, reviewer.modelName, elapsed)
         }.getOrElse { exception ->
             val elapsed = (System.nanoTime() - startedAt) / 1_000_000
             val reason = (exception.message ?: exception.javaClass.simpleName).take(500)
@@ -657,64 +623,15 @@ class NewsBriefingGenerator(
         if (leftUrls.intersect(rightUrls).isNotEmpty()) return true
         val sameCategory = left.story.category == right.story.category
         val titleThreshold = if (sameCategory) 0.38 else 0.52
-        if (clusterer.similarity(left.story.title, right.story.title) >= titleThreshold) return true
+        val titleSimilarity = clusterer.similarity(left.story.title, right.story.title)
+        if (titleSimilarity >= titleThreshold) return true
+        // A generic summary phrase ("결과", "공개됐다") alone doesn't establish
+        // that unrelated headlines refer to the same event.
+        if (titleSimilarity < 0.25) return false
         val leftConclusion = left.story.oneLineSummary.orEmpty()
         val rightConclusion = right.story.oneLineSummary.orEmpty()
         return leftConclusion.isNotBlank() && rightConclusion.isNotBlank() &&
             clusterer.similarity(leftConclusion, rightConclusion) >= if (sameCategory) 0.44 else 0.58
-    }
-
-    private fun categoryStoryCap(category: Category): Int = when (category) {
-        Category.ECONOMY, Category.FINANCE -> minOf(
-            maxStoriesPerCategory.coerceAtLeast(1),
-            economyFinanceMaxStoriesPerCategory.coerceAtLeast(1),
-        )
-        else -> maxStoriesPerCategory.coerceAtLeast(1)
-    }
-
-    private fun canAddToEditorialSelection(selected: Collection<EditorialStory>, candidate: EditorialStory): Boolean =
-        !isEconomyFinance(candidate.story.category) ||
-            selected.count { isEconomyFinance(it.story.category) } < economyFinanceMaxStoriesTotal.coerceAtLeast(1)
-
-    private fun List<EditorialStory>.filterWithEconomyFinanceCap(): List<EditorialStory> {
-        var economyFinanceCount = 0
-        return filter { candidate ->
-            if (!isEconomyFinance(candidate.story.category)) return@filter true
-            if (economyFinanceCount >= economyFinanceMaxStoriesTotal.coerceAtLeast(1)) return@filter false
-            economyFinanceCount += 1
-            true
-        }
-    }
-
-    private fun ensureEditorialTarget(
-        reviewed: List<EditorialStory>,
-        baseline: List<EditorialStory>,
-    ): List<EditorialStory> {
-        val target = targetStories
-            .coerceAtLeast(coveragePolicy.minimumStories)
-            .coerceAtMost(maxStories.coerceAtLeast(1))
-        val candidates = (reviewed + baseline.filterNot(reviewed::contains))
-            .distinct()
-            .filterWithEconomyFinanceCap()
-        val selected = candidates.take(target).toMutableList()
-        coveragePolicy.requiredCategories.forEach { category ->
-            if (selected.any { it.story.category == category }) return@forEach
-            val required = candidates.firstOrNull { it.story.category == category } ?: return@forEach
-            val replaceIndex = selected.indexOfLast { it.story.category !in coveragePolicy.requiredCategories }
-            if (replaceIndex >= 0) selected[replaceIndex] = required
-            else if (selected.size < target) selected += required
-        }
-        return selected.distinct().take(target)
-    }
-
-    private fun isEconomyFinance(category: Category): Boolean =
-        category == Category.ECONOMY || category == Category.FINANCE
-
-    private fun limitEditorialCandidatesByCategory(candidates: List<EditorialStory>): List<EditorialStory> {
-        val comparator = compareByDescending<EditorialStory> { it.importanceScore }
-            .thenByDescending { it.clusterRank }
-        return candidates.groupBy { it.story.category }
-            .flatMap { (category, stories) -> stories.sortedWith(comparator).take(categoryStoryCap(category)) }
     }
 
     private fun generationResult(

@@ -1,6 +1,7 @@
 package kr.briefly.domain
 
 import jakarta.persistence.*
+import org.hibernate.annotations.BatchSize
 import java.time.LocalDate
 import java.time.OffsetDateTime
 
@@ -37,6 +38,7 @@ class BriefingEdition(
     @Column(length = 80) var editorialModel: String? = null,
     @Column var editorialDurationMillis: Long? = null,
     @Column(length = 600) var editorialFallbackReason: String? = null,
+    @BatchSize(size = 32)
     @OneToMany(mappedBy = "edition", cascade = [CascadeType.ALL], orphanRemoval = true)
     @OrderBy("displayOrder ASC")
     var stories: MutableList<NewsStory> = mutableListOf(),
@@ -67,8 +69,10 @@ class NewsStory(
 ) {
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "edition_id", nullable = false)
     lateinit var edition: BriefingEdition
+    @BatchSize(size = 32)
     @OneToMany(mappedBy = "story", cascade = [CascadeType.ALL], orphanRemoval = true)
     var sources: MutableList<NewsSource> = mutableListOf()
+    @BatchSize(size = 32)
     @OneToMany(mappedBy = "story", cascade = [CascadeType.ALL], orphanRemoval = true)
     @OrderBy("displayOrder ASC")
     var claims: MutableList<NewsClaim> = mutableListOf()

@@ -1,6 +1,16 @@
 import type { Briefing, Story } from './briefing';
 
 export const lastLiveBriefingKey = 'achim-gyeol-last-live-briefing';
+export const editionPageSize = 12;
+export type EditionView = {
+  category: string;
+  query: string;
+  order: 'edition' | 'sources';
+  visible: number;
+};
+export const defaultEditionView: EditionView = {
+  category: '', query: '', order: 'edition', visible: editionPageSize,
+};
 
 export function safeNewsUrl(value?: string | null): string | null {
   if (!value) return null;
@@ -47,4 +57,43 @@ export function distinctText(value?: string | null, ...others: Array<string | nu
   const normalize = (text?: string | null) => text?.replace(/\s+/g, '').trim() ?? '';
   const text = normalize(value);
   return !!text && !others.some(other => normalize(other) === text);
+}
+
+const koreanDomainSuffixes = new Set(['co.kr', 'or.kr', 'go.kr', 'ac.kr', 'ne.kr']);
+
+// Older cached editions predate the additive sourceCount field. Count distinct
+// linked domains for those editions too, not headlines, views, or search traffic.
+export function editionSourceCount(story: Story): number {
+  const supplied = story.sourceCount;
+  if (typeof supplied === 'number' && Number.isSafeInteger(supplied) && supplied >= 0 && supplied <= story.sources.length) return supplied;
+  const families = new Set<string>();
+  for (const source of story.sources) {
+    const href = safeNewsUrl(source.url);
+    if (!href) continue;
+    const parts = new URL(href).hostname.toLowerCase().replace(/^www\./, '').split('.');
+    const suffix = parts.slice(-2).join('.');
+    families.add(parts.slice(koreanDomainSuffixes.has(suffix) ? -3 : -2).join('.'));
+  }
+  return families.size;
+}
+
+export function filterEditionStories(stories: readonly Story[], view: Pick<EditionView, 'category' | 'query' | 'order'>): Story[] {
+  const normalize = (value: string) => value.normalize('NFKC').toLowerCase();
+  const tokens = normalize(view.query).trim().split(/\s+/).filter(Boolean);
+  const matches = stories.filter(story => {
+    if (view.category && story.category !== view.category) return false;
+    if (!tokens.length) return true;
+    const content = normalize([story.title, story.category, story.oneLineSummary, story.summary].join(' '));
+    return tokens.every(token => content.includes(token));
+  });
+  return view.order === 'sources'
+    ? matches.map(story => ({ story, count: editionSourceCount(story) })).sort((a, b) => b.count - a.count).map(item => item.story)
+    : matches;
+}
+
+export function fragmentStoryId(fragment: string): number | null {
+  const match = /^#news-(\d+)$/.exec(fragment);
+  if (!match) return null;
+  const id = Number(match[1]);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
 }

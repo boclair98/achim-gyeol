@@ -2,6 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  // Playwright clears its output before each run. Keep manually captured
+  // design evidence and prior verification notes outside that directory.
+  outputDir: "./test-results/playwright",
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,

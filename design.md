@@ -1,5 +1,215 @@
 # OpenUI Design Plan
 
+## 현재 작업 · 2026-11-08 · 뉴스 홈
+
+이 작업의 완성안은 아래 하나다. 뒤의 기존 편지형·메일 시안과 배포 승인 기록은 보존하며, 이 작업의 새 발행이나 배포를 승인하는 문서가 아니다.
+
+2026-11-08 후속 배포 요청: 뉴스 홈과 기사 선정 변경을 운영에 반영한다. 검증 중 구형 시안의 iPhone WebKit에서 기사 팝업을 닫은 뒤 포커스가 돌아가지 않는 문제가 발견됐다. 기존 색상·서체·레이아웃·경로는 유지하고, 팝업을 연 버튼을 직접 기억해 실제 닫힌 다음 그 버튼에 포커스를 돌려준다. 기존 Escape 테스트를 데스크톱·모바일에서 다시 실행한다. 뉴스 재생성·알림 발송은 범위 밖이다.
+
+### Variant 1 — 아침결 뉴스 홈
+
+#### Resolved inputs
+
+- Topic: 아침결의 발행일별 뉴스 홈과 개별 기사 읽기
+- Offer: 한 번의 알림으로 들어와 전날의 주요 이슈와 여러 출처가 다룬 소식을 훑고, 검증된 전체 기사를 읽는 서비스
+- Audience: 출근길의 모바일 독자와 PC에서 분야별로 깊게 읽는 한국어 독자
+- Primary user action: 대표 기사 또는 관심 분야의 제목을 눌러 기사 한 편을 읽기
+- Deliverable: 기존 Next.js 정적 React /briefing/ 화면과 스코프 CSS Module
+- Style direction: Editorial. 흰 종이, 아침결 블루, 조용한 본문, 헤드라인·출처에 명확한 활자 위계
+- Tonal key: Light. 흰 종이와 중립적인 옅은 블루 그레이
+- Icon policy: Minimal. 기존 메일 표식과 lucide의 검색·이전·다음·설정 아이콘만 사용
+- Proof assets: 기존 API의 실제 발행일·기사·출처, 제공된 원본 사진과 사진 출처; 로컬 검증의 보관 뉴스는 실제 날짜 표시
+- Motion intensity: Minimal. 색상·포커스 피드백만, 자동 넘김 없음, prefers-reduced-motion 준수
+
+#### Composition contract
+
+- Hero archetype: asymmetrical. 실제 첫 기사 한 편이 화면의 중심. 장식 배너, 자동 슬라이더, 광고 영역 없음.
+- First-viewport structure: 아침결 머리글·지난 뉴스·알림 설정 → 실제 발행일과 뉴스 수 → 검색과 분야 메뉴 → 넓은 대표 뉴스 + 좁은 ‘여러 곳에서 다룬 뉴스’ → 전체 목록 첫 줄. 768px 미만에서 대표 기사의 제목·핵심·사진 순으로 쌓고 이어지는 제목 목록을 보여준다. 여러 출처 뉴스가 없으면 해당 순위를 만들지 않고 다른 주요 기사 제목을 쓴다.
+- Primary visual/proof artifact: 기존 브리핑 대표 기사 제목, 한 줄 결론, 원본 사진과 표시 가능한 사진 출처. 사진이 없으면 제목과 결론의 타이포그래피가 중심이다.
+- Interaction behavior: 대표 기사의 ‘기사 읽기’와 각 제목은 같은 발행일의 #news-ID를 연다. ‘전체 기사’는 #mail-contents로 이동. 목록 필터·검색·출처순과 더 보기는 모든 발행 기사에 적용. 닫기/목록 또는 브라우저 뒤로 가기 때 이전 탐색과 포커스 유지. 상세는 이전·다음 기사, 실제 원문, 글자 크기, 공유, 근거·정정·관심도·신고 보존.
+- Reuse boundary: 기존 /briefing/?date=, #news-ID, #mail-contents, API/기기 세션, SUIT 글꼴, 알림 하나와 기존 평일 시간 유지. 새 카테고리 라우트, 이메일 발송, 독자 조회 통계, 새 인증, UI 프레임워크 도입 없음.
+
+#### Product evidence and exact visual system
+
+- 기존 운영 화면은 최대640px짜리 한 문서에 목차와 기사 본문 전체가 이어져 15건에서도 탐색 길이가 길었다. 11월8일 운영 공개 API는 최신 발행일 11월6일(금), 15건, 8개 분야, 사진15개. 주말에 오늘 뉴스라고 바꾸어 보여주지 않는다. 15건은 백엔드 발행 상한과 목표 값(둘 다 15), 카테고리별 발행 상한, 편집 재채우기에서 생겼다. 뉴스 모으기·검증·읽기 배치는 별개다.
+- [AI타임스](https://www.aitimes.com/)의 헤드라인, 분야 메뉴, 최신 기사와 [인공지능신문](https://www.aitimes.kr/)의 대표 뉴스와 좁은 관련 소식 목록 구조를 참고한다. .kr PC 화면과 좁은 폭에서 관찰한 고정 폭/가로 넘침, 광고, 제목 말줄임, 사이트 로고와 사진은 복제하지 않는다.
+- SUIT Regular/SemiBold/Bold, Apple SD Gothic Neo/Malgun Gothic/system sans fallback. 잉크 #172337, 보조 #506078, 링크·선택 #1d4ed8, 포커스 #2563eb, 배경 #f5f7fb, 종이 #ffffff, 경계 #dfe6ef, 얕은 블루 #edf3ff. 대표 제목 34px/1.25 PC, 26px/1.32 모바일; 목록 제목 17–19px/1.45, 본문 18px/1.75, 보조 14–16px. 굵기 400/600/700. 과도한 영문 라벨이나 반복 인사말 없음.
+- 데스크톱 전체 폭 최대1200px, 32px 가터, 대표 섹션 2.15:1, 28px 간격. 주요 기사 안에는 충분한 폭에서 사진과 텍스트 나란히; 768px 이하에는 한 열, 18–24px 가터. 상세 글은 최대760px, 본문 약688px. 8/12/16/24/32/40px 리듬, 8–12px 반경은 사진과 입력/선택에 한정하고 섹션은 얇은 구분선으로 정리.
+- 뉴스 제목은 자르지 않고 keep-all과 anywhere 안전 줄바꿈. 썸네일은 3:2, 대표 사진은 PC 16:10·모바일 16:9 영역 안에 contain; 원본을 자르지 않는다. 상세 사진은 max-width:100%, height:auto로 원본 비율을 유지하고 작은 원본을 확대하지 않는다. 오류/없음은 사진 영역을 제거하며 기사는 계속 읽을 수 있다. 제목과 함께 있는 목록 썸네일은 장식 alt="", 본문 사진은 제목 기반 대체 텍스트 및 제공된 사진 출처.
+- 분야 메뉴는 좁은 화면에서 가로 이동 가능한 메뉴만 스크롤. 검색어·분야 변경 시 목록을 다시 12건씩 표시하며 나머지 전부는 더 보기로 접근한다. 12건은 한 번에 그리는 행 수일 뿐 발행 상한이 아니다. 필터 결과/진행 건수 표시, 검색 지우기, 링크 접근 가능, 44px 제어, 명확한 포커스와 빠진 기사 링크 안내. 최신·보관·캐시·실패·빈 에디션 표시 유지.
+- 자주 보도된 소식의 기준은 해당 기사에 연결된 서로 다른 출처 수다. 조회수/검색량/실시간 인기라고 표시하지 않는다. 전체 기사에 출처순을 제공하며 오른쪽은 예시 순위나 별도 발행 제한이 아닌 탐색 바로가기다.
+
+#### Editorial and operations contract
+
+- 수집·요약 호출 예산, 입력 발행일, 키와 Terra/Sol 모델 및 07:30 평일 발송 일정은 유지. 발행 결과의 15건/분야 상한과 채우기 목표만 제거한다. 사용자 후속 요청에 따라 중요도·추천 기준을 낮추지 않고, 여러 출처의 보도는 통과한 기사 안에서 우선순위에만 반영한다. 반복 수집, 같은 출처 기사 수, 홍보/근거 부족/상충은 숫자 늘리기 용도로 사용하지 않는다.
+- 기존 출처·교차확인·홍보·상충 검증, 사건 단위 중복 제거 유지. Sol은 선별을 다시 잘라내지 않고 제한된 후보의 앞 순서만 정한다. 나머지 적격 기사와 가능한 스포츠/e스포츠도 모두 반환. 편집 장애에는 안전한 기본 순서, 빈 실패에는 기존 에디션 보존. 기사 수에 비례해 정정·출처·근거 DB 왕복이 커지지 않게 묶어서 읽는다. 기존 API 응답에 출처 수만 선택적으로 덧붙이며 스키마 변경 없음.
+- [OpenAI 공식 구조화 출력 문서](https://developers.openai.com/api/docs/guides/structured-outputs)와 [Sol 모델 문서](https://developers.openai.com/api/docs/models/gpt-6.1-sol)를 확인했다. 기존 Responses 엄격한 JSON·토큰 한도 유지. 현재 작업에서 실제 OpenAI 호출, 운영 데이터 쓰기, 푸시, 커밋, 푸시 또는 배포는 하지 않는다.
+
+#### Verification plan
+
+- 실제 읽기 경로 /briefing/ → 공개 브리핑 API → 실제 발행일/기존 출처 정보 → 대표 기사·전체 목록 → 한 편/원문/이전·다음/목록. 백엔드 가짜 수집·모델 응답으로 15건 초과 발행, 순서 편집 실패·누락, 출처 신호와 근거 조건, 적격 스포츠·e스포츠 보존 검증. 브라우저에서는 테스트 데이터로 15건을 넘는 전체 목록과 검색·정렬·복귀를 검증하되 사용자에게 실제 뉴스처럼 보여주지 않는다.
+- 린트·단위·빌드, 360×800/390×844/768×1024/1440×900 실제 보관 뉴스 화면과 글자 크기·키보드·사진 비율·콘솔 검사. 잘못된 날짜/없어진 기사/실패 복구 및 페이지 내 이동 중 재요청 없는지 확인. 로컬 미리보기에서 운영에는 공개 GET만 사용하고 모든 쓰기는 격리.
+
+#### Filled generation prompt
+
+Create one high-concept page for 아침결의 발행일별 뉴스 홈과 개별 기사 읽기.
+
+#### Inputs
+- Topic: 아침결의 발행일별 뉴스 홈과 개별 기사 읽기.
+- Offer: 한 번의 알림으로 들어와 전날의 주요 이슈와 여러 출처가 다룬 소식을 훑고, 검증된 전체 기사를 읽는 서비스
+- Audience: 출근길의 모바일 독자와 PC에서 분야별로 깊게 읽는 한국어 독자
+- Primary user action: 대표 기사 또는 관심 분야의 제목을 눌러 기사 한 편을 읽기
+- Deliverable: 기존 Next.js 정적 React /briefing/ 화면과 스코프 CSS Module
+- Style direction: Editorial. 흰 종이, 아침결 블루, 조용한 본문, 헤드라인·출처에 명확한 활자 위계
+- Tonal key: Light. 흰 종이와 중립적인 옅은 블루 그레이
+- Icon policy: Minimal. 기존 메일 표식과 lucide의 검색·이전·다음·설정 아이콘만 사용
+- Proof assets: 기존 API의 실제 발행일·기사·출처, 제공된 원본 사진과 사진 출처; 로컬 검증의 보관 뉴스는 실제 날짜 표시
+- Motion intensity: Minimal. 색상·포커스 피드백만, 자동 넘김 없음, prefers-reduced-motion 준수
+
+#### Objective
+Design one premium, memorable page with a dominant hero and one coherent visual world derived from the topic itself.
+The result should feel specific, intentional, and action-oriented when the concept calls for action, not like a generic startup or SaaS template.
+
+Choose the strongest clear solution.
+Do not collapse the concept into a simpler generic pattern just to make execution easier.
+
+- Treat single-file execution as a packaging constraint, not a creative constraint.
+Do not reduce conceptual ambition, visual specificity, interaction richness, or production quality merely because the deliverable is concise.
+
+#### Internal concept choice
+Before composing, decide internally:
+- one dominant hero archetype: centered / asymmetrical / immersive
+- one dominant proof mode: none / embedded gesture / single artifact
+- one palette driver derived from the topic
+- one tonal key: light / mid / dark / topic-derived
+- one motion role: none / minimal / ambient / interactive
+- one icon approach: none / minimal / expressive / topic-native
+- optionally one secondary accent only if it strengthens the main direction without creating a second visual world
+Do not output this planning.
+
+#### Non-negotiables
+- Use a strong hero-first composition.
+- Headline: 3-12 words, max 3 lines.
+- Supporting copy: 1-2 short sentences, concise and specific.
+- CTAs are optional. If used, include at most 1 primary and 1 secondary CTA.
+- If a clear next step is central to the offer or concept, include a CTA; otherwise CTA omission is allowed.
+- CTA labels must be specific to the offer and action, not generic.
+- Supporting highlights are optional. If used, show them only once in a single lower support cluster beneath the hero.
+- Keep the hero dominant, focused, readable, and uncluttered.
+- Proof is optional. Use it only if it clearly strengthens the concept.
+- If no real proof assets are provided, do not invent metrics, testimonials, customer logos, screenshots, or fake UI proof.
+- Prefer depth inside the hero, proof gesture, CTA behavior, support copy, or background logic rather than adding extra sections by default.
+
+#### Composition
+- Choose the clearest structure for the topic; do not default to generic two-column marketing layouts.
+- A top navigation bar is optional. When used, make it native to the chosen style direction and subordinate to the hero rather than a generic boxed header.
+- The hero may be fully integrated rather than framed.
+- The hero does not need to become a panel, dashboard, device mockup, rounded card, or floating showcase unless the topic genuinely demands that artifact.
+- Build hierarchy through scale, contrast, spacing, alignment, depth, rhythm, and composition before using frames, dividers, or containers.
+- Keep supporting content clearly subordinate to the hero.
+- Do not interpret structural restraint as permission to flatten the concept into a generic minimal layout.
+- Do not use text-on-text layering, typographic collisions, or overlapping live text as a compositional device.
+
+#### Visual system
+- Build one coherent visual world derived from the topic itself.
+- Let the topic drive palette, contrast, typography, spacing, geometry, motifs, materials, and motion.
+- Even restrained palettes must feel intentional and specific, not generic premium-neutral.
+- The background must actively contribute mood, depth, and topic logic.
+- If the topic suggests a real system language, physical behavior, or interface grammar, show that directly instead of generic abstract-tech decoration.
+- Treat headline typography as part of the concept, not neutral text.
+- The headline may use topic-derived color, selective emphasis, multi-tone treatment, or gradient accents when they strengthen the concept and remain readable.
+- Do not default the headline to neutral black, white, or near-white unless that is clearly the strongest topic-native choice.
+
+#### Background and tonal diversity
+- Premium and atmospheric design may be light, mid-tone, or dark; do not default to dark.
+- Choose the tonal key from the topic, offer, audience, and style direction rather than from generic cinematic or tech aesthetics.
+- Contrast may come from hue, saturation, temperature, texture, density, or scale, not only darkness.
+
+#### Proof and concept expression
+- Prefer the minimum visual evidence needed to make the idea feel specific, credible, and native to the topic.
+- If the concept is strongest with typography, atmosphere, and one precise gesture, do that.
+- If a stronger proof artifact is justified, use one legible, unified artifact rather than multiple fragmented panels.
+- Proof may take the form of a signal, trace, contour, command line, path, specimen, structural mark, scene fragment, or other topic-native evidence.
+- Typography itself may carry part of the concept or proof.
+- When appropriate, use one precise typographic gesture—such as selective word emphasis, chromatic offset, gradient emphasis, distortion, signal breakup, or structural interruption—to make the concept feel more specific and alive.
+- Prefer one strong typographic intervention over many scattered decorative effects.
+- Avoid decorative pseudo-proof.
+- Avoid turning simple ideas into framed showcases, dashboard fragments, floating panels, softened slabs, or generic marketing geometry.
+
+#### Icons and symbolic language
+- Icons are optional.
+- Use icons only when they improve scanability, recognition, navigation, proof clarity, or support-cluster legibility.
+- Prefer topic-native icon logic over generic startup glyphs.
+- Keep icon style consistent in stroke weight, geometry, corner logic, and detail level.
+- Use icons primarily in clearly secondary roles unless a single topic-native symbol is central to the concept.
+- Do not let icons compete with the hero headline, proof artifact, or CTA hierarchy.
+
+#### Support cluster
+- If used, show supporting highlights only once, in a single lower cluster beneath the hero.
+- Each highlight should be short, fast to scan, and clearly secondary.
+- Supporting highlights may use concise icons or symbolic marks when helpful.
+- Support-cluster elements may use subtle motion when it improves scanability, continuity, or atmosphere and remains clearly secondary.
+- Card-like grouping is allowed only inside this lower support cluster.
+- These modules may use at most one light surface treatment, such as a subtle stroke, tonal fill, or very soft shadow.
+- Keep support modules uniform, non-nested, and visually subordinate.
+- Do not use card-like structures in the hero, proof, CTA area, or elsewhere on the page.
+
+#### Motion
+- Motion is optional.
+- Use motion only when it supports hierarchy, continuity, feedback, atmosphere, or topic logic.
+- Default to none, minimal, or ambient motion depending on what the concept actually needs.
+- Motion may live in typography, background behavior, proof logic, support-cluster behavior, or interaction feedback.
+- A single key word or short phrase may use subtle text-based motion such as glitch, flicker, jitter, scanline shift, chromatic split, text scramble, pulse, or reveal if it strengthens the concept.
+- Keep motion controlled, readable, non-blocking, and subordinate to clarity.
+- Avoid scrolljacking, attention-hijacking loops, and ornamental animation.
+- Respect reduced-motion preferences.
+
+#### Accessibility and readability
+- Preserve strong readability and clear hierarchy at all viewport sizes.
+- Maintain sufficient contrast between text and background.
+- Do not place essential text over busy imagery unless readability remains strong.
+- Avoid cramped spacing, visual collisions, and weak focal hierarchy.
+- Do not place badges, pills, annotations, stickers, or floating interface fragments over essential text.
+- If the deliverable is code, use semantic HTML structure, visible focus states, keyboard-friendly interactions, and reduced-motion handling.
+- When in doubt, preserve legibility over expressive overlap.
+
+#### Anti-drift rules
+- Do not drift into bland corporate SaaS styling.
+- Do not default to dashboard aesthetics, feature-grid thinking, boxed-section composition, or template-like modularity.
+- Do not use disconnected motifs, random color choices, or interchangeable abstract-tech shapes.
+- Do not use card-within-card composition, nested surfaces, floating panels, fake proof, or stock-looking UI.
+- Keep one visual world, one dominant hero, and one clear structural logic.
+- Do not allow text, labels, or interface elements to overlap, collide, or sit on top of one another.
+
+#### Output
+Return only the final 기존 Next.js 정적 React /briefing/ 화면과 스코프 CSS Module.
+
+If the deliverable is code:
+- Output a complete production-ready file or component.
+- Keep dependencies minimal unless explicitly requested.
+- Make it responsive.
+- Keep support highlights in one lower support cluster only when used.
+
+#### Final self-check
+Before returning, verify that the result keeps:
+- one dominant hero
+- one coherent visual world
+- no invented proof
+- no cardification outside the lower support cluster
+- no generic SaaS drift
+- no unnecessary structural fragmentation
+- no nested containment
+- no floating sub-surfaces
+- all text clearly legible and comfortably spaced
+
+#### Output target
+
+- Path: `frontend/components/DailyBriefingLetter.tsx`, `frontend/components/NewsEditionIndex.tsx`, `frontend/components/DailyBriefingLetter.module.css`, `frontend/lib/daily-letter.ts`. 기존 /briefing/ 라우트는 같은 데이터 계약을 유지한다.
+- 관련 백엔드: `NewsBriefingGenerator.kt`, `EditorialReviewer.kt`, `BriefingService.kt`, 필요한 저장소·설정 및 테스트, README.
+
+---
+
+
 ## Variant 1
 
 ### Resolved inputs

@@ -24,6 +24,7 @@ export type Story = {
   evidenceAvailable?: boolean;
   claims?: EvidenceClaim[];
   sources: Source[];
+  sourceCount?: number;
   corrections?: Array<{ correctedAt: string; reason: string }>;
   viewerInterest?: StoryInterest | null;
 };

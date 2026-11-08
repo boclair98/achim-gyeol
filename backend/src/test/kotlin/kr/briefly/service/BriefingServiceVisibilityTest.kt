@@ -9,6 +9,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import java.time.LocalDate
 import java.time.OffsetDateTime
@@ -25,7 +26,7 @@ class BriefingServiceVisibilityTest {
         val review = edition(LocalDate.of(2026, 8, 13), EditorialState.REVIEW, 13)
         val published = edition(LocalDate.of(2026, 8, 12), EditorialState.AUTO_APPROVED, 12)
         `when`(editionRepository.findTop30ByOrderByBriefingDateDesc()).thenReturn(listOf(review, published))
-        `when`(correctionRepository.findAllByStoryIdOrderByCreatedAtDesc(120L)).thenReturn(emptyList())
+        `when`(correctionRepository.findAllByStoryIdInOrderByCreatedAtDesc(setOf(120L))).thenReturn(emptyList())
 
         val result = service.latest()
 
@@ -50,8 +51,7 @@ class BriefingServiceVisibilityTest {
         val thinEdition = edition(date, EditorialState.AUTO_APPROVED, 13)
         thinEdition.addStory(story(Category.TECH, 131))
         `when`(editionRepository.findTop30ByOrderByBriefingDateDesc()).thenReturn(listOf(thinEdition))
-        `when`(correctionRepository.findAllByStoryIdOrderByCreatedAtDesc(130L)).thenReturn(emptyList())
-        `when`(correctionRepository.findAllByStoryIdOrderByCreatedAtDesc(131L)).thenReturn(emptyList())
+        `when`(correctionRepository.findAllByStoryIdInOrderByCreatedAtDesc(setOf(130L, 131L))).thenReturn(emptyList())
         val strictService = BriefingService(
             editionRepository, storyRepository, feedbackRepository, correctionRepository,
             BriefingCoveragePolicy(minimumStories = 8, minimumCategories = 5, requiredCategories = "SPORTS,ESPORTS"),
@@ -61,6 +61,26 @@ class BriefingServiceVisibilityTest {
 
         assertThat(result.stories).hasSize(2)
         assertThat(result.productionReady).isTrue()
+    }
+
+    @Test
+    fun `15건을 넘는 발행본도 모두 공개하고 정정은 한 번에 조회한다`() {
+        val date = LocalDate.of(2026, 11, 6)
+        val expanded = edition(date, EditorialState.AUTO_APPROVED, 21)
+        (211L..230L).forEach { id -> expanded.addStory(story(Category.ECONOMY, id)) }
+        expanded.stories.last().addSource(NewsSource("동일 매체", "https://m.b.example/second", OffsetDateTime.now()))
+        val storyIds = (210L..230L).toSet()
+        `when`(editionRepository.findByBriefingDate(date)).thenReturn(expanded)
+        `when`(correctionRepository.findAllByStoryIdInOrderByCreatedAtDesc(storyIds))
+            .thenReturn(listOf(StoryCorrection(230, "이전", "이후", "기사 정정", "TEST")))
+
+        val result = service.byDate(date)
+
+        assertThat(result.stories.map(StoryResponse::id)).containsExactlyElementsOf(storyIds)
+        assertThat(result.stories.last().sourceCount).isEqualTo(2)
+        assertThat(result.stories.last().corrections.map(CorrectionResponse::reason)).containsExactly("기사 정정")
+        assertThat(result.stories.first().corrections).isEmpty()
+        verify(correctionRepository).findAllByStoryIdInOrderByCreatedAtDesc(storyIds)
     }
 
     @Test

@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormEvent } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowUp, Check, Flag, RefreshCw, Share2, ThumbsDown, ThumbsUp } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bell, CalendarDays, Flag, RefreshCw, Share2, ThumbsDown, ThumbsUp } from 'lucide-react';
 import type { Briefing, Story, StoryInterest } from '@/lib/briefing';
 import { deviceHeaders } from '@/lib/device';
-import { cachedLiveBriefing, distinctText, koreaToday, lastLiveBriefingKey, parseLiveBriefing, safeNewsUrl, storyLead, validEditionDate } from '@/lib/daily-letter';
+import { cachedLiveBriefing, defaultEditionView, distinctText, editionSourceCount, filterEditionStories, fragmentStoryId, koreaToday, lastLiveBriefingKey, parseLiveBriefing, safeNewsUrl, storyLead, validEditionDate } from '@/lib/daily-letter';
+import { NewsEditionIndex } from './NewsEditionIndex';
 import styles from './DailyBriefingLetter.module.css';
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL ?? '';
@@ -16,6 +17,16 @@ type FontSize = 'small' | 'normal' | 'large';
 function stored(key: string): string | null { try { return localStorage.getItem(key); } catch { return null; } }
 function store(key: string, value: string) { try { localStorage.setItem(key, value); } catch { /* Reading works without browser storage. */ } }
 function headers() { try { return deviceHeaders(); } catch { return { 'Content-Type': 'application/json' }; } }
+function subscribeToFragment(notify: () => void) {
+  window.addEventListener('hashchange', notify);
+  window.addEventListener('popstate', notify);
+  return () => {
+    window.removeEventListener('hashchange', notify);
+    window.removeEventListener('popstate', notify);
+  };
+}
+const currentFragment = () => window.location.hash;
+const serverFragment = () => '';
 
 export function DailyBriefingLetter() {
   const [briefing, setBriefing] = useState<Briefing | null>(null);
@@ -81,26 +92,32 @@ export function DailyBriefingLetter() {
   };
   const retry = () => { setLoadState('loading'); setVersion(current => current + 1); };
   const reportingEnabled = loadState === 'live' && briefing?.productionReady === true && briefing.briefingDate === koreaToday();
+  const availability = !briefing ? '' : loadState === 'cached'
+    ? '연결이 원활하지 않아 이 기기에 저장된 ' + briefing.dateLabel + ' 뉴스를 보여드려요.'
+    : !briefing.productionReady
+      ? '현재 준비된 뉴스를 먼저 전해요. 내용이 보완될 수 있어요.'
+      : !date && briefing.briefingDate !== koreaToday()
+        ? '최근 발행한 ' + briefing.dateLabel + ' 뉴스예요.'
+        : '';
 
-  return <main className={`${styles.app} ${styles[font]}`}>
+  return <main className={font === 'normal' ? styles.app : `${styles.app} ${styles[font]}`}>
     <a className={styles.skip} href="#daily-letter">뉴스 본문으로 바로가기</a>
-    <header className={styles.toolbar}>
-      <Link href="/" className={styles.back}><ArrowLeft size={18} /> 아침결 홈</Link>
-      <nav aria-label="뉴스 메뉴"><Link href="/archive">지난 뉴스</Link><Link href="/preferences">알림 설정</Link></nav>
-    </header>
-    <div className={styles.envelope}>
-      <div><h1>{briefing ? `${briefing.dateLabel} 아침결` : '아침결 뉴스'}</h1><div className={styles.sender}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={`${basePath}/newsletter-prototypes/edition-icon.svg`} width={36} height={36} alt="" />
-        <span><strong>아침결</strong><small>{briefing ? `${briefing.briefingDate ?? briefing.dateLabel} · 뉴스 ${briefing.stories.length}개` : '평일 아침, 한 번에 읽는 어제의 뉴스'}</small></span>
-      </div></div>
-      <div className={styles.fontControls} role="group" aria-label="글자 크기">
-        {(['small', 'normal', 'large'] as const).map((size, index) => <button key={size} type="button" aria-label={['작은 글자', '기본 글자', '큰 글자'][index]} aria-pressed={font === size} onClick={() => { setFont(size); store('achim-gyeol-reader-font', size); }}>가</button>)}
+    <header className={styles.masthead}>
+      <div className={styles.toolbar}>
+        <Link href="/" className={styles.brand} aria-label="아침결 홈">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={`${basePath}/newsletter-prototypes/edition-icon.svg`} width={36} height={36} alt="" />
+          <strong>아침결<span>.</span></strong><small>뉴스 브리핑</small>
+        </Link>
+        <nav aria-label="뉴스 메뉴">
+          <Link href="/archive"><CalendarDays size={16} aria-hidden="true" /> 지난 뉴스</Link>
+          <Link href="/preferences"><Bell size={16} aria-hidden="true" /> 알림 설정</Link>
+        </nav>
       </div>
-    </div>
-    {loadState === 'loading' ? <section id="daily-letter" className={styles.state} role="status" aria-busy="true"><span className={styles.loadingLine} /><h2>아침 뉴스를 펼치고 있어요</h2><p>잠시만 기다려 주세요.</p></section> : loadState === 'error' || loadState === 'empty' ? <section id="daily-letter" className={styles.state} role="status"><h2>{loadState === 'empty' ? '아직 준비된 뉴스가 없어요' : '뉴스를 불러오지 못했어요'}</h2><p>{date ? `${date} 브리핑을 확인할 수 없어요. 날짜를 확인하거나 다시 시도해 주세요.` : '연결 상태를 확인하고 다시 시도해 주세요. 준비되지 않은 뉴스를 예시로 대신하지 않아요.'}</p><button type="button" onClick={retry}><RefreshCw size={16} /> 다시 불러오기</button><Link href="/archive">지난 뉴스 보기</Link>{date && <button type="button" onClick={() => chooseDate('')}>오늘 뉴스로</button>}</section> : briefing && <>
-      {(loadState === 'cached' || briefing.briefingDate !== koreaToday() || !briefing.productionReady) && <aside className={styles.availability} role="status"><span>{loadState === 'cached' ? `연결이 원활하지 않아 이 기기에 저장된 ${briefing.dateLabel} 뉴스를 보여드려요.` : date || briefing.briefingDate !== koreaToday() ? `${briefing.dateLabel}에 발행한 뉴스입니다.` : '현재 준비된 뉴스를 먼저 전해요. 내용이 보완될 수 있어요.'}</span><button type="button" onClick={retry}><RefreshCw size={14} /> 새로 확인</button></aside>}
-      <LetterContents key={briefing.id} briefing={briefing} reportingEnabled={reportingEnabled} />
+    </header>
+    {loadState === 'loading' ? <section id="daily-letter" tabIndex={-1} className={styles.state} role="status" aria-busy="true"><span className={styles.loadingLine} /><h1>뉴스를 불러오고 있어요</h1><p>잠시만 기다려 주세요.</p></section> : loadState === 'error' || loadState === 'empty' ? <section id="daily-letter" tabIndex={-1} className={styles.state} role="status"><h1>{loadState === 'empty' ? '아직 준비된 뉴스가 없어요' : '뉴스를 불러오지 못했어요'}</h1><p>{loadState === 'empty' && briefing?.dateLabel ? `${briefing.dateLabel}에 읽을 수 있는 뉴스가 아직 없어요.` : date ? `${date} 발행본을 확인할 수 없어요. 날짜를 확인하거나 다시 시도해 주세요.` : '연결 상태를 확인하고 다시 시도해 주세요.'}</p><button type="button" onClick={retry}><RefreshCw size={16} aria-hidden="true" /> 다시 불러오기</button><Link href="/archive">지난 뉴스 보기</Link>{date && <button type="button" onClick={() => chooseDate('')}>최근 뉴스로</button>}</section> : briefing && <>
+      {availability && <aside className={styles.availability} role="status"><span>{availability}</span><button type="button" onClick={retry}><RefreshCw size={14} aria-hidden="true" /> 새로 확인</button></aside>}
+      <LetterContents key={briefing.id} briefing={briefing} reportingEnabled={reportingEnabled} font={font} onFontChange={size => { setFont(size); store('achim-gyeol-reader-font', size); }} />
     </>}
     <div className={styles.afterword}>
       <form className={styles.dateForm} onSubmit={(event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const value = String(new FormData(event.currentTarget).get('edition-date') ?? ''); if (validEditionDate(value)) chooseDate(value); }}>
@@ -112,32 +129,48 @@ export function DailyBriefingLetter() {
   </main>;
 }
 
-function LetterContents({ briefing, reportingEnabled }: { briefing: Briefing; reportingEnabled: boolean }) {
-  const [read, setRead] = useState<number[]>([]);
-  const readRef = useRef(new Set<number>());
+function LetterContents({ briefing, reportingEnabled, font, onFontChange }: { briefing: Briefing; reportingEnabled: boolean; font: FontSize; onFontChange: (size: FontSize) => void }) {
+  const fragment = useSyncExternalStore(subscribeToFragment, currentFragment, serverFragment);
+  const [view, setView] = useState(defaultEditionView);
+  const { category, query, order } = view;
+  const matches = useMemo(() => filterEditionStories(briefing.stories, { category, query, order }), [briefing.stories, category, query, order]);
+  const requested = fragmentStoryId(fragment);
+  const story = briefing.stories.find(item => item.id === requested);
+  const previousStory = useRef<number | null>(null);
+  const lastTrigger = useRef('');
+  const [read, setRead] = useState(() => savedReadIds(briefing));
+  const readRef = useRef(read);
   const [message, setMessage] = useState('');
-  const markRead = useCallback((id: number) => {
-    if (readRef.current.has(id)) return;
-    readRef.current.add(id);
-    const next = [...readRef.current];
-    setRead(next); store(`achim-gyeol-read-${briefing.id}`, JSON.stringify(next));
-    if (reportingEnabled) {
-      void track('CARD_VIEW', briefing.id, id);
-      if (next.length === briefing.stories.length) void track('COMPLETE', briefing.id);
-    }
-  }, [briefing.id, briefing.stories.length, reportingEnabled]);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      try { const saved: unknown = JSON.parse(stored(`achim-gyeol-read-${briefing.id}`) ?? '[]'); if (Array.isArray(saved)) { const ids = saved.filter(id => briefing.stories.some(story => story.id === id)); readRef.current = new Set(ids); setRead(ids); } } catch { /* Invalid read history is not news. */ }
-      if (reportingEnabled) void track('BRIEFING_OPEN', briefing.id);
-      try {
-        const target = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
-        if (target) target.scrollIntoView();
-      } catch { /* A malformed external fragment must not break reading. */ }
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [briefing.id, briefing.stories, reportingEnabled]);
+    if (reportingEnabled) void track('BRIEFING_OPEN', briefing.id);
+  }, [briefing.id, reportingEnabled]);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => {
+      const previous = previousStory.current;
+      previousStory.current = story?.id ?? null;
+      if (story && previous !== story.id) {
+        window.scrollTo({ top: 0, behavior: 'auto' });
+        document.getElementById('news-' + story.id)?.focus({ preventScroll: true });
+        if (readRef.current.has(story.id)) return;
+        const next = new Set(readRef.current).add(story.id);
+        readRef.current = next;
+        setRead(next);
+        store('achim-gyeol-read-' + briefing.id, JSON.stringify([...next]));
+        if (reportingEnabled) {
+          void track('CARD_VIEW', briefing.id, story.id);
+          if (next.size === briefing.stories.length) void track('COMPLETE', briefing.id);
+        }
+      } else if (!story && (previous !== null || fragment === '#mail-contents')) {
+        const trigger = previous !== null ? document.getElementById(lastTrigger.current) : null;
+        const target = trigger ?? document.getElementById('mail-contents');
+        target?.focus({ preventScroll: true });
+        target?.scrollIntoView({ block: trigger ? 'center' : 'start', behavior: 'auto' });
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [briefing.id, briefing.stories.length, fragment, reportingEnabled, story]);
 
   async function share(story: Story) {
     try {
@@ -150,50 +183,65 @@ function LetterContents({ briefing, reportingEnabled }: { briefing: Briefing; re
     } catch (error) { if (!(error instanceof DOMException && error.name === 'AbortError')) setMessage('링크를 공유하지 못했어요. 브라우저 주소를 복사해 주세요.'); }
   }
 
-  return <article id="daily-letter" className={styles.paper} aria-label={`${briefing.dateLabel} 전체 뉴스`}>
-    <header className={styles.masthead}><Link href="/briefing">아침결<span>.</span></Link><div><time dateTime={briefing.briefingDate}>{briefing.dateLabel}</time><small>{briefing.stories.length}개의 소식이 담긴 한 통</small></div></header>
-    <div className={styles.greeting}><h2>좋은 아침이에요.</h2><p>중요한 소식은 짧게, 낯선 이야기는 쉽게 전해요.</p></div>
-    <nav id="mail-contents" className={styles.contents} aria-label="이번 편의 전체 뉴스 목차" tabIndex={-1}>
-      <h2>이번 편에 담았어요</h2><p>제목을 누르면 이 편 안에서 바로 읽을 수 있어요.</p>
-      <ol>{briefing.stories.map(story => <li key={story.id}><a href={`#news-${story.id}`}><span>{story.category}</span><strong>{story.title}</strong>{read.includes(story.id) && <Check size={14} aria-label="읽음" />}</a></li>)}</ol>
-    </nav>
-    {briefing.stories.map((story, index) => <LetterStory key={story.id} story={story} position={index + 1} total={briefing.stories.length} reportingEnabled={reportingEnabled} onRead={markRead} onShare={() => void share(story)} />)}
-    <footer className={styles.letterEnd}><strong>오늘의 이야기는 여기까지예요.</strong><p>다음 평일 아침에 새로운 소식으로 만나요.</p><a href="#mail-contents"><ArrowUp size={16} /> 목차로 돌아가기</a></footer>
+  const sequence = story && matches.some(item => item.id === story.id) ? matches : briefing.stories;
+  const position = story ? sequence.findIndex(item => item.id === story.id) : -1;
+  const previous = position > 0 ? sequence[position - 1] : undefined;
+  const next = position >= 0 ? sequence[position + 1] : undefined;
+
+  return <div id="daily-letter" tabIndex={-1} className={story ? styles.reader : styles.newsroom}>
+    {story ? <>
+      <div className={styles.readerBar}>
+        <a href="#mail-contents" className={styles.backToIndex}><ArrowLeft size={18} aria-hidden="true" /> 기사 목록</a>
+        <div className={styles.fontControls} role="group" aria-label="글자 크기">
+          {(['small', 'normal', 'large'] as const).map((size, index) => <button key={size} type="button" aria-label={['작은 글자', '기본 글자', '큰 글자'][index]} aria-pressed={font === size} onClick={() => onFontChange(size)}>가</button>)}
+        </div>
+      </div>
+      <LetterStory key={story.id} story={story} dateLabel={briefing.dateLabel} position={position + 1} total={sequence.length} reportingEnabled={reportingEnabled} onShare={() => void share(story)} />
+      {(previous || next) && <nav className={styles.neighborLinks} aria-label="이전·다음 기사">
+        {previous && <a href={'#news-' + previous.id}><span><ArrowLeft size={15} aria-hidden="true" /> 이전 기사</span><strong>{previous.title}</strong></a>}
+        {next && <a href={'#news-' + next.id}><span>다음 기사 <ArrowRight size={15} aria-hidden="true" /></span><strong>{next.title}</strong></a>}
+      </nav>}
+    </> : <NewsEditionIndex briefing={briefing} view={view} matches={matches} read={read} missingStory={fragment.startsWith('#news-')} onViewChange={setView} onStoryLink={event => {
+      if (!event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey) lastTrigger.current = event.currentTarget.id;
+    }} />}
     {message && <div role="status" className={styles.message}><span>{message}</span><button type="button" onClick={() => setMessage('')}>확인</button></div>}
-  </article>;
+  </div>;
 }
 
-function LetterStory({ story, position, total, reportingEnabled, onRead, onShare }: { story: Story; position: number; total: number; reportingEnabled: boolean; onRead: (id: number) => void; onShare: () => void }) {
-  const ref = useRef<HTMLElement>(null);
+function savedReadIds(briefing: Briefing): Set<number> {
+  try {
+    const saved: unknown = JSON.parse(stored('achim-gyeol-read-' + briefing.id) ?? '[]');
+    if (!Array.isArray(saved)) return new Set();
+    const ids = new Set(briefing.stories.map(story => story.id));
+    return new Set(saved.filter((id): id is number => typeof id === 'number' && ids.has(id)));
+  } catch { return new Set(); }
+}
+
+function LetterStory({ story, dateLabel, position, total, reportingEnabled, onShare }: { story: Story; dateLabel: string; position: number; total: number; reportingEnabled: boolean; onShare: () => void }) {
   const [imageFailed, setImageFailed] = useState(false);
   const lead = storyLead(story);
   const image = safeNewsUrl(story.imageUrl);
-  useEffect(() => {
-    if (!ref.current || typeof IntersectionObserver === 'undefined') return;
-    const observer = new IntersectionObserver(entries => { if (entries.some(entry => entry.isIntersecting)) { onRead(story.id); observer.disconnect(); } }, { rootMargin: '0px 0px -30% 0px' });
-    observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, [onRead, story.id]);
-  return <section ref={ref} id={`news-${story.id}`} data-story-id={story.id} className={styles.story} tabIndex={-1} aria-labelledby={`headline-${story.id}`}>
-    <div className={styles.storyMeta}><span>{story.category}</span><small>{String(position).padStart(2, '0')} / {String(total).padStart(2, '0')}</small></div>
-    <h2 id={`headline-${story.id}`}>{story.title}</h2>
-    <div className={styles.lead}><h3>핵심 요약</h3><p>{lead}</p></div>
+  const sourceCount = editionSourceCount(story);
+  return <article id={`news-${story.id}`} data-story-id={story.id} className={styles.story} tabIndex={-1} aria-labelledby={`headline-${story.id}`}>
+    <div className={styles.storyMeta}><div><span>{story.category}</span><small>{dateLabel}{sourceCount > 0 && ` · 출처 ${sourceCount}곳`}</small></div><small>{position} / {total}</small></div>
+    <h1 id={`headline-${story.id}`}>{story.title}</h1>
+    <div className={styles.lead}><h2>핵심 요약</h2><p>{lead}</p></div>
     {image && !imageFailed && <figure className={styles.photo}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={image} alt={`${story.title} 관련 기사 사진`} loading={position === 1 ? 'eager' : 'lazy'} decoding="async" referrerPolicy="no-referrer" onError={() => setImageFailed(true)} />
+      <img src={image} alt={`${story.title} 관련 기사 사진`} loading="eager" decoding="async" referrerPolicy="no-referrer" onError={() => setImageFailed(true)} />
       <figcaption>{story.imagePublisher ? `사진 ${story.imagePublisher}` : '관련 원문 기사 사진'}</figcaption>
     </figure>}
-    <section className={styles.explanation}><h3>쉽게 읽기</h3><p>{story.plainExplanation || story.summary}</p>{distinctText(story.summary, story.plainExplanation || story.summary, lead) && <p>{story.summary}</p>}</section>
-    {story.backgroundContext && <aside className={styles.background}><h3>알고 읽으면 쉬워요</h3><p>{story.backgroundContext}</p></aside>}
-    {story.whyItMatters && <section className={styles.importance}><h3>왜 중요한가요</h3><p>{story.whyItMatters}</p></section>}
-    {story.whatToWatch && <section className={styles.context}><h3>앞으로 살펴볼 점</h3><p>{story.whatToWatch}</p></section>}
-    {story.uncertainty && <aside className={styles.uncertainty}><h3>아직 확인이 필요한 부분</h3><p>{story.uncertainty}</p></aside>}
-    {!!story.corrections?.length && <aside className={styles.uncertainty}><h3>바로잡은 내용</h3>{story.corrections.map((item, index) => <p key={index}>{item.reason} <time>{item.correctedAt}</time></p>)}</aside>}
+    <section className={styles.explanation}><h2>쉽게 읽기</h2><p>{story.plainExplanation || story.summary}</p>{distinctText(story.summary, story.plainExplanation || story.summary, lead) && <p>{story.summary}</p>}</section>
+    {story.backgroundContext && <aside className={styles.background}><h2>알고 읽으면 쉬워요</h2><p>{story.backgroundContext}</p></aside>}
+    {story.whyItMatters && <section className={styles.importance}><h2>왜 중요한가요</h2><p>{story.whyItMatters}</p></section>}
+    {story.whatToWatch && <section className={styles.context}><h2>앞으로 살펴볼 점</h2><p>{story.whatToWatch}</p></section>}
+    {story.uncertainty && <aside className={styles.uncertainty}><h2>아직 확인이 필요한 부분</h2><p>{story.uncertainty}</p></aside>}
+    {!!story.corrections?.length && <aside className={styles.uncertainty}><h2>바로잡은 내용</h2>{story.corrections.map((item, index) => <p key={index}>{item.reason} <time>{item.correctedAt}</time></p>)}</aside>}
     {!!story.claims?.length && <details className={styles.evidence}><summary>근거와 출처 더 보기</summary><ul>{story.claims.map((claim, index) => <li key={index}><p>{claim.statement}</p>{claim.sources.map((source, i) => safeNewsUrl(source.url) && <a key={i} href={safeNewsUrl(source.url)!} target="_blank" rel="noopener noreferrer">{source.publisher}</a>)}</li>)}</ul></details>}
-    <footer className={styles.storyFooter}><div className={styles.sources}>{story.sources.map((source, index) => safeNewsUrl(source.url) && <a key={index} href={safeNewsUrl(source.url)!} target="_blank" rel="noopener noreferrer">원문 읽기 <span>({source.publisher})</span></a>)}</div><a className={styles.returnLink} href="#mail-contents">목차로 돌아가기</a></footer>
+    <footer className={styles.storyFooter}><div className={styles.sources}>{story.sources.map((source, index) => safeNewsUrl(source.url) && <a key={index} href={safeNewsUrl(source.url)!} target="_blank" rel="noopener noreferrer">원문 읽기 <span>({source.publisher})</span></a>)}</div><a className={styles.returnLink} href="#mail-contents">기사 목록으로</a></footer>
     <div className={styles.storyActions}><button type="button" onClick={onShare}><Share2 size={15} /> 공유</button>{reportingEnabled && <StoryFeedback storyId={story.id} />}</div>
     {reportingEnabled && <StoryInterest key={`${story.id}-${story.viewerInterest ?? 'none'}`} story={story} />}
-  </section>;
+  </article>;
 }
 
 function StoryInterest({ story }: { story: Story }) {

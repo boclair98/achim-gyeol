@@ -97,8 +97,8 @@ export function ReaderPrototype() {
     if (persisted) setNotice(saved ? "저장한 기사에서 지웠어요." : "저장했어요. ‘저장한 기사’에서 다시 읽을 수 있어요.");
   }
 
-  function openStory(story: Story) {
-    returnFocus.current = document.activeElement as HTMLElement;
+  function openStory(story: Story, trigger: HTMLButtonElement) {
+    returnFocus.current = trigger;
     setActiveStory(story);
     if (!current.read.includes(story.id)) update({ read: [...current.read, story.id] });
   }
@@ -124,10 +124,22 @@ export function ReaderPrototype() {
   }, [settingsOpen]);
 
   useEffect(() => {
-    if (!dialogOpen) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = previous; returnFocus.current?.focus(); };
+    if (dialogOpen) {
+      const style = document.body.style;
+      const previous = style.getPropertyValue("overflow");
+      const priority = style.getPropertyPriority("overflow");
+      style.setProperty("overflow", "hidden");
+      return () => { style.setProperty("overflow", previous, priority); };
+    }
+    const trigger = returnFocus.current;
+    if (!trigger) return;
+    // WebKit may not focus a clicked button. Restore the explicit opener
+    // after the native dialog has finished its own close/focus handling.
+    const frame = window.requestAnimationFrame(() => {
+      if (trigger.isConnected) trigger.focus({ preventScroll: true });
+      if (returnFocus.current === trigger) returnFocus.current = null;
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [dialogOpen]);
 
   useEffect(() => {
@@ -151,7 +163,7 @@ export function ReaderPrototype() {
         <a className={styles.brand} href="#prototype-top" aria-label="아침결 맨 위로"><span className={styles.brandMark}><Mail size={25} strokeWidth={1.7} /></span><strong>아침결<span className={styles.brandPeriod}>.</span></strong><span className={styles.brandTagline}>하루의 시작, 세상의 흐름</span></a>
         <div className={styles.headerActions}>
           <button type="button" className={styles.savedHeader} onClick={() => switchView(view === "saved" ? "edition" : "saved")} aria-pressed={view === "saved"}><Bookmark size={18} /><span>저장한 기사</span>{current.saved.length > 0 && <b>{current.saved.length}</b>}</button>
-          <button type="button" className={styles.iconButton} aria-label="읽기 설정" onClick={() => { returnFocus.current = document.activeElement as HTMLElement; setSettingsOpen(true); }}><Settings2 size={21} /></button>
+          <button type="button" className={styles.iconButton} aria-label="읽기 설정" onClick={(event) => { returnFocus.current = event.currentTarget; setSettingsOpen(true); }}><Settings2 size={21} /></button>
         </div>
       </header>
 
@@ -166,7 +178,7 @@ export function ReaderPrototype() {
           <details ref={overview} className={styles.overview} open>
             <summary><span><BookOpen size={17} /> 먼저, 세 줄로 읽기</span><ArrowDown size={16} /></summary>
             <div className={styles.overviewList}>
-              {[archive[0], archive[1], archive[2]].map((story, index) => <button key={story.id} type="button" onClick={() => openStory(story)}><span className={styles.overviewNumber}>0{index + 1}</span><span><small>{story.category}</small>{story.oneLineSummary || story.title}</span><ChevronRight size={17} /></button>)}
+              {[archive[0], archive[1], archive[2]].map((story, index) => <button key={story.id} type="button" onClick={(event) => openStory(story, event.currentTarget)}><span className={styles.overviewNumber}>0{index + 1}</span><span><small>{story.category}</small>{story.oneLineSummary || story.title}</span><ChevronRight size={17} /></button>)}
             </div>
           </details>
         </section>
@@ -189,10 +201,10 @@ export function ReaderPrototype() {
                     <div className={styles.cardImage}><Picture story={story} priority={index === 0} /></div>
                     <div className={styles.cardBody}>
                       <div className={styles.storyKicker}><span>{index === 0 && category === "전체" && view !== "saved" ? "먼저 읽는 뉴스" : story.category}</span>{index === 0 && <span className={styles.categoryMuted}>{story.category}</span>}{current.read.includes(story.id) && <span className={styles.readBadge}><Check size={12} />읽음</span>}{saveButton(story)}</div>
-                      <h3><button type="button" onClick={() => openStory(story)}>{story.title}</button></h3>
+                      <h3><button type="button" onClick={(event) => openStory(story, event.currentTarget)}>{story.title}</button></h3>
                       <p className={styles.storySummary}>{story.plainExplanation?.split(/(?<=\.)\s/)[0] || story.oneLineSummary || story.summary.split(". ")[0]}</p>
                       {expanded && story.backgroundContext && <div className={styles.inlineContext}><h4>알고 읽으면 쉬워요</h4><p>{story.backgroundContext}</p></div>}
-                      <div className={styles.cardFooter}><span>{story.sources[0]?.publisher}<i aria-hidden="true">·</i>출처 {story.sources.length}곳</span><button type="button" onClick={() => openStory(story)} aria-label={`${story.title} 기사 읽기`}>기사 읽기 <ArrowRight size={17} /></button></div>
+                      <div className={styles.cardFooter}><span>{story.sources[0]?.publisher}<i aria-hidden="true">·</i>출처 {story.sources.length}곳</span><button type="button" onClick={(event) => openStory(story, event.currentTarget)} aria-label={`${story.title} 기사 읽기`}>기사 읽기 <ArrowRight size={17} /></button></div>
                     </div>
                   </article>)}
                 </div>
@@ -203,7 +215,7 @@ export function ReaderPrototype() {
             <aside className={styles.sidebar} aria-label="읽기 안내">
               <div className={styles.sidebarInner}>
                 <div className={styles.railHeading}><span>이번 브리핑</span><span>06 STORIES</span></div>
-                <div className={styles.toc}>{archive.map((story, index) => <button type="button" key={story.id} onClick={() => openStory(story)}><span className={styles.tocIndex}>{current.read.includes(story.id) ? <Check size={15} /> : `0${index + 1}`}</span><span><small>{story.category}</small>{story.title}</span><ChevronRight size={14} /></button>)}</div>
+                <div className={styles.toc}>{archive.map((story, index) => <button type="button" key={story.id} onClick={(event) => openStory(story, event.currentTarget)}><span className={styles.tocIndex}>{current.read.includes(story.id) ? <Check size={15} /> : `0${index + 1}`}</span><span><small>{story.category}</small>{story.title}</span><ChevronRight size={14} /></button>)}</div>
                 <div className={styles.readingNote}><BookOpen size={21} strokeWidth={1.5} /><h3>모르는 이야기여도 괜찮아요.</h3><p>기사를 열면 배경부터 차근차근.<br />낯선 용어도 함께 풀어드립니다.</p><button type="button" onClick={() => { setExpanded(!expanded); }}>{expanded ? "핵심만 읽기로 돌아가기" : "배경 설명 펼쳐보기"}<ArrowRight size={15} /></button></div>
                 <p className={styles.archiveNote}>보관 브리핑 중 일부를 선택했습니다.<br />기사 내용은 디자인 검토용이며,<br />현재 시점의 최신 뉴스가 아닙니다.</p>
               </div>

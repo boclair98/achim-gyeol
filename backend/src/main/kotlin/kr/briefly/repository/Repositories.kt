@@ -54,7 +54,7 @@ interface EditorialAuditLogRepository : JpaRepository<EditorialAuditLog, Long> {
 }
 
 interface StoryCorrectionRepository : JpaRepository<StoryCorrection, Long> {
-    fun findAllByStoryIdOrderByCreatedAtDesc(storyId: Long): List<StoryCorrection>
+    fun findAllByStoryIdInOrderByCreatedAtDesc(storyIds: Collection<Long>): List<StoryCorrection>
     fun findTop100ByOrderByCreatedAtDesc(): List<StoryCorrection>
 }
 
