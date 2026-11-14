@@ -587,6 +587,8 @@ class NewsBriefingGenerator(
                 qualityScore = candidate.story.qualityScore,
                 sourceCount = candidate.story.sources.map { newsSourceFamily(it.url) }.distinct().size,
                 claims = candidate.story.claims.map(NewsClaim::statement),
+                verificationStatus = candidate.story.verificationStatus.name,
+                uncertainty = candidate.story.uncertainty,
             )
         }
         val startedAt = System.nanoTime()

@@ -1,6 +1,45 @@
 # OpenUI Design Plan
 
-## 현재 작업 · 뉴스 품질과 휴대폰 읽기
+## 현재 작업 · 2026-11-14 · 읽고 싶은 데일리 에디션
+
+이 절이 아래 이전 계획보다 우선한다. 사용자가 이 수신 화면 디자인의 GitHub 반영·배포와 뉴스 품질 보강을 승인했다. 검증 후 canonical upstream → 실제 fork 동기화 → 기존 Coders 프로젝트 배포 → 운영 확인 순서로 반영한다. 홈페이지 `/`, 일반 `/briefing/`, 평일 오전 07:30(Asia/Seoul) 정기 알림, 메일 발송 채널과 기존 API는 수정하지 않는다. 이번 배포 과정에서 실제 기사 재생성·추가 알림 발송은 하지 않는다.
+
+### 목적과 근거
+
+- 실제 `ReceivedBriefing`은 모든 기사가 같은 크기의 제목 행이라 읽기 시작점과 기사 맥락이 약하다. 목록에서 사진이나 요약은 보이지 않고, 길게 읽은 뒤 다음 기사로 가려면 끝까지 내려가야 한다.
+- 출근길 한국어 독자에게 중요 순서가 유지된 전체 목록 → 핵심 → 필요한 깊이 → 다음 기사의 흐름을 제공한다. 디자인이 뉴스의 정확성을 보증하거나 확인 중인 사실을 확정으로 보이게 하지 않는다.
+- 첫 행동은 목록의 실제 기사 선택(`#news-ID`), 보조 행동은 `이어서 읽기`(이 기기에서 아직 열지 않은 첫 기사), 상세의 `뉴스 목록`(`#received-contents`) 및 다음 기사. 기존 날짜 쿼리를 유지한다.
+
+### OpenUI resolved inputs / composition contract
+
+- Topic: 아침결 수신용 데일리 뉴스 에디션. Offer: 전날 중요 소식을 쉽게 이해하고 내 속도로 읽기. Audience: 한국어 모바일·PC 구독자. Primary user action: 기사 열기. Deliverable: 기존 React 수신 목록/기사 개선 1개, 새 랜딩 아님.
+- Style direction: 현대적인 편집 매거진. Tonal key: 밝은 종이와 짙은 남색, 절제된 파랑. Icon policy: 기존 메일 SVG와 lucide. Proof assets: 실제 11월 10일 보관본과 원문 사진, 기존 source·verificationStatus; 인기/조회수/품질 점수/새 뉴스 생성 금지. Motion intensity: 색상·테두리 반응 160ms, reduced-motion에서는 제거.
+- Hero archetype: 광고 히어로가 아닌 compact edition masthead. First viewport: 브랜드/발행일 → 제목·실제 기사 수/예상 읽기 시간 → 첫 기사 제목/짧은 맥락과 실제 사진. 첫 기사는 API 순서 그대로이며 `가장 많이 읽음` 같은 허위 배지는 없다.
+- Primary visual: 첫 기사의 원본 사진과 완전한 제목. 이미지 없거나 깨지면 텍스트만 보여준다. 사진은 모든 위치에서 contain/자연비율, 잘라내지 않는다. 모든 기사 제목과 설명을 줄수 제한 없이 표시한다.
+- Interaction: 읽은 기사는 열린 기록으로만 표현(읽기 완료로 과장하지 않음), 그 다음 안 연 기사로 이어 읽기. 상세 sticky toolbar에서 목록/크기/다음 이동. 목록 복귀 시 초점 복원, 근거/맥락은 네이티브 펼치기, 실제 원문 링크 보존.
+- Reuse boundary: `ReceivedBriefing.tsx`/CSS module과 그 테스트, README 설명. 별도 뉴스 품질 보강은 기존 편집 파이프라인의 근거 중심 선별·설명과 회귀 테스트로 제한한다. 키·모델·호출량·수집/발송 일정·전날 범위·기사 수 기준·스포츠 부재 시에도 발송하는 원칙은 유지한다.
+
+### 디자인 토큰과 반응형
+
+- 기존 라이선스 포함 SUIT 400/600/700, Apple SD Gothic Neo/Malgun Gothic/system-ui 대체. 토스 고유 폰트/자산 복제 없음.
+- Ink #182334, muted #536175, action #2157b5, paper #ffffff, canvas #f5f6f8, cover #172b4d, soft #edf4ff, rule #dfe6ef, caution #fff6e8/#654512. 진한 커버의 글자는 흰색, 보조는 #d6e2f3.
+- 목록 컨테이너 최대 1080px, 상세 본문 최대 680px. 목록 첫 기사 1개 강조 + 다음 기사 desktop 2열, 768px 미만 1열. 모바일 여백 20px, 360px에서 18px. 목록 제목 21px, 첫 제목 26–36px, 상세 29–40px; 본문 17–18px/1.75, 메타 13–14px. 8/12/16/24/32/48px 간격, 카드 16–20px 반경, 1px 선.
+- 한글 keep-all + overflow-wrap:anywhere; min-width:0. 주요 조작 44px 이상. sticky toolbar는 safe-area를 고려하고 긴 화면을 가리지 않도록 1줄 기본/좁으면 의도적 줄바꿈. 앵커 scroll-margin과 초점 복원 확인.
+- loading/error/empty/offline 경로와 기사 원문 부재를 사실대로 표시한다. 원문 요약을 추가 생성하지 않으며 외부 이미지를 내려받거나 변조하지 않는다.
+
+### Filled master prompt / output
+
+Improve the existing 아침결 recipient edition, not the homepage. Build one polished Korean editorial reading experience from the live Briefing/Story schema. Establish a calm navy edition header, an identifiable first story with an optional uncropped original image, readable full headlines and short existing summaries for every subsequent story, with a responsive two-column desktop/one-column phone layout. Provide truthful opened-story progress and a continue action targeting the next unopened story. Keep article facts and caveats prominent, full text expandable, original sources visible, and list/font/next controls reachable. Preserve all dated deep links, local read state, focus return, cached/error states, API contracts and the whole uncapped story list. Use SUIT, white paper, restrained blue, natural photos, no fabricated popularity or guarantees, and no automatic notifications. Output to ReceivedBriefing.tsx/CSS and focused tests. Validate types/lint/build/unit and browser navigation at 360×800,390×844,768×1024,1440×900; inspect phone and desktop screenshots using actual archived content, plus long text/broken image/keyboard regressions.
+
+### 승인된 배포와 편집 품질 검증
+
+- 단순 기사량이나 자극적 제목 대신 확인된 변화·사회적 영향·일상과의 관련성을 중심으로 편집한다. 흥미는 사실에 근거한 의미와 맥락으로 설명하며 전망·주장·확정 사실을 구분한다. 낯선 이름·용어를 설명하되 원문에 없는 인과·수치·인용은 만들지 않는다.
+- 기존 Terra 요약·Sol 최종 편집과 자격 증명을 유지한다. 추가 유료 생성·원문 호출 없이 단위/회귀 검증을 수행한다. 프롬프트·회귀 테스트의 통과를 실제 발행 기사 품질의 보증으로 표현하지 않는다.
+- 홈페이지·정기 알림 설정에 diff가 없는지 확인하고, 수신 화면 브라우저 검증 및 backend verify 후 게시한다. 운영에서는 실제 보관 발행본을 GET으로 확인하며 신규 발송·구독 변경은 하지 않는다.
+
+---
+
+## 이전 작업 · 뉴스 품질과 휴대폰 읽기
 
 ### Resolved inputs
 

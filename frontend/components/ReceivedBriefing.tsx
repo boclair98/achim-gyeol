@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, ArrowUpRight, ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, Check, ChevronDown, ChevronRight, Clock3, RefreshCw } from "lucide-react";
 import type { Briefing, Story } from "@/lib/briefing";
 import { fragmentStoryId, koreaToday, safeNewsUrl } from "@/lib/daily-letter";
 import { composeReceivedReading, relatedGlossaryTerm } from "@/lib/received-reading";
@@ -29,14 +29,14 @@ export function ReceivedBriefing() {
     : "";
 
   return <main className={styles.surface}>
-    <div className={styles.sheet}>
+    <div className={styles.sheet} data-reading={!!data?.stories.some(item => item.id === fragmentStoryId(fragment))}>
       <header className={styles.masthead}>
         <Link href="/" className={styles.brand} aria-label="아침결 홈" prefetch={false}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={`${basePath}/newsletter-prototypes/edition-icon.svg`} width={32} height={32} alt="" />
           <span>아침결<span className={styles.brandDot}>.</span></span>
         </Link>
-        <span className={styles.mastheadLabel}>뉴스레터</span>
+        <span className={styles.mastheadLabel}>하루를 여는 뉴스레터</span>
       </header>
       {isReadable ? <>
         {notice && <p className={styles.notice} role="status">{notice}</p>}
@@ -44,6 +44,7 @@ export function ReceivedBriefing() {
           report={result.state === "ready" && data.productionReady === true && data.briefingDate === koreaToday()} />
       </> : <ReceivedEditionStatus state={result.state} date={date} onRetry={retry} />}
       <footer className={styles.sheetFooter}>
+        <p>세상을 읽는 시간, 아침결.</p>
         <nav aria-label="뉴스레터 안내">
           <Link href="/archive" prefetch={false}>지난 뉴스</Link>
           <Link href="/preferences" prefetch={false}>알림 설정</Link>
@@ -93,6 +94,8 @@ function ReceivedEdition({ briefing, fragment, report }: { briefing: Briefing; f
     const saved = readReceivedStorage(fontKey);
     return saved === "small" || saved === "large" ? saved : "normal";
   });
+  const nextUnread = stories.find(item => !read.has(item.id));
+  const categories = [...new Set(stories.map(item => item.category))];
 
   useEffect(() => {
     if (report) void reportReaderEvent("BRIEFING_OPEN", id);
@@ -135,10 +138,14 @@ function ReceivedEdition({ briefing, fragment, report }: { briefing: Briefing; f
     return <div className={styles.reading} data-font={font}>
       <div className={styles.readingBar}>
         <a href={`#${contentsId}`} className={styles.textAction}><ArrowLeft size={18} aria-hidden="true" /> 뉴스 목록</a>
+        <span className={styles.toolbarPosition}>{position + 1}<span> / {stories.length}</span></span>
         <div className={styles.fontControls} role="group" aria-label="글자 크기">
           {fontOptions.map(([size, label]) => <button type="button" key={size} aria-label={label} aria-pressed={size === font}
             onClick={() => { setFont(size); writeReceivedStorage(fontKey, size); }}>가</button>)}
         </div>
+        {stories[position + 1] && <a href={storyAnchor(stories[position + 1].id)} className={styles.nextQuick} aria-label="다음 뉴스">
+          <span>다음</span><ArrowRight size={18} aria-hidden="true" />
+        </a>}
       </div>
       <ReceivedStory key={story.id} story={story} dateLabel={dateLabel} date={briefingDate}
         position={position + 1} total={stories.length} publicHref={`/briefing/${date}${storyAnchor(story.id)}`} canReport={report} />
@@ -148,28 +155,59 @@ function ReceivedEdition({ briefing, fragment, report }: { briefing: Briefing; f
 
   return <>
     <header className={styles.intro}>
-      <p className={styles.dateline}><time dateTime={briefingDate}>{dateLabel}</time></p>
+      <div className={styles.editionEyebrow}><span>DAILY LETTER</span><time dateTime={briefingDate}>{dateLabel}</time></div>
       <h1>어제의 핵심 뉴스</h1>
-      <p className={styles.introCopy}>기사 제목을 누르면 핵심 요약부터 볼 수 있어요.</p>
+      <p className={styles.introCopy}>중요한 소식부터, 이해하기 쉽게.<br /> 한 편씩 나의 속도로 읽어보세요.</p>
+      <div className={styles.editionFacts}>
+        <span><BookOpen size={16} aria-hidden="true" />{stories.length}개의 소식</span>
+        {briefing.readMinutes > 0 && <span><Clock3 size={16} aria-hidden="true" />전체 약 {briefing.readMinutes}분</span>}
+      </div>
     </header>
+    <div className={styles.editionContext}>
+      <p>{categories.join(" · ")}</p>
+      <span>핵심부터 차근차근</span>
+    </div>
+    {read.size > 0 && <aside className={styles.readProgress} aria-label="이 기기의 읽기 기록">
+      <div><span>{read.size === stories.length ? "이번 편을 모두 열어봤어요" : "읽던 이야기, 이어서"}</span>
+        <strong>{read.size} / {stories.length}편 열어봄</strong>
+        <progress value={read.size} max={stories.length} aria-label="열어본 기사 수" />
+      </div>
+      {nextUnread ? <a href={storyAnchor(nextUnread.id)} onClick={event => rememberOpener(event, nextUnread.id)} className={styles.textAction}>이어서 읽기 <ArrowRight size={17} aria-hidden="true" /></a>
+        : <Check size={24} aria-label="모든 기사 열람" />}
+    </aside>}
     {fragment.startsWith("#news-") && <p className={styles.notice} role="status">이 뉴스레터에서 해당 기사를 찾지 못했어요. 아래 목록을 확인해 주세요.</p>}
     <section className={styles.contents} id={contentsId} tabIndex={-1} aria-labelledby="received-list-title">
-      <header className={styles.listHead}><h2 id="received-list-title">이 편의 뉴스</h2><span>{stories.length}건</span></header>
+      <header className={styles.listHead}><h2 id="received-list-title">이 편의 뉴스</h2><span>전체 {stories.length}건</span></header>
       <ol className={styles.storyList}>
-        {stories.map((item, index) => <li key={item.id}>
+        {stories.map((item, index) => <li key={item.id} className={index === 0 ? styles.leadItem : undefined}>
           <a href={storyAnchor(item.id)} id={rowId(item.id)} className={styles.row} onClick={event => rememberOpener(event, item.id)}
-            data-received-story={item.id}>
+            data-received-story={item.id} data-lead={index === 0}>
             <span className={styles.rowNumber} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
             <span className={styles.rowText}>
-              <span className={styles.rowMeta}>{item.category}{read.has(item.id) && <span className={styles.readMark}>읽음</span>}</span>
+              <span className={styles.rowMeta}>{item.category}{index === 0 && <span className={styles.leadLabel}>먼저 읽을 소식</span>}{read.has(item.id) && <span className={styles.readMark}><Check size={12} aria-hidden="true" />읽음</span>}</span>
               <strong>{item.title}</strong>
+              <StoryTeaser story={item} />
+              <span className={styles.rowSource}>{sourceLabel(item)}{item.verificationStatus === "DEVELOPING" && <span>추가 확인 중</span>}{item.verificationStatus === "CONFLICTING" && <span>출처 내용 다름</span>}</span>
             </span>
-            <ChevronRight className={styles.rowArrow} size={20} aria-hidden="true" />
+            {index === 0 && <ReceivedPhoto story={item} compact />}
+            <span className={styles.rowArrow}>{index === 0 && <span>핵심 읽기</span>}<ChevronRight size={20} aria-hidden="true" /></span>
           </a>
         </li>)}
       </ol>
     </section>
   </>;
+}
+
+function StoryTeaser({ story }: { story: Story }) {
+  const reading = composeReceivedReading(story);
+  const text = reading.impact.find(sentence => sentence.length <= 160) ?? reading.keyPoints[0] ?? reading.explanation[0];
+  return text ? <span className={styles.teaser}>{text}</span> : null;
+}
+
+function sourceLabel(story: Story) {
+  const sources = story.sources.filter(source => safeNewsUrl(source.url));
+  if (!sources.length) return "기사 내용 보기";
+  return `${sources[0].publisher || "원문"}${sources.length > 1 ? ` 외 ${sources.length - 1}개 원문` : ""}`;
 }
 
 function ReceivedStory({ story, dateLabel, date, position, total, publicHref, canReport }: {
@@ -194,6 +232,7 @@ function ReceivedStory({ story, dateLabel, date, position, total, publicHref, ca
       <span aria-label={`전체 ${total}건 중 ${position}번째`}>{position} / {total}</span>
     </div>
     <h1 id={`received-headline-${story.id}`}>{story.title}</h1>
+    <p className={styles.articleByline}>{sourceLabel(story)}<span>아침결에서 정리했어요</span></p>
     {!!keyPoints.length && <section className={styles.takeaway} aria-labelledby="received-takeaway">
       <h2 id="received-takeaway">핵심 요약</h2>
       {keyPoints.length === 1 ? <p>{keyPoints[0]}</p> : <ul>{keyPoints.map(point => <li key={point}>{point}</li>)}</ul>}
@@ -259,14 +298,14 @@ function StorySection({ label, paragraphs }: { label: string; paragraphs: string
   </section>;
 }
 
-function ReceivedPhoto({ story }: { story: Story }) {
+function ReceivedPhoto({ story, compact = false }: { story: Story; compact?: boolean }) {
   const [failed, setFailed] = useState(false);
   const href = safeNewsUrl(story.imageUrl);
   if (!href || failed) return null;
-  return <figure className={styles.photo}>
+  return <figure className={compact ? styles.leadPhoto : styles.photo}>
     {/* eslint-disable-next-line @next/next/no-img-element */}
-    <img src={href} alt={`${story.title} 관련 사진`} decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
-    <figcaption>{story.imagePublisher ? `사진 · ${story.imagePublisher}` : "관련 원문 기사 사진"}</figcaption>
+    <img src={href} alt={compact ? "" : `${story.title} 관련 사진`} decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
+    {!compact && <figcaption>{story.imagePublisher ? `사진 · ${story.imagePublisher}` : "관련 원문 기사 사진"}</figcaption>}
   </figure>;
 }
 

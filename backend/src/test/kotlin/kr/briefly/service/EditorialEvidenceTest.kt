@@ -4,9 +4,12 @@ import kr.briefly.domain.BriefingEdition
 import kr.briefly.domain.Category
 import kr.briefly.domain.VerificationStatus
 import kr.briefly.integration.AiFact
+import kr.briefly.integration.AiEditorialReviewer
 import kr.briefly.integration.AiSummarizer
 import kr.briefly.integration.AiSummary
 import kr.briefly.integration.CollectedArticle
+import kr.briefly.integration.EditorialCandidate
+import kr.briefly.integration.EditorialReview
 import kr.briefly.integration.NewsProvider
 import kr.briefly.repository.BriefingEditionRepository
 import org.assertj.core.api.Assertions.assertThat
@@ -136,8 +139,16 @@ class EditorialEvidenceTest {
                 plainExplanation = "",
             )
         }
+        var reviewedCandidates = emptyList<EditorialCandidate>()
+        val reviewer = object : AiEditorialReviewer {
+            override val modelName = "offline-test-editor"
+            override fun review(candidates: List<EditorialCandidate>, headlineLimit: Int): EditorialReview {
+                reviewedCandidates = candidates
+                return EditorialReview(candidates.take(headlineLimit).map(EditorialCandidate::ref), "검증용 순서")
+            }
+        }
         val result = NewsBriefingGenerator(
-            listOf(provider), summarizer, null, ArticleClusterer(), QualityGate(),
+            listOf(provider), summarizer, reviewer, ArticleClusterer(), QualityGate(),
             BriefingCoveragePolicy(10, 5, "SPORTS,ESPORTS"), repository,
         ).generate(date, force = true)
         val story = edition.stories.single()
@@ -147,6 +158,11 @@ class EditorialEvidenceTest {
         assertThat(story.uncertainty).contains("같은 값과 단위로 확인하지 못했어요")
         assertThat(story.sources.map { it.url }).containsExactlyElementsOf(reports.map(CollectedArticle::originalUrl))
         assertThat(story.claims.first().sourceIndexes).isEqualTo("0,1")
+        assertThat(result.editorialPassApplied).isTrue()
+        assertThat(reviewedCandidates.single().verificationStatus).isEqualTo("DEVELOPING")
+        assertThat(reviewedCandidates.single().uncertainty).isEqualTo(story.uncertainty)
+        assertThat(reviewedCandidates.single().sourceCount).isEqualTo(3)
+        assertThat(reviewedCandidates.single().claims).containsExactlyElementsOf(story.claims.map { it.statement })
     }
 
     private fun article(url: String, title: String, description: String = title, at: OffsetDateTime = published) =
