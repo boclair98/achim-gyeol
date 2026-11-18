@@ -104,6 +104,19 @@ data class PushDeliverySummary(
     val failureReasons: List<String> = emptyList(),
 )
 
+data class MorningDeliveryStatus(
+    val date: LocalDate,
+    val newsReady: Boolean,
+    val newsUpdatedAt: OffsetDateTime?,
+    val firstNewsReadyAt: OffsetDateTime?,
+    val targetDevices: Int,
+    val providerAccepted: Int,
+    val failed: Int,
+    val pending: Int,
+    val firstAcceptedAt: OffsetDateTime?,
+    val latestAttemptAt: OffsetDateTime?,
+)
+
 data class WelcomePreviewStatus(
     val activeSubscriptions: Int,
     val operatorIncluded: Boolean,
@@ -143,6 +156,9 @@ internal val allDeliveryWeekdaysValue: String = allDeliveryWeekdays.joinToString
 internal fun isBriefingWeekday(date: LocalDate): Boolean = date.dayOfWeek.value in 1..5
 internal val fixedDeliveryTime: LocalTime = LocalTime.of(7, 30)
 internal val lastDeliveryTime: LocalTime = LocalTime.of(8, 0)
+internal val automaticRecoveryEnd: LocalTime = LocalTime.of(13, 30)
+internal fun automaticRecoveryIsDue(date: LocalDate, time: LocalTime): Boolean =
+    isBriefingWeekday(date) && time >= lastDeliveryTime && time < automaticRecoveryEnd
 internal val fixedFinalizationTime: LocalTime = LocalTime.of(6, 0)
 internal fun pushStatusIsRetryable(status: Int): Boolean = status == 408 || status == 429 || status >= 500
 internal fun pushEndpointIsInvalid(status: Int): Boolean = status in setOf(400, 401, 403, 404, 410)
@@ -300,7 +316,48 @@ class WebPushService(
 
     @Scheduled(cron = "0 * * * * MON-FRI", zone = "Asia/Seoul")
     fun deliverScheduledBriefings() {
-        deliverDueBriefings()
+        val now = OffsetDateTime.now(ZoneId.of("Asia/Seoul"))
+        when {
+            deliveryIsDue(now.toLocalTime()) -> deliverDueBriefings()
+            now.minute % 10 == 0 && automaticRecoveryIsDue(now.toLocalDate(), now.toLocalTime()) -> {
+                val result = recoverScheduledMisses()
+                if (result.dueSubscriptions > 0) logger.info(
+                    "Morning recovery: date={}, state={}, targets={}, accepted={}, failed={}",
+                    now.toLocalDate(), result.status, result.dueSubscriptions, result.delivered, result.failed,
+                )
+            }
+        }
+    }
+
+    /** Counts provider acknowledgements, not notification impressions on the phone. */
+    @Transactional(readOnly = true)
+    fun morningDeliveryStatus(): MorningDeliveryStatus {
+        val zone = ZoneId.of("Asia/Seoul")
+        val date = LocalDate.now(zone)
+        val edition = briefingEditionRepository.findByBriefingDate(date)
+        val attempts = edition?.id?.let(deliveryAttemptRepository::findAllByEditionId).orEmpty()
+            .associateBy(PushDeliveryAttempt::subscriptionId)
+        val targetTime = date.atTime(fixedDeliveryTime).atZone(zone).toOffsetDateTime()
+        val targets = repository.findAllByActiveTrue().filter { isBriefingWeekday(date) && !it.createdAt.isAfter(targetTime) }
+            .associateBy { requireNotNull(it.id) }
+        var accepted = 0
+        var failed = 0
+        val ids = targets.keys + attempts.keys
+        ids.forEach { id ->
+            val attempt = attempts[id]
+            val sentAt = targets[id]?.lastSentAt
+            when {
+                deliveryAlreadyCompleted(attempt?.state, sentAt, date, zone) -> accepted++
+                attempt?.state in setOf(DeliveryState.FAILED, DeliveryState.EXPIRED) -> failed++
+            }
+        }
+        val newsReady = briefingService.buildStatus(date)?.let { it.productionReady && it.stories > 0 } == true
+        return MorningDeliveryStatus(
+            date, newsReady, edition?.lastVerifiedAt?.takeIf { newsReady }, edition?.firstNewsReadyAt?.takeIf { newsReady },
+            ids.size, accepted, failed, ids.size - accepted - failed,
+            attempts.values.mapNotNull(PushDeliveryAttempt::deliveredAt).minOrNull(),
+            attempts.values.mapNotNull(PushDeliveryAttempt::lastAttemptAt).maxOrNull(),
+        )
     }
 
     @Synchronized
@@ -479,7 +536,29 @@ class WebPushService(
         require(forcedDispatchCountIsSafe(expectedActiveSubscriptions, subscriptions.size)) {
             "등록 기기 수가 예상과 다릅니다. 예상 ${expectedActiveSubscriptions}대, 현재 ${subscriptions.size}대"
         }
+        return recoverEligibleSubscriptions(briefing, subscriptions)
+    }
 
+    @Synchronized
+    fun recoverScheduledMisses(): PushDeliverySummary {
+        val zone = ZoneId.of("Asia/Seoul")
+        val now = OffsetDateTime.now(zone)
+        val date = now.toLocalDate()
+        if (!isConfigured()) return PushDeliverySummary("PUSH_DISABLED", 0, 0, 0, 0, "알림이 설정되지 않았습니다.")
+        if (!automaticRecoveryIsDue(date, now.toLocalTime())) {
+            return PushDeliverySummary("OUTSIDE_RECOVERY_WINDOW", 0, 0, 0, 0, "자동 복구 시간이 아닙니다.")
+        }
+        val status = briefingService.buildStatus(date)
+        if (status?.productionReady != true || status.stories == 0) {
+            return PushDeliverySummary("BRIEFING_NOT_READY", 0, 0, 0, 0, "오늘의 실제 브리핑이 아직 준비되지 않았습니다.")
+        }
+        val briefing = briefingService.byDate(date)
+        val targetTime = date.atTime(fixedDeliveryTime).atZone(zone).toOffsetDateTime()
+        return recoverEligibleSubscriptions(briefing, repository.findAllByActiveTrue().filter { !it.createdAt.isAfter(targetTime) })
+    }
+
+    private fun recoverEligibleSubscriptions(briefing: BriefingResponse, subscriptions: List<PushSubscription>): PushDeliverySummary {
+        val today = briefing.briefingDate
         val lead = briefing.stories.firstOrNull()
         val title = if (briefing.stories.isEmpty()) {
             "아침결 · 오늘 브리핑 안내"

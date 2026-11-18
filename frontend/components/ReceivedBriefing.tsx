@@ -85,7 +85,7 @@ function ReceivedEdition({ briefing, fragment, report }: { briefing: Briefing; f
   const position = requested === null ? -1 : stories.findIndex(item => item.id === requested);
   const story = stories[position];
   const selectedId = story?.id ?? null;
-  const opener = useRef<number | null>(null);
+  const opener = useRef<string | null>(null);
   const lastArticle = useRef<number | null>(null);
   const readKey = `achim-gyeol-read-${id}`;
   const [read, setRead] = useState(() => loadReadIds(readKey, stories));
@@ -119,7 +119,9 @@ function ReceivedEdition({ briefing, fragment, report }: { briefing: Briefing; f
           }
         }
       } else if (selectedId === null && (previous !== null || fragment === `#${contentsId}`)) {
-        const row = previous !== null ? document.getElementById(rowId(opener.current ?? previous)) : null;
+        const row = previous !== null
+          ? (opener.current ? document.getElementById(opener.current) : null) ?? document.getElementById(rowId(previous))
+          : null;
         const target = row ?? document.getElementById(contentsId);
         target?.focus({ preventScroll: true });
         target?.scrollIntoView({ block: row ? "center" : "start", behavior: "instant" });
@@ -130,7 +132,9 @@ function ReceivedEdition({ briefing, fragment, report }: { briefing: Briefing; f
   }, [selectedId, fragment, readKey, report, id, stories.length]);
 
   function rememberOpener(event: MouseEvent<HTMLAnchorElement>, id: number) {
-    if (event.button === 0 && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) opener.current = id;
+    if (event.button === 0 && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+      opener.current = event.currentTarget.id || rowId(id);
+    }
   }
 
   if (story) {
@@ -163,6 +167,34 @@ function ReceivedEdition({ briefing, fragment, report }: { briefing: Briefing; f
         {briefing.readMinutes > 0 && <span><Clock3 size={16} aria-hidden="true" />전체 약 {briefing.readMinutes}분</span>}
       </div>
     </header>
+    {stories.length > 0 && <section className={styles.quickDigest} aria-labelledby="received-quick-title">
+      <header><h2 id="received-quick-title"><Clock3 size={17} aria-hidden="true" /> 1분 브리핑</h2>
+        <a href={`#${contentsId}`} className={styles.textAction} onClick={event => {
+          if (event.button === 0 && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
+            document.getElementById(contentsId)?.focus({ preventScroll: true });
+          }
+        }}>전체 뉴스 보기 <ChevronDown size={16} aria-hidden="true" /></a>
+      </header>
+      <ol>
+        {stories.slice(0, 3).map(item => {
+          const line = item.oneLineSummary?.trim();
+          const reading = composeReceivedReading(item);
+          const keyPoint = reading.keyPoints.find(sentence => sentence.length <= 100);
+          const impact = reading.impact.find(sentence => sentence.length <= 100);
+          const summary = keyPoint ?? (line && line !== item.title.trim() ? line : impact ?? line);
+          const caveat = item.verificationStatus === "DEVELOPING" ? "추가 확인 중"
+            : item.verificationStatus === "CONFLICTING" ? "출처 내용 다름"
+              : item.verificationStatus === "SINGLE_SOURCE" ? "원문 한 곳" : null;
+          return <li key={item.id}><a href={storyAnchor(item.id)} id={`received-quick-${item.id}`}
+            onClick={event => rememberOpener(event, item.id)}>
+            <span className={styles.quickMeta}>{item.category}{caveat && <small>{caveat}</small>}</span>
+            <strong>{item.title}</strong>
+            {summary && summary !== item.title.trim() && <span className={styles.quickSummary}>{summary}</span>}
+            <ChevronRight className={styles.quickArrow} size={16} aria-hidden="true" />
+          </a></li>;
+        })}
+      </ol>
+    </section>}
     <div className={styles.editionContext}>
       <p>{categories.join(" · ")}</p>
       <span>핵심부터 차근차근</span>

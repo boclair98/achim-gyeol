@@ -71,6 +71,24 @@
 .editionFacts > span { display: inline-flex; gap: 7px; align-items: center; }
 .editionContext { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; padding-block: 18px 30px; color: var(--muted); font-size: 13px; }
 .editionContext p { margin: 0; }
+.quickDigest { margin-top: 18px; border: 1px solid var(--rule); border-radius: 16px; padding: 4px 16px 8px; }
+.quickDigest header { display: flex; flex-wrap: wrap; gap: 0 12px; justify-content: space-between; align-items: center; }
+.quickDigest header h2 { display: flex; gap: 7px; align-items: center; margin: 8px 0; font-size: 17px; font-weight: 700; }
+.quickDigest header h2 svg { color: var(--action); }
+.quickDigest header a { font-size: 13px; }
+.quickDigest ol { display: grid; gap: 0 16px; margin: 0; padding: 0; list-style: none; }
+.quickDigest li { min-width: 0; border-top: 1px solid var(--rule); }
+.quickDigest li a { position: relative; display: grid; gap: 3px; min-height: 44px; padding: 10px 24px 11px 0; color: var(--ink); text-decoration: none; }
+.quickDigest li a:hover strong { text-decoration: underline; text-underline-offset: 3px; }
+.quickDigest strong { font-size: 16px; line-height: 1.45; }
+.quickMeta { display: flex; flex-wrap: wrap; gap: 4px 9px; color: var(--action); font-size: 12px; font-weight: 600; }
+.quickMeta small { color: #79551d; font-size: inherit; font-weight: inherit; }
+.quickSummary { color: var(--muted); font-size: 14px; line-height: 1.55; }
+.quickArrow { position: absolute; top: 50%; inset-inline-end: 1px; transform: translateY(-50%); color: var(--action); }
+@media (min-width: 768px) {
+  .quickDigest { padding-inline: 20px; }
+  .quickDigest ol { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
 .editionContext > span { flex: none; color: var(--action); font-weight: 600; }
 .readProgress { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; margin-bottom: 28px; border-radius: 14px; border: 1px solid var(--rule); background: #f8faff; }
 .readProgress > div { display: grid; gap: 5px; min-width: 0; flex: 1; }

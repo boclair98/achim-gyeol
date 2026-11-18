@@ -42,6 +42,24 @@ async function mockArchivedEdition(page: Page, data = edition()) {
   return methods;
 }
 
+test("the minute briefing links to up to three actual stories without hiding the rest", async ({ page }) => {
+  const data = edition(18);
+  await mockArchivedEdition(page, data);
+  await page.goto(recipient);
+  const quick = page.getByRole("region", { name: "1분 브리핑" });
+  await expect(quick.locator("ol a")).toHaveCount(3);
+  await expect(page.locator("[data-received-story]")).toHaveCount(18);
+  const link = quick.locator("ol a").nth(1);
+  await expect(link).toHaveAttribute("href", "#news-1701");
+  await link.press("Enter");
+  await expect(page).toHaveURL(/date=2024-04-15#news-1701$/);
+  await expect(page.locator("#news-1701")).toBeFocused();
+  await page.getByRole("link", { name: "뉴스 목록", exact: true }).press("Enter");
+  await expect(link).toBeFocused();
+  await quick.getByRole("link", { name: "전체 뉴스 보기" }).press("Enter");
+  await expect(page.locator("#received-contents")).toBeFocused();
+});
+
 test("opened progress and the first unopened article survive returning and reloading", async ({ page }) => {
   const methods = await mockArchivedEdition(page);
   await page.goto(recipient);
@@ -89,6 +107,7 @@ test("the reading toolbar advances with the keyboard and returns focus to the op
 test("opening the whole edition does not leave a misleading continue action", async ({ page }) => {
   const methods = await mockArchivedEdition(page, edition(2));
   await page.goto(recipient);
+  await expect(page.getByRole("region", { name: "1분 브리핑" }).locator("ol a")).toHaveCount(2);
   await page.locator("#received-story-1700").click();
   await page.getByRole("link", { name: "다음 뉴스", exact: true }).click();
   await expect(page.locator("#news-1701")).toBeFocused();

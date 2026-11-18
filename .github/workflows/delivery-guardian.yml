@@ -46,16 +46,16 @@ jobs:
         run: |
           set -Eeuo pipefail
           target="$(TZ=Asia/Seoul date -d "$(TZ=Asia/Seoul date +%F) 07:30:00" +%s)"
-          stale_cutoff="$(TZ=Asia/Seoul date -d "$(TZ=Asia/Seoul date +%F) 10:00:00" +%s)"
+          stale_cutoff="$(TZ=Asia/Seoul date -d "$(TZ=Asia/Seoul date +%F) 13:30:00" +%s)"
           now="$(date +%s)"
-          if (( now > stale_cutoff )); then
-            echo "Guardian started after the 10:00 KST recovery cutoff" >&2
-            exit 1
+          if (( now >= stale_cutoff )); then
+            echo "Guardian started outside the recovery window; persisted delivery status will be checked."
+            exit 0
           fi
           while (( now < target )); do
             curl --fail --silent --show-error --max-time 45 \
               --retry 3 --retry-all-errors \
-              "https://morningnews.coders.kr/api/push/public-key" >/dev/null
+              "https://morningnews.coders.kr/api/push/public-key" >/dev/null || true
             remaining=$((target - now))
             if (( remaining > 45 )); then sleep 45; else sleep "$remaining"; fi
             now="$(date +%s)"
@@ -71,27 +71,28 @@ jobs:
           test -n "$ADMIN_TOKEN"
           briefing_date="$(TZ=Asia/Seoul date +%F)"
 
-          initial="$(curl --fail-with-body --silent --show-error \
-            --retry 3 --retry-all-errors --max-time 180 \
-            -X POST "https://morningnews.coders.kr/api/admin/briefings/dispatch" \
+          time="$(TZ=Asia/Seoul date +%H:%M)"
+          endpoint=""
+          if [[ "$time" < "08:00" && ! "$time" < "07:30" ]]; then endpoint="dispatch"; fi
+          if [[ "$time" < "13:30" && ! "$time" < "08:00" ]]; then endpoint="catch-up"; fi
+          if [[ -n "$endpoint" ]]; then
+            curl --fail --silent --show-error --max-time 180 \
+              -X POST "https://morningnews.coders.kr/api/admin/briefings/$endpoint" \
+              -H "X-Briefing-Admin-Token: $ADMIN_TOKEN" >/dev/null || true
+          fi
+          snapshot="$(curl --fail --silent --show-error --retry 2 --max-time 45 \
+            "https://morningnews.coders.kr/api/admin/briefings/delivery-status" \
             -H "X-Briefing-Admin-Token: $ADMIN_TOKEN")"
-          active="$(curl --fail-with-body --silent --show-error \
-            --retry 3 --retry-all-errors --max-time 90 \
-            "https://morningnews.coders.kr/api/admin/briefings/subscriptions" \
-            -H "X-Briefing-Admin-Token: $ADMIN_TOKEN" | jq -r '.activeSubscriptions')"
-          recovery="$(curl --fail-with-body --silent --show-error \
-            --retry 3 --retry-all-errors --max-time 180 \
-            -X POST "https://morningnews.coders.kr/api/admin/briefings/recover-missed" \
-            -H "X-Briefing-Admin-Token: $ADMIN_TOKEN" \
-            -H "Content-Type: application/json" \
-            --data "{\"expectedBriefingDate\":\"${briefing_date}\",\"expectedActiveSubscriptions\":${active}}")"
-
-          initial_delivered="$(jq -r '.delivered // 0' <<< "$initial")"
-          recovered="$(jq -r '.delivered // 0' <<< "$recovery")"
-          failed="$(jq -r '.failed // 0' <<< "$recovery")"
-          due="$(jq -r '.dueSubscriptions // 0' <<< "$recovery")"
-          status="$(jq -r '.status // "UNKNOWN"' <<< "$recovery")"
-          total_delivered=$((initial_delivered + recovered))
+          jq -e --arg date "$briefing_date" '.date == $date and (.targetDevices | type == "number")' <<< "$snapshot" >/dev/null
+          active="$(jq -r '.targetDevices' <<< "$snapshot")"
+          total_delivered="$(jq -r '.providerAccepted' <<< "$snapshot")"
+          failed="$(jq -r '.failed' <<< "$snapshot")"
+          due="$(jq -r '.pending' <<< "$snapshot")"
+          ready="$(jq -r '.newsReady' <<< "$snapshot")"
+          status="DISPATCH_CONFIRMED"
+          if [[ "$ready" != "true" ]]; then status="NEWS_NOT_READY";
+          elif (( failed + due > 0 )); then status="UNDELIVERED_REMAIN";
+          elif (( active == 0 )); then status="NO_TARGETS"; fi
           echo "date=$briefing_date" >> "$GITHUB_OUTPUT"
           echo "active=$active" >> "$GITHUB_OUTPUT"
           echo "due=$due" >> "$GITHUB_OUTPUT"
@@ -102,13 +103,17 @@ jobs:
             echo "### 07:30 보호 발송"
             echo ""
             echo "- 기준일: ${briefing_date}"
-            echo "- 활성 기기: ${active}대"
-            echo "- 이번 발송 성공: ${total_delivered}대"
-            echo "- 누락 복구 대상: ${due}대"
+            echo "- 뉴스 준비: ${ready}"
+            echo "- 첫 준비 시각: $(jq -r '.firstNewsReadyAt // "기록 없음"' <<< "$snapshot")"
+            echo "- 마지막 뉴스 갱신: $(jq -r '.newsUpdatedAt // "없음"' <<< "$snapshot")"
+            echo "- 첫 푸시 접수: $(jq -r '.firstAcceptedAt // "없음"' <<< "$snapshot")"
+            echo "- 발송 대상: ${active}대"
+            echo "- 푸시 제공자 접수: ${total_delivered}대"
+            echo "- 미시도·대기: ${due}대"
             echo "- 최종 실패: ${failed}대"
             echo "- 복구 상태: ${status}"
           } >> "$GITHUB_STEP_SUMMARY"
-          if (( failed > 0 )); then exit 1; fi
+          if [[ "$ready" != "true" ]] || (( failed + due > 0 )); then exit 1; fi
 
       - name: Report guardian result on Telegram
         if: always()
@@ -133,10 +138,10 @@ jobs:
 
           기준일: ${BRIEFING_DATE:-확인 불가}
           작업 결과: ${JOB_STATUS}
-          활성 기기: ${ACTIVE:-0}대
-          이번 발송 성공: ${DELIVERED:-0}대
-          누락 복구 대상: ${DUE:-0}대
-          최종 실패: ${FAILED:-0}대
+          발송 대상: ${ACTIVE:-확인 불가}
+          푸시 제공자 접수: ${DELIVERED:-확인 불가}
+          미시도·대기: ${DUE:-확인 불가}
+          실패: ${FAILED:-확인 불가}
           복구 상태: ${RECOVERY_STATUS:-실행 실패}
           작업 확인: ${RUN_URL}"
           response="$(curl --fail-with-body --silent --show-error \

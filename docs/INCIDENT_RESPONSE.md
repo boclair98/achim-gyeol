@@ -15,6 +15,12 @@
 4. 실패한 발송만 재시도하며 이미 성공한 기기에는 중복 발송하지 않습니다.
 5. 감사 로그에서 `EDITORIAL_INCIDENT_DECLARED`, `STORY_CORRECTED`, `EDITION_APPROVED` 순서를 확인합니다.
 
+### 아침 알림 점검
+
+- Actions의 Morning briefing operations에서 `delivery-status`와 `generation-status`를 사용합니다. 두 작업은 조회 전용이며 텔레그램 보고 여부는 기본값(끄기)을 유지합니다.
+- 먼저 대상 날짜의 `newsReady`와 첫 준비 시간을 확인하고, `providerAccepted`·`failed`·`pending`을 별도로 확인합니다. Actions 작업 성공이나 푸시 제공자 접수는 휴대폰에서 알림이 표시됐다는 증거가 아닙니다.
+- 07:30 KST는 정시 시작 목표입니다. 작업 지연 시 보호 워크플로와 살아 있는 백엔드가 평일 08:00~13:30 미만에 당일 발행본과 기존 발송 기록을 확인해 누락만 복구합니다. 13:30 이후의 보호 워크플로는 상태만 조회하며 전체 재발송은 하지 않습니다.
+
 ## 사후 점검
 
 - 원인, 영향, 복구 시간, 재발 방지 조치를 GitHub 비공개 운영 기록 또는 접근이 제한된 문서에 남깁니다.

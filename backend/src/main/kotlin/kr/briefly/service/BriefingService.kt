@@ -20,7 +20,7 @@ data class CorrectionResponse(val correctedAt: String, val reason: String)
 data class StoryResponse(val id: Long, val category: String, val title: String, val oneLineSummary: String, val summary: String, val whyItMatters: String, val whatToWatch: String?, val verificationStatus: VerificationStatus, val qualityScore: Int, val uncertainty: String?, val evidenceAvailable: Boolean, val claims: List<ClaimResponse>, val sources: List<SourceResponse>, val corrections: List<CorrectionResponse> = emptyList(), val viewerInterest: StoryInterest? = null, val backgroundContext: String, val plainExplanation: String, val imageUrl: String? = null, val imagePublisher: String? = null, val sourceCount: Int)
 data class BriefingResponse(val id: Long, val briefingDate: LocalDate, val productionReady: Boolean, val editorialState: EditorialState, val humanReviewed: Boolean, val dateLabel: String, val lead: String, val readMinutes: Int, val verifiedCount: Int, val lastVerifiedAt: String, val stories: List<StoryResponse>, val personalized: Boolean = false)
 data class ArchiveEditionResponse(val id: Long, val briefingDate: LocalDate, val dateLabel: String, val lead: String, val readMinutes: Int, val verifiedCount: Int, val storyCount: Int, val categories: List<String>, val headlines: List<String>)
-data class BriefingBuildStatus(val briefingDate: LocalDate, val coverageReady: Boolean, val productionReady: Boolean, val stories: Int, val categories: Int, val minimumStories: Int, val minimumCategories: Int, val blockReasons: List<String>, val coverageWarnings: List<String>)
+data class BriefingBuildStatus(val briefingDate: LocalDate, val coverageReady: Boolean, val productionReady: Boolean, val stories: Int, val categories: Int, val minimumStories: Int, val minimumCategories: Int, val blockReasons: List<String>, val coverageWarnings: List<String>, val operationsMetrics: EditionOperationsMetrics? = null)
 
 @Service
 class BriefingService(
@@ -77,6 +77,7 @@ class BriefingService(
                 if (!publishableState) add("발행 상태: ${edition.editorialState ?: EditorialState.AUTO_APPROVED}")
             },
             coverageWarnings = coverage.reasons,
+            operationsMetrics = readEditionOperations(edition.operationsMetrics),
         )
     }
 

@@ -19,6 +19,7 @@ import java.time.OffsetDateTime
 interface BriefingEditionRepository : JpaRepository<BriefingEdition, Long> {
     fun findFirstByOrderByBriefingDateDesc(): BriefingEdition?
     fun findByBriefingDate(date: LocalDate): BriefingEdition?
+    fun findTop4ByBriefingDateLessThanAndPipelineGeneratedTrueOrderByBriefingDateDesc(date: LocalDate): List<BriefingEdition>
     fun findTop30ByOrderByBriefingDateDesc(): List<BriefingEdition>
 }
 

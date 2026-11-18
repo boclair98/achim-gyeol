@@ -22,6 +22,7 @@ data class EditorialCandidate(
     val claims: List<String>,
     val verificationStatus: String,
     val uncertainty: String?,
+    val previousEdition: PreviousNewsContext? = null,
 )
 
 data class EditorialReview(
@@ -32,6 +33,8 @@ data class EditorialReview(
 interface AiEditorialReviewer {
     val modelName: String
     fun review(candidates: List<EditorialCandidate>, headlineLimit: Int): EditorialReview
+    fun review(candidates: List<EditorialCandidate>, headlineLimit: Int, recordUsage: (BriefingAiUsage) -> Unit): EditorialReview =
+        review(candidates, headlineLimit)
 }
 
 @Component
@@ -53,7 +56,10 @@ class OpenAiEditorialReviewer(
         })
         .build()
 
-    override fun review(candidates: List<EditorialCandidate>, headlineLimit: Int): EditorialReview {
+    override fun review(candidates: List<EditorialCandidate>, headlineLimit: Int): EditorialReview =
+        review(candidates, headlineLimit) {}
+
+    override fun review(candidates: List<EditorialCandidate>, headlineLimit: Int, recordUsage: (BriefingAiUsage) -> Unit): EditorialReview {
         require(candidates.isNotEmpty()) { "최종 편집 후보가 없습니다" }
         val refs = candidates.map(EditorialCandidate::ref)
         val evidence = editorialReviewEvidence(candidates)
@@ -77,6 +83,7 @@ class OpenAiEditorialReviewer(
                         - 분야 균형을 유지하되 중요하지 않은 기사로 숫자를 채우지 않습니다.
                         - 단순 행사·홍보·반복 인용·지역 단신·경기 예고보다 확정된 변화와 결과를 우선합니다.
                         - 독자에게 새로운 변화가 무엇인지, 누구에게 어떤 의미인지 구체적인 후보를 우선합니다. 클릭을 유도하는 표현이나 유명인 이름만으로 순위를 높이지 않습니다.
+                        - previousEdition은 같은 사건일 수 있는 이전 발행본의 비교 자료입니다. 이전 것과 오늘의 주장·핵심 요약을 비교해서 새 결과나 확정 정보가 없는 재보도는 뒤로 둡니다. 새 수치·확정·반전처럼 독자가 알아야 할 변화가 있으면 높일 수 있습니다. 이전 기사 내용 자체를 오늘의 근거로 삼거나 다른 사건으로 섞지 마세요.
                         - 중요도가 비슷하면 생활·정책 뉴스와 새로운 과학·문화·스포츠·이스포츠 성과를 함께 읽을 수 있게 배치합니다. 흥미를 위해 중요도가 낮은 후보를 끼워 넣지는 않습니다.
                         - 출처 수(sourceCount)는 독립 출처 수이지 관심도·조회수가 아닙니다. 동일 보도자료를 인용한 기사 수만으로 중요도를 높이지 않습니다.
                         - verificationStatus와 uncertainty를 확인하세요. DEVELOPING·CONFLICTING·SINGLE_SOURCE나 주의 문구가 있는 후보를 확정 사실처럼 평가하지 말고, 핵심 근거가 비슷하면 VERIFIED 후보를 우선합니다. 중요한 진행 중 사건은 주의사항을 전제로 앞에 둘 수 있으며, 미확인 상태만으로 기사를 삭제하지 않습니다.
@@ -102,6 +109,7 @@ class OpenAiEditorialReviewer(
 
         val root = client.post().uri("/responses").body(body).retrieve().body(JsonNode::class.java)
             ?: error("OpenAI 최종 편집 응답이 비어 있습니다")
+        briefingAiUsage(root, modelName)?.let(recordUsage)
         val json = mapper.readTree(extractOutputText(root))
         return EditorialReview(
             orderedRefs = json.path("orderedRefs").values().map { it.asText() },

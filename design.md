@@ -1,8 +1,18 @@
 # OpenUI Design Plan
 
-## 현재 작업 · 2026-11-14 · 읽고 싶은 데일리 에디션
+## 현재 작업 · 2026-11-18 · 1분 브리핑과 운영 개선
 
-이 절이 아래 이전 계획보다 우선한다. 사용자가 이 수신 화면 디자인의 GitHub 반영·배포와 뉴스 품질 보강을 승인했다. 검증 후 canonical upstream → 실제 fork 동기화 → 기존 Coders 프로젝트 배포 → 운영 확인 순서로 반영한다. 홈페이지 `/`, 일반 `/briefing/`, 평일 오전 07:30(Asia/Seoul) 정기 알림, 메일 발송 채널과 기존 API는 수정하지 않는다. 이번 배포 과정에서 실제 기사 재생성·추가 알림 발송은 하지 않는다.
+- 목적·독자: 출근 중 받은 뉴스의 주요 소식부터 훑고, 필요하면 전체 기사를 읽는 한국어 구독자. 실제 11월 18일판은 16건·약 20분이라 1분용 진입점이 없다. 홈페이지, 일반 뉴스 화면, 메일 미리보기 및 평일 07:30 목표는 유지한다.
+- Topic: 지난 하루 뉴스. Offer: 1분 브리핑과 전체판. Audience: 모바일·PC 구독자. Primary action: 실제 편집 순서의 앞 최대 세 건을 열기. Deliverable: 기존 수신 화면 안에 한 섹션. Style: 간결한 한국어 편집물. Tonal key: 흰색·남색. Icon policy: 기존 화살표. Proof assets: 실제 발행본 제목·요약·검증 표시. Motion: 없음.
+- Composition: 기존 남색 표지 → 짧은 1분 브리핑 → 기존 이어서 읽기와 전체 기사. CTA는 각 기사 제목의 날짜 유지 `#news-ID`, 보조는 `전체 뉴스 보기` → `#received-contents`. 기사에서 돌아오면 눌렀던 항목으로 초점을 돌린다. 빈 발행본에는 노출하지 않으며 실제 기사가 1–2건이면 그대로 표시한다.
+- 기존 SUIT + 시스템 글꼴, 잉크 #182334, 보조 #536175, 파랑 #2157b5, 경계 #dfe6ef, 확인 표시 #79551d. 좁은 폰은 세로 목록, 768px 이상 3열. 제목 16px/1.45, 요약 14px/1.55, 최소 조작 높이 44px, 간격 8/12/16/24px, 경계 1px/반경 16px. 줄임표 없고 기존 사진·본문·전체 기사 수 유지. 새 이미지·아이콘 에셋 없음.
+- Output: `ReceivedBriefing.tsx`, CSS module, 수신용 E2E. 편집은 비교용 이전 판, 정확히 동일한 입력만 재사용, 토큰 집계와 발송 상태는 관리자 경로로 한정한다. Playwright·JDK21 테스트와 360/390/768/1440px 운영 읽기를 검증하고 실발송·실제 요약은 수동 호출하지 않는다.
+
+Filled master prompt: Build one compact “1분 브리핑” on the existing Korean recipient edition, immediately after the dateline and cover. Present at most three stories in edition order with non-truncated titles, short existing source-grounded text, and an uncertainty cue where applicable. Use local dated anchors and restore focus. Keep the complete newsletter, homepage, notification cadence, saved data and natural photo ratios intact. Use existing typography, ink, pale rules and blue action styling, with one column on phones and up to three on wider screens. No new authoring, timers, hype, art or motion. Verify both fixtures and live read-only content.
+
+## 이전 작업 · 2026-11-14 · 읽고 싶은 데일리 에디션
+
+사용자가 이 수신 화면 디자인의 GitHub 반영·배포와 뉴스 품질 보강을 승인했다. 검증 후 canonical upstream → 실제 fork 동기화 → 기존 Coders 프로젝트 배포 → 운영 확인 순서로 반영했다.
 
 ### 목적과 근거
 

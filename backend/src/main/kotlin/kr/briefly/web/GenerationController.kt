@@ -1,6 +1,8 @@
 package kr.briefly.web
 
 import kr.briefly.service.GenerationJobSnapshot
+import kr.briefly.service.EditionOperationsMetrics
+import kr.briefly.service.MorningDeliveryStatus
 import kr.briefly.service.BriefingService
 import kr.briefly.service.MorningGenerationJob
 import kr.briefly.service.PushDeliverySummary
@@ -22,7 +24,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 data class MorningRunResult(val generationStarted: Boolean, val generationJob: GenerationJobSnapshot, val delivery: PushDeliverySummary?)
-data class MorningStatusResponse(val date: LocalDate?, val coverageReady: Boolean, val productionReady: Boolean, val stories: Int, val categories: Int, val minimumStories: Int, val minimumCategories: Int, val blockReasons: List<String>, val coverageWarnings: List<String>, val activeSubscriptions: Int, val generationJob: GenerationJobSnapshot)
+data class MorningStatusResponse(val date: LocalDate?, val coverageReady: Boolean, val productionReady: Boolean, val stories: Int, val categories: Int, val minimumStories: Int, val minimumCategories: Int, val blockReasons: List<String>, val coverageWarnings: List<String>, val activeSubscriptions: Int, val generationJob: GenerationJobSnapshot, val operationsMetrics: EditionOperationsMetrics? = null)
 data class OperatorTestRequest(val expectedActiveSubscriptions: Int)
 data class WelcomePreviewRequest(val expectedNewSubscriptions: Int, val expectedTotalSubscriptions: Int)
 data class ForceRegenerationRequest(val expectedBriefingDate: LocalDate)
@@ -65,6 +67,18 @@ class GenerationController(
     fun dispatch(@RequestHeader("X-Briefing-Admin-Token", required = false) suppliedToken: String?): PushDeliverySummary {
         adminAuthorizer.authorize(suppliedToken)
         return webPushService.deliverDueBriefings()
+    }
+
+    @PostMapping("/catch-up")
+    fun catchUp(@RequestHeader("X-Briefing-Admin-Token", required = false) suppliedToken: String?): PushDeliverySummary {
+        adminAuthorizer.authorize(suppliedToken)
+        return webPushService.recoverScheduledMisses()
+    }
+
+    @GetMapping("/delivery-status")
+    fun deliveryStatus(@RequestHeader("X-Briefing-Admin-Token", required = false) suppliedToken: String?): MorningDeliveryStatus {
+        adminAuthorizer.authorize(suppliedToken)
+        return webPushService.morningDeliveryStatus()
     }
 
     @PostMapping("/dispatch-all")
@@ -151,6 +165,7 @@ class GenerationController(
             coverageWarnings = current?.coverageWarnings ?: emptyList(),
             activeSubscriptions = webPushService.activeSubscriptionCount(),
             generationJob = generationJob.status(),
+            operationsMetrics = current?.operationsMetrics,
         )
     }
 

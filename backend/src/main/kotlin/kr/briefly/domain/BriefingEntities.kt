@@ -38,6 +38,8 @@ class BriefingEdition(
     @Column(length = 80) var editorialModel: String? = null,
     @Column var editorialDurationMillis: Long? = null,
     @Column(length = 600) var editorialFallbackReason: String? = null,
+    @Column(columnDefinition = "text") var operationsMetrics: String? = null,
+    @Column var firstNewsReadyAt: OffsetDateTime? = null,
     @BatchSize(size = 32)
     @OneToMany(mappedBy = "edition", cascade = [CascadeType.ALL], orphanRemoval = true)
     @OrderBy("displayOrder ASC")

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
 const workflow = (await readFile(new URL('../.github/workflows/morning-briefing.yml', import.meta.url), 'utf8')).replace(/\r\n/g, '\n');
+const guardian = (await readFile(new URL('../.github/workflows/delivery-guardian.yml', import.meta.url), 'utf8')).replace(/\r\n/g, '\n');
 const step = name => {
   const marker = `      - name: ${name}\n`;
   const start = workflow.indexOf(marker);
@@ -44,4 +45,23 @@ test('scheduled delivery remains weekday-only at 07:30 and manual preview is not
   assert.match(workflow, /07:30:00/);
   const operation = step('Choose operation');
   assert.match(operation, /if \[\[ "\$REQUESTED_OPERATION" == "run" \]\]; then\s+final_delivery=true\s+else\s+final_delivery=false/);
+});
+
+test('guardian separates on-time dispatch from missed-only recovery and reads persistent status', () => {
+  assert.match(guardian, /07:30:00/);
+  assert.match(guardian, /13:30:00/);
+  assert.match(guardian, /endpoint="catch-up"/);
+  assert.match(guardian, /briefings\/delivery-status/);
+  assert.match(guardian, /\.providerAccepted/);
+  assert.match(guardian, /\.pending/);
+  assert.doesNotMatch(guardian, /dispatch-all|test-push/);
+});
+
+test('manual delivery status has a separate read-only branch', () => {
+  const body = step('Wake service and run morning operation');
+  const start = body.indexOf('elif [[ "$OPERATION" == "delivery-status"');
+  assert.ok(start >= 0);
+  const diagnostic = body.slice(start, body.indexOf('elif [[ "$OPERATION" == "status"', start));
+  assert.match(diagnostic, /briefings\/delivery-status/);
+  assert.doesNotMatch(diagnostic, /-X POST|regenerate|dispatch-all/);
 });

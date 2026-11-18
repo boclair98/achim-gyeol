@@ -13,6 +13,7 @@ import kr.briefly.integration.ArticleImageResolver
 import kr.briefly.integration.CollectedArticle
 import kr.briefly.integration.EditorialCandidate
 import kr.briefly.integration.NewsProvider
+import kr.briefly.integration.PreviousNewsContext
 import kr.briefly.repository.BriefingEditionRepository
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -54,7 +55,7 @@ data class GenerationResult(
 )
 
 data class ArticleCluster(val category: Category, val articles: List<CollectedArticle>, val rank: Int)
-data class EditorialStory(val story: NewsStory, val importanceScore: Int, val clusterRank: Int)
+data class EditorialStory(val story: NewsStory, val importanceScore: Int, val clusterRank: Int, val figureNeedsReview: Boolean = false)
 
 private val editorialOrder = compareByDescending<EditorialStory> { it.importanceScore }
     .thenByDescending { it.clusterRank }
@@ -282,6 +283,7 @@ class NewsBriefingGenerator(
     private val log = LoggerFactory.getLogger(javaClass)
     private val zone = ZoneId.of("Asia/Seoul")
     private val coverageHoldMarker = "COVERAGE_GATE"
+    private val summaryCache = EditionSummaryCache()
     private val queries = linkedMapOf(
         Category.POLICY to listOf("정부 정책", "국회 법안", "복지 노동", "주거 교육 정책", "대통령 국무회의", "선거 공공기관 개혁", "청년 지원 연금", "규제 변화 행정", "세제 개편 예산", "지방자치 행정 지역 현안"),
         Category.ECONOMY to listOf("물가 소비 경기", "기업 실적 수출", "고용 산업 생산", "부동산 주택 공급", "유통 자영업 매출", "경제 성장 전망", "스타트업 투자 기업 인수", "반도체 자동차 조선 산업", "중소기업 제조업", "무역 관세 공급망"),
@@ -327,6 +329,13 @@ class NewsBriefingGenerator(
         check(newsProviders.isNotEmpty()) { "뉴스 공급원 API가 설정되지 않았습니다" }
         val summarizer = aiSummarizer ?: error("OpenAI API 키가 설정되지 않았습니다")
         val coverageDate = briefingDate.minusDays(1)
+        val previousStories = editionRepository.findTop4ByBriefingDateLessThanAndPipelineGeneratedTrueOrderByBriefingDateDesc(briefingDate)
+            .firstOrNull { previous ->
+                previous.editorialState in setOf(EditorialState.AUTO_APPROVED, EditorialState.APPROVED, EditorialState.PUBLISHED) &&
+                    previous.stories.isNotEmpty()
+            }?.stories.orEmpty()
+        summaryCache.prepare(briefingDate)
+        val usage = GenerationUsage()
         var collectedCount = 0
         val providerWarnings = mutableListOf<String>()
         val clusters = deduplicateClusters(queries.flatMap { (category, categoryQueries) ->
@@ -345,7 +354,7 @@ class NewsBriefingGenerator(
             maxPerCategory = maxCandidatesPerCategory,
             maxTotal = maxAiCandidates,
         )
-        val evaluations = evaluateCandidates(aiCandidates, summarizer)
+        val evaluations = evaluateCandidates(aiCandidates, summarizer, previousStories, usage)
         log.info(
             "Morning briefing AI review completed: selectedCandidates={}, totalClusters={}, concurrency={}",
             aiCandidates.size,
@@ -353,15 +362,22 @@ class NewsBriefingGenerator(
             aiConcurrency.coerceIn(1, 6),
         )
         val editorialStories = mutableListOf<EditorialStory>()
+        var sameDayDuplicates = 0
         val failures = evaluations.mapNotNull(CandidateEvaluation::failure)
         evaluations.mapNotNull(CandidateEvaluation::candidate).sortedWith(editorialOrder).forEach { candidate ->
             if (editorialStories.any { existing -> sameEditorialEvent(existing, candidate) }) {
+                sameDayDuplicates++
                 log.info("Duplicate morning briefing candidate excluded after AI summary: category={}, title={}", candidate.story.category, candidate.story.title)
                 return@forEach
             }
             editorialStories += candidate
         }
-        val editorialPass = applyEditorialPass(editorialStories)
+        val (repeats, fresh) = editorialStories.partition { candidate ->
+            previousStories.any { prior -> carriesNoNewFacts(candidate.story, prior, clusterer::similarity) }
+        }
+        val editorialPass = applyEditorialPass(fresh, previousStories, usage).let { pass ->
+            pass.copy(stories = pass.stories + repeats.map(EditorialStory::story))
+        }
         val stories = editorialPass.stories
         val coverage = coveragePolicy.evaluate(stories)
         val editionState = when {
@@ -374,6 +390,9 @@ class NewsBriefingGenerator(
                 briefingDate = briefingDate,
                 lead = "",
             )
+        val usageThisRun = usage.totals()
+        log.info("Morning AI usage: date={}, requests={}, measured={}, summaryCacheHits={}, standardEstimateUsd={}",
+            briefingDate, usageThisRun.requests, usageThisRun.responsesMeasured, usageThisRun.cacheHits, usageThisRun.estimatedUsd)
         // A failed model/provider pass must not erase an already readable edition.
         // Throw before mutating the managed entity so its transaction rolls back;
         // the job's failure notice also preserves existing non-empty editions.
@@ -387,6 +406,20 @@ class NewsBriefingGenerator(
         }
         edition.readMinutes = max(3, ceil(stories.size * 1.25).toInt())
         edition.lastVerifiedAt = OffsetDateTime.now(zone)
+        if (stories.isNotEmpty() && edition.firstNewsReadyAt == null) edition.firstNewsReadyAt = edition.lastVerifiedAt
+        val operations = EditionOperationsMetrics(
+            usage = (readEditionOperations(edition.operationsMetrics)?.usage ?: EditionAiTotals()) + usageThisRun,
+            qualitySignals = EditionQualitySignals(
+                repeatStoriesDemoted = repeats.size,
+                titleSummaryDuplicates = stories.count { story ->
+                    normalizedEditorialText(story.title) == normalizedEditorialText(story.oneLineSummary.orEmpty())
+                },
+                storiesWithCaveats = stories.count { it.verificationStatus != VerificationStatus.VERIFIED || !it.uncertainty.isNullOrBlank() },
+                sameDayDuplicatesExcluded = sameDayDuplicates,
+                headlineFiguresNeedingReview = editorialStories.count(EditorialStory::figureNeedsReview),
+            ),
+        )
+        edition.operationsMetrics = writeEditionOperations(operations)
         edition.pipelineGenerated = true
         edition.editorialState = editionState
         edition.approvedAt = if (editionState == EditorialState.AUTO_APPROVED) OffsetDateTime.now(zone) else null
@@ -448,15 +481,21 @@ class NewsBriefingGenerator(
     private fun evaluateCandidates(
         clusters: List<ArticleCluster>,
         summarizer: AiSummarizer,
+        previousStories: List<NewsStory>,
+        usage: GenerationUsage,
     ): List<CandidateEvaluation> {
         if (clusters.isEmpty()) return emptyList()
+        // Build detached comparison data on the transaction thread, never in AI workers.
+        val prepared = clusters.map { cluster ->
+            cluster to previousContext(cluster.category, cluster.articles.take(6).map(CollectedArticle::title), previousStories)
+        }
         val executor = Executors.newFixedThreadPool(aiConcurrency.coerceIn(1, 6)) { runnable ->
             Thread(runnable, "morning-ai-summary").apply { isDaemon = true }
         }
         return try {
-            val tasks = clusters.map { cluster ->
+            val tasks = prepared.map { (cluster, previous) ->
                 Callable {
-                    runCatching { buildStory(cluster, summarizer) }
+                    runCatching { buildStory(cluster, summarizer, previous, usage) }
                         .fold(
                             onSuccess = { CandidateEvaluation(it) },
                             onFailure = { exception ->
@@ -473,9 +512,18 @@ class NewsBriefingGenerator(
         }
     }
 
-    private fun buildStory(cluster: ArticleCluster, summarizer: AiSummarizer): EditorialStory? {
+    private fun previousContext(category: Category, headlines: List<String>, previousStories: List<NewsStory>): PreviousNewsContext? =
+        previousStories.asSequence().filter { it.category == category }
+            .map { prior -> prior to (headlines.maxOfOrNull { clusterer.similarity(it, prior.title) } ?: 0.0) }
+            .filter { it.second >= 0.59 }.maxByOrNull { it.second }?.first
+            ?.let { PreviousNewsContext(it.title, it.oneLineSummary.orEmpty(), it.claims.take(4).map(NewsClaim::statement)) }
+
+    private fun buildStory(cluster: ArticleCluster, summarizer: AiSummarizer, previous: PreviousNewsContext?, usage: GenerationUsage): EditorialStory? {
         val articles = cluster.articles.distinctBy { newsSourceFamily(it.originalUrl) }.take(6)
-        val summary = summarizer.summarize(articles)
+        val summary = summaryCache.summarize(articles, previous, usage) {
+            usage.attempted()
+            summarizer.summarize(articles, previous, usage::record)
+        }
         if (!summary.recommendedForMorningBriefing || summary.importanceScore < minimumImportanceScore.coerceIn(0, 100)) {
             log.info("Morning briefing candidate excluded: category={}, score={}, reason={}", cluster.category, summary.importanceScore, summary.importanceReason)
             return null
@@ -536,7 +584,7 @@ class NewsBriefingGenerator(
         citedFacts.forEachIndexed { index, fact ->
             story.addClaim(NewsClaim(fact.statement.take(700), fact.sourceIndexes.joinToString(","), index + 1))
         }
-        return EditorialStory(story, summary.importanceScore, cluster.rank)
+        return EditorialStory(story, summary.importanceScore, cluster.rank, figureNeedsReview)
     }
 
     private fun shouldReuseExistingEdition(edition: BriefingEdition): Boolean {
@@ -566,7 +614,7 @@ class NewsBriefingGenerator(
         }
     }
 
-    private fun applyEditorialPass(candidates: List<EditorialStory>): EditorialPassOutcome {
+    private fun applyEditorialPass(candidates: List<EditorialStory>, previousStories: List<NewsStory>, usage: GenerationUsage): EditorialPassOutcome {
         // Candidates are already verified, deduplicated, and ordered. The
         // editor controls the opening headlines, not what readers can access.
         val baseline = candidates
@@ -589,12 +637,14 @@ class NewsBriefingGenerator(
                 claims = candidate.story.claims.map(NewsClaim::statement),
                 verificationStatus = candidate.story.verificationStatus.name,
                 uncertainty = candidate.story.uncertainty,
+                previousEdition = previousContext(candidate.story.category, listOf(candidate.story.title), previousStories),
             )
         }
         val startedAt = System.nanoTime()
         return runCatching {
             val headlineLimit = minOf(EDITORIAL_HEADLINES, pool.size)
-            val review = reviewer.review(reviewCandidates, headlineLimit)
+            usage.attempted()
+            val review = reviewer.review(reviewCandidates, headlineLimit, usage::record)
             val headlines = resolveEditorialSelection(byRef, review.orderedRefs).take(headlineLimit)
             val ordered = headlines + baseline.filterNot(headlines.toSet()::contains)
             val elapsed = (System.nanoTime() - startedAt) / 1_000_000
