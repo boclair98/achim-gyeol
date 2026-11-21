@@ -50,6 +50,8 @@ test("one editorial list keeps every dated story once and expands only the openi
   const rows = page.locator("[data-received-story]");
   await expect(rows).toHaveCount(data.stories.length);
   const expected = data.stories.map(story => `#news-${story.id}`);
+  const positions = rows.locator('span[aria-hidden="true"]');
+  await expect(positions).toHaveText(data.stories.map((_, index) => String(index + 1).padStart(2, "0")));
   // Check all article anchors on the fresh edition, not just card ids: a second
   // digest of the same articles would still pass a row-only count.
   const links = page.locator('main a[href^="#news-"]');
@@ -117,6 +119,7 @@ test("the reading toolbar advances with the keyboard and returns focus to the op
   await first.press("Enter");
   const next = page.getByRole("link", { name: "다음 뉴스", exact: true });
   await expect(next).toHaveAttribute("href", "#news-1701");
+  await expect(next.getByText("다음", { exact: true })).toBeVisible();
   expect((await next.boundingBox())!.height).toBeGreaterThanOrEqual(44);
   await next.press("Enter");
   await expect(page.locator("#news-1701")).toBeFocused();
@@ -167,17 +170,19 @@ test("returning from a story restores the original row at the same viewport posi
   expect(methods).toEqual(["GET"]);
 });
 
-test("the list keeps long headlines and every article; its lead photo opens uncropped in the dated story", async ({ page }) => {
-  test.setTimeout(45_000);
-  const data = edition(18);
-  const photoUrl = data.stories[0].imageUrl!;
-  const methods = await mockArchivedEdition(page, data);
-  await page.goto(recipient);
-  await expect(page.locator("[data-received-story]")).toHaveCount(18, { timeout: 10_000 });
-  const first = page.locator("#received-story-1700");
-  for (const viewport of viewports) {
+for (const viewport of viewports) {
+  test(`the list keeps long headlines and photos uncropped at ${viewport.width}px`, async ({ page }) => {
+    const data = edition(18);
+    const photoUrl = data.stories[0].imageUrl!;
+    const methods = await mockArchivedEdition(page, data);
     await page.setViewportSize(viewport);
+    await Promise.all([
+      page.waitForResponse(response => response.ok() && new URL(response.url()).pathname === `/api/briefings/${date}`,
+        { timeout: 20_000 }),
+      page.goto(recipient),
+    ]);
     await expect(page.locator("[data-received-story]")).toHaveCount(18);
+    const first = page.locator("#received-story-1700");
     await expect(page.locator("[data-received-story] img")).toHaveCount(0);
     const title = first.getByText(longTitle, { exact: true });
     await expect(title).toBeVisible();
@@ -213,6 +218,6 @@ test("the list keeps long headlines and every article; its lead photo opens uncr
     await page.getByRole("link", { name: "뉴스 목록", exact: true }).press("Enter");
     await expect(first).toBeFocused();
     await expect(page).toHaveURL(url => url.pathname + url.search === recipient && !url.hash.startsWith("#news-"));
-  }
-  expect(methods).toEqual(["GET"]);
-});
+    expect(methods).toEqual(["GET"]);
+  });
+}

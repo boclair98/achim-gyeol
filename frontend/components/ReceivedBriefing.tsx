@@ -163,9 +163,11 @@ function ReceivedEdition({ briefing, fragment, report }: { briefing: Briefing; f
 
   return <>
     <header className={styles.intro}>
-      <div className={styles.editionEyebrow}><time dateTime={briefingDate}>{dateLabel} 발행</time></div>
+      <div className={styles.editionMeta}>
+        <time className={styles.editionEyebrow} dateTime={briefingDate}>{dateLabel} 발행</time>
+        <p className={styles.editionFacts}>뉴스 {stories.length}건{briefing.readMinutes > 0 && <> · 전체 약 {briefing.readMinutes}분</>}</p>
+      </div>
       <h1>어제의 핵심 뉴스</h1>
-      <p className={styles.editionFacts}>뉴스 {stories.length}건{briefing.readMinutes > 0 && <> · 전체 약 {briefing.readMinutes}분</>}</p>
     </header>
     {read.size > 0 && <aside className={styles.readProgress} aria-label="이 기기의 읽기 기록">
       <div><span>{read.size === stories.length ? "이번 편을 모두 열어봤어요" : "읽던 이야기, 이어서"}</span>
@@ -200,7 +202,9 @@ function ReceivedStoryRow({ story, index, opened, onOpen }: {
       aria-labelledby={titleId} aria-describedby={teaser ? `${metaId} ${teaserId}` : metaId}
       onClick={event => onOpen(event, story.id)} data-received-story={story.id} data-lead={lead}>
       <span className={styles.rowText}>
-        <span className={styles.rowMeta} id={metaId}>{story.category}
+        <span className={styles.rowMeta} id={metaId}>
+          <span className={styles.rowNumber} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
+          {story.category}
           {confidence && <span className={styles.confidence}>{confidence}</span>}
           {opened && <span className={styles.readMark}><Check size={12} aria-hidden="true" />열어봄</span>}
         </span>

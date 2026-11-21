@@ -69,3 +69,11 @@ Do not start implementation until `design.md` is complete.
 
 The October 22 reader redesign is local-only. Do not commit, push, deploy, or send notifications unless the user explicitly authorizes it. Preserve the existing reader and API contracts; the prototype uses a static archive fixture and separate local preferences.
 
+## 아침결 받은 뉴스: 프로젝트 전용 디자인 기준
+
+- 알림에서 들어온 독자가 날짜와 첫 뉴스를 바로 알아보고, 기사에서 요점·확인할 점·원문을 찾은 다음 같은 목록 위치로 돌아가는 흐름을 우선한다. 가입 홍보, 통계, 유령 기능, 대형 사진 표지로 첫 제목을 미루지 않는다.
+- 새 디자인 작업에서는 실제 발행본과 기존 화면을 먼저 보고, 유사 운영 매체의 모바일·PC 화면을 직접 비교한다. `design.md`에 참고 화면, 채택·배제 이유, 아침결의 적용 위치와 합격 기준을 기록한다. Stitch는 보조 시안이며 생성된 뉴스·기능·코드를 운영에 복사하지 않는다.
+- 모바일 목록은 한 열과 충분한 제목 폭, PC 목록은 편집 순서를 지키는 두 열을 기본으로 한다. 기사 본문은 PC에서도 약 680px 안팎의 읽기 폭을 유지한다. 기존 SUIT, 역할별 색과 얇은 구분선을 우선하고 긴 제목과 사진은 자르지 않는다.
+- 목록·다음·글자 크기·원문은 레이블을 명확히 하고 주요 터치 영역은 최소 44px로 검증한다. 발행일·기사 수·편집 순서는 실제 데이터만 사용한다. 날짜·기사 주소, 포커스·목록 위치, 실패·오프라인 상태를 보존한다.
+- 변경 요청이 없는 메인 화면·공개 뉴스·메일 HTML·API·평일 오전 7시 30분 알림은 그대로 둔다. 검증은 실제 뉴스가 있는 360/390/768/1440px에서 하고, 사용자 알림을 보내지 않는다. 커밋·푸시·배포는 별도 명시 요청에 한한다.
+
