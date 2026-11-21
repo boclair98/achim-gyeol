@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, ArrowUpRight, BookOpen, Check, ChevronDown, ChevronRight, Clock3, RefreshCw } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronRight, RefreshCw } from "lucide-react";
 import type { Briefing, Story } from "@/lib/briefing";
 import { fragmentStoryId, koreaToday, safeNewsUrl } from "@/lib/daily-letter";
 import { composeReceivedReading, relatedGlossaryTerm } from "@/lib/received-reading";
@@ -36,7 +36,7 @@ export function ReceivedBriefing() {
           <img src={`${basePath}/newsletter-prototypes/edition-icon.svg`} width={32} height={32} alt="" />
           <span>아침결<span className={styles.brandDot}>.</span></span>
         </Link>
-        <span className={styles.mastheadLabel}>하루를 여는 뉴스레터</span>
+        <span className={styles.mastheadLabel}>받은 뉴스</span>
       </header>
       {isReadable ? <>
         {notice && <p className={styles.notice} role="status">{notice}</p>}
@@ -85,7 +85,7 @@ function ReceivedEdition({ briefing, fragment, report }: { briefing: Briefing; f
   const position = requested === null ? -1 : stories.findIndex(item => item.id === requested);
   const story = stories[position];
   const selectedId = story?.id ?? null;
-  const opener = useRef<string | null>(null);
+  const opener = useRef<{ id: string; top: number } | null>(null);
   const lastArticle = useRef<number | null>(null);
   const readKey = `achim-gyeol-read-${id}`;
   const [read, setRead] = useState(() => loadReadIds(readKey, stories));
@@ -95,7 +95,6 @@ function ReceivedEdition({ briefing, fragment, report }: { briefing: Briefing; f
     return saved === "small" || saved === "large" ? saved : "normal";
   });
   const nextUnread = stories.find(item => !read.has(item.id));
-  const categories = [...new Set(stories.map(item => item.category))];
 
   useEffect(() => {
     if (report) void reportReaderEvent("BRIEFING_OPEN", id);
@@ -119,12 +118,18 @@ function ReceivedEdition({ briefing, fragment, report }: { briefing: Briefing; f
           }
         }
       } else if (selectedId === null && (previous !== null || fragment === `#${contentsId}`)) {
+        const origin = opener.current;
         const row = previous !== null
-          ? (opener.current ? document.getElementById(opener.current) : null) ?? document.getElementById(rowId(previous))
+          ? (origin ? document.getElementById(origin.id) : null) ?? document.getElementById(rowId(previous))
           : null;
         const target = row ?? document.getElementById(contentsId);
         target?.focus({ preventScroll: true });
-        target?.scrollIntoView({ block: row ? "center" : "start", behavior: "instant" });
+        if (row && origin?.id === row.id) {
+          const visibleTop = Math.max(0, Math.min(origin.top, window.innerHeight - 48));
+          window.scrollBy({ top: row.getBoundingClientRect().top - visibleTop, behavior: "instant" });
+        } else {
+          target?.scrollIntoView({ block: row ? "center" : "start", behavior: "instant" });
+        }
         opener.current = null;
       }
     });
@@ -133,7 +138,7 @@ function ReceivedEdition({ briefing, fragment, report }: { briefing: Briefing; f
 
   function rememberOpener(event: MouseEvent<HTMLAnchorElement>, id: number) {
     if (event.button === 0 && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
-      opener.current = event.currentTarget.id || rowId(id);
+      opener.current = { id: event.currentTarget.id || rowId(id), top: event.currentTarget.getBoundingClientRect().top };
     }
   }
 
@@ -142,7 +147,6 @@ function ReceivedEdition({ briefing, fragment, report }: { briefing: Briefing; f
     return <div className={styles.reading} data-font={font}>
       <div className={styles.readingBar}>
         <a href={`#${contentsId}`} className={styles.textAction}><ArrowLeft size={18} aria-hidden="true" /> 뉴스 목록</a>
-        <span className={styles.toolbarPosition}>{position + 1}<span> / {stories.length}</span></span>
         <div className={styles.fontControls} role="group" aria-label="글자 크기">
           {fontOptions.map(([size, label]) => <button type="button" key={size} aria-label={label} aria-pressed={size === font}
             onClick={() => { setFont(size); writeReceivedStorage(fontKey, size); }}>가</button>)}
@@ -159,81 +163,66 @@ function ReceivedEdition({ briefing, fragment, report }: { briefing: Briefing; f
 
   return <>
     <header className={styles.intro}>
-      <div className={styles.editionEyebrow}><span>DAILY LETTER</span><time dateTime={briefingDate}>{dateLabel}</time></div>
+      <div className={styles.editionEyebrow}><time dateTime={briefingDate}>{dateLabel} 발행</time></div>
       <h1>어제의 핵심 뉴스</h1>
-      <p className={styles.introCopy}>중요한 소식부터, 이해하기 쉽게.<br /> 한 편씩 나의 속도로 읽어보세요.</p>
-      <div className={styles.editionFacts}>
-        <span><BookOpen size={16} aria-hidden="true" />{stories.length}개의 소식</span>
-        {briefing.readMinutes > 0 && <span><Clock3 size={16} aria-hidden="true" />전체 약 {briefing.readMinutes}분</span>}
-      </div>
+      <p className={styles.editionFacts}>뉴스 {stories.length}건{briefing.readMinutes > 0 && <> · 전체 약 {briefing.readMinutes}분</>}</p>
     </header>
-    {stories.length > 0 && <section className={styles.quickDigest} aria-labelledby="received-quick-title">
-      <header><h2 id="received-quick-title"><Clock3 size={17} aria-hidden="true" /> 1분 브리핑</h2>
-        <a href={`#${contentsId}`} className={styles.textAction} onClick={event => {
-          if (event.button === 0 && !event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey) {
-            document.getElementById(contentsId)?.focus({ preventScroll: true });
-          }
-        }}>전체 뉴스 보기 <ChevronDown size={16} aria-hidden="true" /></a>
-      </header>
-      <ol>
-        {stories.slice(0, 3).map(item => {
-          const line = item.oneLineSummary?.trim();
-          const reading = composeReceivedReading(item);
-          const keyPoint = reading.keyPoints.find(sentence => sentence.length <= 100);
-          const impact = reading.impact.find(sentence => sentence.length <= 100);
-          const summary = keyPoint ?? (line && line !== item.title.trim() ? line : impact ?? line);
-          const caveat = item.verificationStatus === "DEVELOPING" ? "추가 확인 중"
-            : item.verificationStatus === "CONFLICTING" ? "출처 내용 다름"
-              : item.verificationStatus === "SINGLE_SOURCE" ? "원문 한 곳" : null;
-          return <li key={item.id}><a href={storyAnchor(item.id)} id={`received-quick-${item.id}`}
-            onClick={event => rememberOpener(event, item.id)}>
-            <span className={styles.quickMeta}>{item.category}{caveat && <small>{caveat}</small>}</span>
-            <strong>{item.title}</strong>
-            {summary && summary !== item.title.trim() && <span className={styles.quickSummary}>{summary}</span>}
-            <ChevronRight className={styles.quickArrow} size={16} aria-hidden="true" />
-          </a></li>;
-        })}
-      </ol>
-    </section>}
-    <div className={styles.editionContext}>
-      <p>{categories.join(" · ")}</p>
-      <span>핵심부터 차근차근</span>
-    </div>
     {read.size > 0 && <aside className={styles.readProgress} aria-label="이 기기의 읽기 기록">
       <div><span>{read.size === stories.length ? "이번 편을 모두 열어봤어요" : "읽던 이야기, 이어서"}</span>
         <strong>{read.size} / {stories.length}편 열어봄</strong>
         <progress value={read.size} max={stories.length} aria-label="열어본 기사 수" />
       </div>
-      {nextUnread ? <a href={storyAnchor(nextUnread.id)} onClick={event => rememberOpener(event, nextUnread.id)} className={styles.textAction}>이어서 읽기 <ArrowRight size={17} aria-hidden="true" /></a>
+      {nextUnread ? <a id="received-continue" href={storyAnchor(nextUnread.id)} onClick={event => rememberOpener(event, nextUnread.id)} className={styles.textAction}>이어서 읽기 <ArrowRight size={17} aria-hidden="true" /></a>
         : <Check size={24} aria-label="모든 기사 열람" />}
     </aside>}
     {fragment.startsWith("#news-") && <p className={styles.notice} role="status">이 뉴스레터에서 해당 기사를 찾지 못했어요. 아래 목록을 확인해 주세요.</p>}
     <section className={styles.contents} id={contentsId} tabIndex={-1} aria-labelledby="received-list-title">
-      <header className={styles.listHead}><h2 id="received-list-title">이 편의 뉴스</h2><span>전체 {stories.length}건</span></header>
+      <header className={styles.listHead}><h2 id="received-list-title">이 편의 뉴스</h2></header>
       <ol className={styles.storyList}>
-        {stories.map((item, index) => <li key={item.id} className={index === 0 ? styles.leadItem : undefined}>
-          <a href={storyAnchor(item.id)} id={rowId(item.id)} className={styles.row} onClick={event => rememberOpener(event, item.id)}
-            data-received-story={item.id} data-lead={index === 0}>
-            <span className={styles.rowNumber} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
-            <span className={styles.rowText}>
-              <span className={styles.rowMeta}>{item.category}{index === 0 && <span className={styles.leadLabel}>먼저 읽을 소식</span>}{read.has(item.id) && <span className={styles.readMark}><Check size={12} aria-hidden="true" />읽음</span>}</span>
-              <strong>{item.title}</strong>
-              <StoryTeaser story={item} />
-              <span className={styles.rowSource}>{sourceLabel(item)}{item.verificationStatus === "DEVELOPING" && <span>추가 확인 중</span>}{item.verificationStatus === "CONFLICTING" && <span>출처 내용 다름</span>}</span>
-            </span>
-            {index === 0 && <ReceivedPhoto story={item} compact />}
-            <span className={styles.rowArrow}>{index === 0 && <span>핵심 읽기</span>}<ChevronRight size={20} aria-hidden="true" /></span>
-          </a>
-        </li>)}
+        {stories.map((item, index) => <ReceivedStoryRow key={item.id} story={item} index={index}
+          opened={read.has(item.id)} onOpen={rememberOpener} />)}
       </ol>
     </section>
   </>;
 }
 
-function StoryTeaser({ story }: { story: Story }) {
+function ReceivedStoryRow({ story, index, opened, onOpen }: {
+  story: Story; index: number; opened: boolean; onOpen: (event: MouseEvent<HTMLAnchorElement>, id: number) => void;
+}) {
+  const confidence = confirmationLabel(story);
+  const lead = index === 0;
+  const metaId = `received-meta-${story.id}`;
+  const titleId = `received-title-${story.id}`;
+  const teaser = index < 3 ? storyTeaser(story) : undefined;
+  const teaserId = `received-teaser-${story.id}`;
+  return <li className={lead ? styles.leadItem : undefined}>
+    <a href={storyAnchor(story.id)} id={rowId(story.id)} className={styles.row}
+      aria-labelledby={titleId} aria-describedby={teaser ? `${metaId} ${teaserId}` : metaId}
+      onClick={event => onOpen(event, story.id)} data-received-story={story.id} data-lead={lead}>
+      <span className={styles.rowText}>
+        <span className={styles.rowMeta} id={metaId}>{story.category}
+          {confidence && <span className={styles.confidence}>{confidence}</span>}
+          {opened && <span className={styles.readMark}><Check size={12} aria-hidden="true" />열어봄</span>}
+        </span>
+        <strong id={titleId}>{story.title}</strong>
+        {teaser && <span className={styles.teaser} id={teaserId}>{teaser}</span>}
+      </span>
+      <ChevronRight className={styles.rowArrow} size={20} aria-hidden="true" />
+    </a>
+  </li>;
+}
+
+function storyTeaser(story: Story) {
   const reading = composeReceivedReading(story);
-  const text = reading.impact.find(sentence => sentence.length <= 160) ?? reading.keyPoints[0] ?? reading.explanation[0];
-  return text ? <span className={styles.teaser}>{text}</span> : null;
+  return [...reading.keyPoints, ...reading.explanation]
+    .find(sentence => sentence.length <= 130 && !/^(복수의|여러) 기사에서.+확인된다[.!]?$/u.test(sentence));
+}
+
+function confirmationLabel(story: Story) {
+  if (story.verificationStatus === "CONFLICTING") return "출처 내용 다름";
+  if (story.verificationStatus === "SINGLE_SOURCE") return "원문 한 곳";
+  if (story.verificationStatus === "DEVELOPING") return "추가 확인 중";
+  return null;
 }
 
 function sourceLabel(story: Story) {
@@ -247,35 +236,38 @@ function ReceivedStory({ story, dateLabel, date, position, total, publicHref, ca
 }) {
   const { keyPoints, explanation, rest, background, impact, watch, cautions } = composeReceivedReading(story);
   const term = relatedGlossaryTerm(story);
-  const detailsBody = term ? [...explanation, ...rest] : rest;
-  const more = detailsBody.length + background.length + impact.length + watch.length > 0;
-  const confidence = story.verificationStatus === "CONFLICTING" ? "출처 내용 다름"
-    : story.verificationStatus === "SINGLE_SOURCE" ? "원문 한 곳"
-    : story.verificationStatus === "DEVELOPING" ? "추가 확인 중" : null;
-  const caveat = cautions[0] ?? (story.verificationStatus === "CONFLICTING"
-    ? "출처가 서로 다르게 전한 부분이 있어요. 아래 원문을 함께 확인해 주세요." : null);
+  const confidence = confirmationLabel(story);
+  const displayedCautions = cautions.length ? cautions : story.verificationStatus === "CONFLICTING"
+    ? ["출처가 서로 다르게 전한 부분이 있어요. 아래 원문을 함께 확인해 주세요."] : [];
   const sources = story.sources.flatMap(source => {
     const href = safeNewsUrl(source.url);
-    return href ? [{ href, publisher: source.publisher }] : [];
+    return href ? [{ href, publisher: source.publisher, publishedAt: source.publishedAt, primary: source.primarySource === true }] : [];
   });
+  const sourcesHeading = useRef<HTMLHeadingElement>(null);
   return <article id={`news-${story.id}`} tabIndex={-1} aria-labelledby={`received-headline-${story.id}`} className={styles.story}>
     <div className={styles.articleMeta}>
       <span><strong>{story.category}</strong><time dateTime={date}>{dateLabel}</time>{confidence && <span className={styles.confidence}>{confidence}</span>}</span>
       <span aria-label={`전체 ${total}건 중 ${position}번째`}>{position} / {total}</span>
     </div>
     <h1 id={`received-headline-${story.id}`}>{story.title}</h1>
-    <p className={styles.articleByline}>{sourceLabel(story)}<span>아침결에서 정리했어요</span></p>
+    <div className={styles.articleByline}>
+      {sources.length > 0 && <span>{sourceLabel(story)}</span>}
+      {sources.length > 0 && <button className={styles.sourceJump} type="button" onClick={() => {
+        sourcesHeading.current?.focus({ preventScroll: true });
+        sourcesHeading.current?.scrollIntoView({ block: "start", behavior: "instant" });
+      }}>원문 {sources.length}건 보기 <ArrowDown size={16} aria-hidden="true" /></button>}
+    </div>
+    {!!story.corrections?.length && <section className={styles.storySection}>
+      <h2>바로잡은 내용</h2>
+      {story.corrections.map((correction, index) => <p key={index}>{correction.reason} <time>{correction.correctedAt}</time></p>)}
+    </section>}
     {!!keyPoints.length && <section className={styles.takeaway} aria-labelledby="received-takeaway">
       <h2 id="received-takeaway">핵심 요약</h2>
       {keyPoints.length === 1 ? <p>{keyPoints[0]}</p> : <ul>{keyPoints.map(point => <li key={point}>{point}</li>)}</ul>}
     </section>}
-    {caveat && <aside className={styles.caveat} aria-labelledby="received-caveat">
+    {!!displayedCautions.length && <aside className={styles.caveat} aria-labelledby="received-caveat">
       <h2 id="received-caveat">확인할 점</h2>
-      <p>{caveat}</p>
-      {cautions.length > 1 && <details>
-        <summary>확인할 점 더 보기</summary>
-        {cautions.slice(1).map(note => <p key={note}>{note}</p>)}
-      </details>}
+      {displayedCautions.map(note => <p key={note}>{note}</p>)}
     </aside>}
     {!term && <StorySection label="쉽게 읽기" paragraphs={explanation} />}
     {term && <aside className={styles.glossary} aria-labelledby="received-term">
@@ -286,17 +278,10 @@ function ReceivedStory({ story, dateLabel, date, position, total, publicHref, ca
       </a>
     </aside>}
     <ReceivedPhoto story={story} />
-    {more && <details className={styles.storyDetails}>
-      <summary>자세히 읽기 <ChevronDown size={18} aria-hidden="true" /></summary>
-      <StorySection label={term ? "쉽게 읽기" : "추가로 볼 내용"} paragraphs={detailsBody} />
-      <StorySection label="배경" paragraphs={background} />
-      <StorySection label="왜 중요한가요" paragraphs={impact} />
-      <StorySection label="다음에 살펴볼 점" paragraphs={watch} />
-    </details>}
-    {!!story.corrections?.length && <section className={styles.storySection}>
-      <h2>바로잡은 내용</h2>
-      {story.corrections.map((correction, index) => <p key={index}>{correction.reason} <time>{correction.correctedAt}</time></p>)}
-    </section>}
+    <StorySection label={term ? "쉽게 읽기" : "추가로 볼 내용"} paragraphs={term ? [...explanation, ...rest] : rest} />
+    <StorySection label="배경" paragraphs={background} />
+    <StorySection label="왜 중요한가요" paragraphs={impact} />
+    <StorySection label="다음에 살펴볼 점" paragraphs={watch} />
     {!!story.claims?.length && <details className={styles.evidence}>
       <summary>근거 확인</summary>
       <ul>{story.claims.map((claim, index) => <li key={index}>
@@ -309,10 +294,11 @@ function ReceivedStory({ story, dateLabel, date, position, total, publicHref, ca
     </details>}
     <footer className={styles.articleFooter}>
       {!!sources.length && <section aria-labelledby="received-sources">
-        <h2 id="received-sources">원문과 출처</h2>
-        <ul>{sources.map(({ href, publisher }, index) => <li key={index}>
+        <h2 id="received-sources" tabIndex={-1} ref={sourcesHeading}>원문과 출처</h2>
+        <ul>{sources.map(({ href, publisher, publishedAt, primary }, index) => <li key={index}>
           <a className={styles.sourceLink} href={href} target="_blank" rel="noopener noreferrer">
-            <span>{publisher || "원문 기사"}</span><ArrowUpRight size={16} aria-hidden="true" />
+            <span>{publisher || "원문 기사"}{primary && <small className={styles.sourceType}>1차 자료</small>}</span>
+            <span className={styles.sourceMeta}><SourcePublication value={publishedAt} /><ArrowUpRight size={16} aria-hidden="true" /></span>
           </a>
         </li>)}</ul>
       </section>}
@@ -323,6 +309,14 @@ function ReceivedStory({ story, dateLabel, date, position, total, publicHref, ca
   </article>;
 }
 
+function SourcePublication({ value }: { value?: string }) {
+  if (!value || !/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d{2}:\d{2})$/u.test(value)) return null;
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return null;
+  const text = new Intl.DateTimeFormat("ko-KR", { timeZone: "Asia/Seoul", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" }).format(date);
+  return <time dateTime={value} aria-label={`원문 보도 ${text} (한국 시간)`}>{text}</time>;
+}
+
 function StorySection({ label, paragraphs }: { label: string; paragraphs: string[] }) {
   if (!paragraphs.length) return null;
   return <section className={styles.storySection}><h2>{label}</h2>
@@ -330,14 +324,14 @@ function StorySection({ label, paragraphs }: { label: string; paragraphs: string
   </section>;
 }
 
-function ReceivedPhoto({ story, compact = false }: { story: Story; compact?: boolean }) {
+function ReceivedPhoto({ story }: { story: Story }) {
   const [failed, setFailed] = useState(false);
   const href = safeNewsUrl(story.imageUrl);
   if (!href || failed) return null;
-  return <figure className={compact ? styles.leadPhoto : styles.photo}>
+  return <figure className={styles.photo}>
     {/* eslint-disable-next-line @next/next/no-img-element */}
-    <img src={href} alt={compact ? "" : `${story.title} 관련 사진`} decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
-    {!compact && <figcaption>{story.imagePublisher ? `사진 · ${story.imagePublisher}` : "관련 원문 기사 사진"}</figcaption>}
+    <img src={href} alt={`${story.title} 관련 사진`} decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
+    <figcaption>{story.imagePublisher ? `사진 · ${story.imagePublisher}` : "관련 원문 기사 사진"}</figcaption>
   </figure>;
 }
 

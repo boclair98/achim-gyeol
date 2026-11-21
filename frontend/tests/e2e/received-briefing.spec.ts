@@ -52,7 +52,7 @@ test("all titles stay in the received edition and keyboard open/return preserves
   await page.getByRole("link", { name: "뉴스 목록", exact: true }).click();
   await expect(page.locator("[data-received-story]")).toHaveCount(29);
   await expect(last).toBeFocused();
-  await expect(last).toContainText("읽음");
+  await expect(last).toContainText("열어봄");
   await page.goBack();
   await expect(page.locator("#news-727")).toBeFocused();
   expect(requests).toBe(1);
@@ -129,12 +129,14 @@ test("missing images and outdated article links do not hide the remaining headli
   await expect(page.getByRole("link", { name: "지난 뉴스 보기" })).toHaveAttribute("href", "/archive/");
 });
 
-test("a phone sees meaningful facts and uncertainty before the photo, with full detail one tap away", async ({ page }) => {
+test("opening an article on a phone exposes the verified facts, uncertainty and full text without another tap", async ({ page }) => {
   const data = edition(1);
   const repeated = "서울시가 어린이 버스 지원 대상을 확대했다.";
   const start = "새 기준은 2027년 3월부터 적용된다.";
   const caution = "지역별 접수 일정은 아직 확인되지 않았다.";
   const background = "기존에는 정해진 연령대에만 지원을 제공했다.";
+  const followUp = "시청은 월요일에 접수 창구를 공개한다.";
+  const correction = "기사에 인용한 조례의 이름을 바로잡았습니다.";
   const sources = [
     { publisher: "검증 원문", url: "https://news.example/article" },
     { publisher: "추가 원문", url: "https://other.example/article" },
@@ -143,6 +145,7 @@ test("a phone sees meaningful facts and uncertainty before the photo, with full 
     ...data, stories: data.stories.map(story => ({
       ...story, title: "서울시 어린이 버스 지원 대상 확대", oneLineSummary: repeated, summary: `${repeated} ${start}`,
       plainExplanation: "이용할 수 있는 가족이 더 많아진다.", backgroundContext: background, uncertainty: caution,
+      whatToWatch: followUp, corrections: [{ correctedAt: "2024-04-15T01:10:00Z", reason: correction }],
       verificationStatus: "DEVELOPING", sources, claims: [{ statement: start, sources }],
     })),
   });
@@ -160,15 +163,38 @@ test("a phone sees meaningful facts and uncertainty before the photo, with full 
   await expect.poll(() => photo.evaluate(img => (img as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
   expect((await caveat.boundingBox())!.y).toBeLessThan((await photo.boundingBox())!.y);
   await expect(article.getByText("이용할 수 있는 가족이 더 많아진다.")).toBeVisible();
-  await expect(article.getByText(background)).toBeHidden();
-  await expect(article.getByRole("link", { name: "검증 원문", exact: true })).toBeVisible();
-  const details = article.locator("summary").filter({ hasText: "자세히 읽기" });
-  expect((await details.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-  await details.press("Enter");
   await expect(article.getByText(background)).toBeVisible();
-  await details.press("Space");
-  await expect(article.getByText(background)).toBeHidden();
+  await expect(article.getByText(data.stories[0].whyItMatters, { exact: true })).toBeVisible();
+  await expect(article.getByText(followUp, { exact: true })).toBeVisible();
+  await expect(article.getByText(correction, { exact: false })).toBeVisible();
+  await expect(article.locator("summary").filter({ hasText: "자세히 읽기" })).toHaveCount(0);
+  const evidence = article.locator("details").filter({ has: page.locator("summary", { hasText: "근거 확인" }) });
+  await evidence.locator("summary").press("Enter");
+  await expect(evidence).toHaveAttribute("open", "");
+  await expect(evidence.getByText(start, { exact: false })).toBeVisible();
+  await expect(evidence.getByRole("link", { name: "검증 원문" })).toHaveAttribute("href", sources[0].url);
+  await expect(evidence.getByRole("link", { name: "추가 원문" })).toHaveAttribute("href", sources[1].url);
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("the originals shortcut focuses the source heading without losing the dated article or opening a second URL", async ({ page }) => {
+  const data = edition(1);
+  // The second fixture URL is unsafe. Neither the count nor the rendered links may include it.
+  await mockEdition(page, data);
+  const target = recipient + "#news-700";
+  await page.goto(target);
+  const article = page.locator("#news-700");
+  await expect(article).toBeFocused();
+  const jump = article.getByRole("button", { name: "원문 1건 보기" });
+  await expect(jump).toBeVisible();
+  expect((await jump.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await jump.press("Enter");
+  const heading = page.locator("#received-sources");
+  await expect(heading).toBeFocused();
+  await expect(heading).toBeInViewport();
+  await expect(article.getByRole("link", { name: "검증 원문", exact: true })).toHaveAttribute("href", data.stories[0].sources[0].url);
+  await expect(article.getByText("열면 안 되는 링크")).toHaveCount(0);
+  await expect(page).toHaveURL(url => url.pathname + url.search + url.hash === target);
 });
 
 test("email prototype fits the complete message and a title opens the same dated web article", async ({ page }) => {

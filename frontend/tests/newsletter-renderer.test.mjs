@@ -89,7 +89,9 @@ test("a real font face requires explicit license confirmation and safe delivery 
 test("bundled public SUIT font is intact, version-pinned and includes its OFL", async () => {
   const directory = new URL("../public/newsletter-prototypes/fonts/", import.meta.url);
   const config = JSON.parse(await readFile(new URL("font-config.json", directory), "utf8"));
-  const license = await readFile(new URL("SUIT-LICENSE.txt", directory));
+  // Git can check out the unchanged license as CRLF on Windows. The pinned
+  // text uses LF; font binaries still have to match byte-for-byte.
+  const license = (await readFile(new URL("SUIT-LICENSE.txt", directory), "utf8")).replace(/\r\n/g, "\n");
   assert.equal(config.family, "SUIT");
   assert.equal(config.license, "OFL-1.1");
   assert.equal(config.licenseConfirmed, true);
@@ -103,8 +105,8 @@ test("bundled public SUIT font is intact, version-pinned and includes its OFL", 
     assert.equal(createHash("sha256").update(binary).digest("hex"), face.sha256);
   }
   assert.equal(createHash("sha256").update(license).digest("hex"), config.licenseSha256);
-  assert.match(license.toString(), /Copyright \(c\) 2022, SUNN/);
-  assert.match(license.toString(), /SIL OPEN FONT LICENSE Version 1.1/);
+  assert.match(license, /Copyright \(c\) 2022, SUNN/);
+  assert.match(license, /SIL OPEN FONT LICENSE Version 1.1/);
   const html = renderNewsletter(edition, { fontFaces: config.faces, fontLicenseConfirmed: true }).html;
   assert.match(html, /@font-face\{font-family:'SUIT'/);
   assert.match(html, /font-size:17px;line-height:1\.65/);

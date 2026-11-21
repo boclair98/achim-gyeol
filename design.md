@@ -1,5 +1,18 @@
 # OpenUI Design Plan
 
+## 받은 뉴스 · 핵심부터, 한 편씩
+
+- 독자 여정: 평일 알림 → 해당 발행판 → 관심 기사 → 맥락과 원문 확인 → 같은 목록 위치. 기존 수신판은 큰 표지 뒤 ‘1분 브리핑’과 전체 목록에 같은 제목이 두 번 나오고, 상세의 배경과 영향을 한 번 더 눌러야 읽을 수 있다.
+- 대안: 현행의 큰 표지와 요약 카드는 익숙하지만 첫 기사까지 스크롤이 길다. 알림에서 첫 기사 전문을 곧장 여는 안은 다른 분야를 찾기 어렵다. 새 Stitch 보드의 편집 방향을 출발점으로, 독립 검토에서 지적된 중복·사진 진입 장벽·숨은 본문을 해결하는 한 가지 안을 선택했다. 사진은 상세에서 원래 비율로 보여 주고, 목록엔 같은 기사 링크를 하나만 둔다.
+- Topic / Offer / Audience / Action: 전날의 주요 뉴스를 훑고, 필요한 한 편을 충분히 깊게 읽는 한국어 아침 독자. 첫 행동은 실제 기사 제목 열기. 보조 행동은 원문으로 이동과 목록 복귀. Deliverable: 기존 React 수신판과 상세 한 가지. Style: 차분한 흰 지면·짙은 잉크, 기능 아이콘만. Proof: 기존 발행판의 날짜·제목·맥락·확인할 점·근거. Motion: 추가하지 않는다.
+- 첫 화면: 짧은 제호, 실제 발행일과 건수, 핵심 제목과 제목을 반복하지 않는 보충 사실. 우선 3건이 한 번만 나오고 이후 전 기사 편집 순서 유지. 상세는 제목 바로 아래 핵심·확인할 점, 본문과 배경·영향, 선택적 원본 사진, 원문·근거·이전/다음. 정정은 숨기지 않는다. 원문 이동은 기사 해시를 바꾸지 않는다.
+- 토큰: 기존 SUIT와 시스템 대체 서체, 흰 지면 #fff·잉크 #182334·보조 #536175·동작 #2157b5·선 #dfe6ef·핵심 배경 #edf4ff. 간격 8/12/16/24/32px, 17px 기본 본문·1.76 행간, 28–44px 기사 제목, 상세 약 680px; 모바일 20px 여백, 최소 44px 조작, 길이 제한 없는 한국어 줄바꿈과 포커스. 토스 라이팅은 제목 반복 제거와 행동 안내에, 배민과 당근 사례는 역할 기반 CSS 토큰 및 접근성에 참고했다.
+- 범위: ReceivedBriefing 및 전용 CSS, 이 동선의 테스트와 README. 홈·공개 뉴스·메일 HTML·API 계약·스케줄·알림·읽기 데이터는 유지한다. 360/390/768/1440, 작은 판/실제 21건, 사진 오류, 직접 URL, 출처·정정·읽던 위치 복귀를 확인한다. 운영에는 푸시 발송 없이 공개판 읽기로 확인한다.
+- PM 수용 기준: 360px에서 발행일, 첫 제목, 핵심 근거가 불필요한 소개·권한 요청보다 앞선다. 다른 기사로 넘어간 후에도 같은 날짜·원래 링크의 초점과 화면 속 위치를 되찾고, 키보드 또는 스크린리더는 긴 설명보다 먼저 제목을 식별할 수 있다. 1440px 읽기 본문은 실제 뉴스 사진과 근거를 좁은 읽기 폭 안에 둔다. 기기·선호 개인화가 아니라 알림으로 도착한 독자의 과업에 맞춘 설계다. 실제 사용자 연구는 별도다.
+- 시안 검토: Gemini가 긴 목록의 부담과 강제 순차 탐색을 지적했다. 상위 세 건의 짧은 사실, 빠른 원문 이동, 이전·다음과 목록 위치 복귀를 함께 적용하고 제목 줄임과 새 필터는 채택하지 않았다. Stitch 신규 보드에서 모바일·PC 목록과 상세를 비교한 뒤 실제 서비스에 없는 메뉴·수치의 삭제를 요청했다. Figma 새 페이지에 읽기 순서·사진 비율·로딩/오프라인/오류 명세를 편집 가능한 비교안으로 정리했다. 생성 결과는 배포 코드나 실제 독자 관찰을 대체하지 않는다.
+
+Filled prompt: Design the delivered Achim Gyeol edition around article choice, not promotion. Keep one compact dated introduction, one editorial list carrying all headlines, and three meaningful lead snippets when available. An article opens completely with its existing source-grounded context, caveats and corrections. Preserve readable original photos, dated deep links, source-jump and keyboard return. Do not copy Toss brand assets, insert demo news, generate new notification content, or change the homepage or public feed. Output to the current ReceivedBriefing surface with its scoped CSS and regression tests.
+
 ## 현재 작업 · 2026-11-18 · 1분 브리핑과 운영 개선
 
 - 목적·독자: 출근 중 받은 뉴스의 주요 소식부터 훑고, 필요하면 전체 기사를 읽는 한국어 구독자. 실제 11월 18일판은 16건·약 20분이라 1분용 진입점이 없다. 홈페이지, 일반 뉴스 화면, 메일 미리보기 및 평일 07:30 목표는 유지한다.
