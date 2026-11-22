@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import Link from "next/link";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronRight, RefreshCw } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
 import type { Briefing, Story } from "@/lib/briefing";
 import { fragmentStoryId, koreaToday, safeNewsUrl } from "@/lib/daily-letter";
 import { composeReceivedReading, relatedGlossaryTerm } from "@/lib/received-reading";
@@ -13,7 +13,7 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const contentsId = "received-contents";
 const fontKey = "achim-gyeol-reader-font";
 const fontOptions = [
-  ["small", "작은 글자"], ["normal", "기본 글자"], ["large", "큰 글자"],
+  ["small", "가−", "작은 글자"], ["normal", "가", "기본 글자"], ["large", "가+", "큰 글자"],
 ] as const;
 type FontSize = (typeof fontOptions)[number][0];
 const storyAnchor = (id: number) => `#news-${id}`;
@@ -148,8 +148,8 @@ function ReceivedEdition({ briefing, fragment, report }: { briefing: Briefing; f
       <div className={styles.readingBar}>
         <a href={`#${contentsId}`} className={styles.textAction}><ArrowLeft size={18} aria-hidden="true" /> 뉴스 목록</a>
         <div className={styles.fontControls} role="group" aria-label="글자 크기">
-          {fontOptions.map(([size, label]) => <button type="button" key={size} aria-label={label} aria-pressed={size === font}
-            onClick={() => { setFont(size); writeReceivedStorage(fontKey, size); }}>가</button>)}
+          {fontOptions.map(([size, label, accessibleLabel]) => <button type="button" key={size} aria-label={accessibleLabel} aria-pressed={size === font}
+            onClick={() => { setFont(size); writeReceivedStorage(fontKey, size); }}>{label}</button>)}
         </div>
         {stories[position + 1] && <a href={storyAnchor(stories[position + 1].id)} className={styles.nextQuick} aria-label="다음 뉴스">
           <span>다음</span><ArrowRight size={18} aria-hidden="true" />
@@ -168,6 +168,7 @@ function ReceivedEdition({ briefing, fragment, report }: { briefing: Briefing; f
         <p className={styles.editionFacts}>뉴스 {stories.length}건{briefing.readMinutes > 0 && <> · 전체 약 {briefing.readMinutes}분</>}</p>
       </div>
       <h1>어제의 핵심 뉴스</h1>
+      <p className={styles.editionInvitation}>관심 가는 이야기부터 편하게 읽어보세요.</p>
     </header>
     {read.size > 0 && <aside className={styles.readProgress} aria-label="이 기기의 읽기 기록">
       <div><span>{read.size === stories.length ? "이번 편을 모두 열어봤어요" : "읽던 이야기, 이어서"}</span>
@@ -179,7 +180,7 @@ function ReceivedEdition({ briefing, fragment, report }: { briefing: Briefing; f
     </aside>}
     {fragment.startsWith("#news-") && <p className={styles.notice} role="status">이 뉴스레터에서 해당 기사를 찾지 못했어요. 아래 목록을 확인해 주세요.</p>}
     <section className={styles.contents} id={contentsId} tabIndex={-1} aria-labelledby="received-list-title">
-      <header className={styles.listHead}><h2 id="received-list-title">이 편의 뉴스</h2></header>
+      <header className={styles.listHead}><h2 id="received-list-title">읽고 싶은 뉴스부터</h2></header>
       <ol className={styles.storyList}>
         {stories.map((item, index) => <ReceivedStoryRow key={item.id} story={item} index={index}
           opened={read.has(item.id)} onOpen={rememberOpener} />)}
@@ -247,6 +248,11 @@ function ReceivedStory({ story, dateLabel, date, position, total, publicHref, ca
     const href = safeNewsUrl(source.url);
     return href ? [{ href, publisher: source.publisher, publishedAt: source.publishedAt, primary: source.primarySource === true }] : [];
   });
+  const contextTopics = [
+    background.length ? "배경" : null,
+    impact.length ? "중요한 이유" : null,
+    watch.length ? "앞으로 확인할 점" : null,
+  ].filter((topic): topic is string => topic !== null);
   const sourcesHeading = useRef<HTMLHeadingElement>(null);
   return <article id={`news-${story.id}`} tabIndex={-1} aria-labelledby={`received-headline-${story.id}`} className={styles.story}>
     <div className={styles.articleMeta}>
@@ -265,27 +271,44 @@ function ReceivedStory({ story, dateLabel, date, position, total, publicHref, ca
       <h2>바로잡은 내용</h2>
       {story.corrections.map((correction, index) => <p key={index}>{correction.reason} <time>{correction.correctedAt}</time></p>)}
     </section>}
+    {!!explanation.length && <StorySection label="쉽게 풀어 보면" paragraphs={explanation} />}
     {!!keyPoints.length && <section className={styles.takeaway} aria-labelledby="received-takeaway">
-      <h2 id="received-takeaway">핵심 요약</h2>
+      <h2 id="received-takeaway">핵심 내용</h2>
       {keyPoints.length === 1 ? <p>{keyPoints[0]}</p> : <ul>{keyPoints.map(point => <li key={point}>{point}</li>)}</ul>}
     </section>}
     {!!displayedCautions.length && <aside className={styles.caveat} aria-labelledby="received-caveat">
       <h2 id="received-caveat">확인할 점</h2>
       {displayedCautions.map(note => <p key={note}>{note}</p>)}
     </aside>}
-    {!term && <StorySection label="쉽게 읽기" paragraphs={explanation} />}
     {term && <aside className={styles.glossary} aria-labelledby="received-term">
-      <h2 id="received-term">용어 풀이 · {term.name}</h2>
+      <h2 id="received-term">낯선 말 하나만 짚고 갈게요 · {term.name}</h2>
       <p>{term.explanation}</p>
       <a href={term.url} target="_blank" rel="noopener noreferrer" className={styles.textAction}>
         {term.publisher} 설명 <ArrowUpRight size={14} aria-hidden="true" />
       </a>
     </aside>}
+    {!!contextTopics.length && <details className={styles.moreContext} open>
+      <summary>
+        <span className={styles.contextSummaryText}>
+          <strong>이 뉴스의 맥락</strong>
+          <span>{contextTopics.join(" · ")}</span>
+        </span>
+        <span className={styles.contextControl}>
+          <span className={styles.contextAction}>
+            <span className={styles.contextCollapse}>접기</span>
+            <span className={styles.contextExpand}>펼치기</span>
+          </span>
+          <ChevronDown size={20} aria-hidden="true" />
+        </span>
+      </summary>
+      <div className={styles.contextBody}>
+        <StorySection label="배경" paragraphs={background} />
+        <StorySection label="중요한 이유" paragraphs={impact} />
+        <StorySection label="앞으로 확인할 점" paragraphs={watch} />
+      </div>
+    </details>}
     <ReceivedPhoto story={story} />
-    <StorySection label={term ? "쉽게 읽기" : "추가로 볼 내용"} paragraphs={term ? [...explanation, ...rest] : rest} />
-    <StorySection label="배경" paragraphs={background} />
-    <StorySection label="왜 중요한가요" paragraphs={impact} />
-    <StorySection label="다음에 살펴볼 점" paragraphs={watch} />
+    {!!rest.length && <StorySection label={explanation.length ? "이야기 이어 읽기" : "기사 내용을 살펴볼게요"} paragraphs={rest} />}
     {!!story.claims?.length && <details className={styles.evidence}>
       <summary>근거 확인</summary>
       <ul>{story.claims.map((claim, index) => <li key={index}>

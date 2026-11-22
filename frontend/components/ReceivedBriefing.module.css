@@ -71,6 +71,7 @@
   letter-spacing: -.052em;
   font-weight: 700;
 }
+.editionInvitation { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.6; }
 .editionEyebrow { color: var(--action); font-size: 14px; font-weight: 700; }
 .editionFacts { margin: 0; color: var(--muted); font-size: 13px; font-weight: 600; }
 .readProgress { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; margin-bottom: 28px; border-radius: 14px; border: 1px solid var(--rule); background: #f8faff; }
@@ -149,9 +150,10 @@
   color: var(--muted);
   cursor: pointer;
   font-weight: 700;
+  font-size: 15px;
 }
 .fontControls button:first-child { font-size: 13px; }
-.fontControls button:last-child { font-size: 19px; }
+.fontControls button:last-child { font-size: 17px; }
 .fontControls button[aria-pressed="true"] { border-color: #cdddf6; background: var(--soft); color: var(--action); }
 
 .story { padding: 26px 0 8px; font-size: var(--read-size); scroll-margin-top: 100px; }
@@ -175,7 +177,7 @@
 .articleByline { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 14px; margin: 0 0 22px; font-size: 13px; color: var(--muted); }
 .articleByline:empty { display: none; }
 .sourceJump { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding-inline: 10px; border: 1px solid var(--rule); border-radius: 8px; color: var(--action); background: var(--paper); font-size: 14px; font-weight: 700; cursor: pointer; }
-.takeaway { margin: 0 0 17px; border-inline-start: 2px solid var(--action); border-radius: 0 10px 10px 0; background: var(--reading-tint); padding: 17px 18px 18px; }
+.takeaway { margin: 0 0 18px; border-inline-start: 3px solid var(--action); padding: 3px 0 4px 15px; }
 .takeaway h2 { margin: 0 0 5px; color: var(--action); font-size: 14px; font-weight: 700; }
 .takeaway :is(p, ul) { margin: 0; font-size: calc(var(--read-size) + 2px); line-height: 1.62; font-weight: 700; }
 .takeaway ul { list-style: disc; padding-inline-start: 1.1em; }
@@ -200,6 +202,30 @@
 .photo { margin: 12px 0 32px; }
 .photo img { display: block; max-width: 100%; height: auto; margin-inline: auto; border-radius: 12px; object-fit: contain; }
 .photo figcaption { margin-top: 8px; color: var(--muted); font-size: 13px; text-align: center; }
+.moreContext { margin: 4px 0 28px; border-block: 1px solid var(--rule); }
+.moreContext > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 64px;
+  color: var(--ink);
+  cursor: pointer;
+  list-style: none;
+}
+.moreContext > summary::-webkit-details-marker { display: none; }
+.contextSummaryText { display: grid; gap: 2px; min-width: 0; }
+.contextSummaryText strong { font-size: 16px; line-height: 1.4; }
+.contextSummaryText > span { color: var(--muted); font-size: 13px; line-height: 1.45; }
+.contextControl { display: inline-flex; align-items: center; gap: 8px; flex: none; color: var(--action); }
+.contextAction { font-size: 13px; font-weight: 700; white-space: nowrap; }
+.contextExpand { display: none; }
+.moreContext:not([open]) .contextCollapse { display: none; }
+.moreContext:not([open]) .contextExpand { display: inline; }
+.contextControl > svg { flex: none; transition: transform 160ms ease; }
+.moreContext[open] .contextControl > svg { transform: rotate(180deg); }
+.contextBody { padding: 18px 0 2px; border-top: 1px solid var(--rule); }
+.contextBody .storySection { margin-bottom: 23px; }
 .storySection { margin: 0 0 27px; }
 .storySection h2, .articleFooter h2 {
   margin: 0 0 8px;
@@ -284,7 +310,7 @@
   .rowNumber { position: absolute; inset-block-start: 20px; inset-inline-start: 16px; }
   .leadItem .rowNumber { inset-block-start: 25px; inset-inline-start: 22px; }
   .rowText strong { font-size: 21px; }
-  .takeaway { padding: 20px 23px; }
+  .takeaway { padding-inline-start: 18px; }
   .previewWrap { border: 1px solid var(--rule); border-radius: 18px; background: var(--paper); }
   .previewHeader { padding-inline: 48px; }
   .mailFrame { border-radius: 0 0 18px 18px; }
@@ -305,7 +331,8 @@
   .story { padding-top: 18px; }
   .story h1 { margin-block: 8px 16px; }
   .articleByline { margin-bottom: 22px; }
-  .takeaway { padding: 13px 15px 15px; }
+  .takeaway { padding-inline-start: 13px; }
+  .editionInvitation { font-size: 14px; }
   .storySection { margin-bottom: 20px; }
   .neighbors { grid-template-columns: minmax(0, 1fr); }
 }
