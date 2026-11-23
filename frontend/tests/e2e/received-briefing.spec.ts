@@ -31,6 +31,35 @@ async function mockEdition(page: Page, data = edition()) {
   await page.route(`**/api/briefings/${date}`, route => route.fulfill({ json: data }));
 }
 
+test("received news shares the homepage type and green-neutral brand system", async ({ page }) => {
+  await mockEdition(page, edition(2));
+  await page.goto(recipient);
+  const surface = page.locator("main");
+  await expect(page.getByRole("link", { name: "아침결 홈" })).toBeVisible();
+  const theme = await surface.evaluate(element => {
+    const styles = getComputedStyle(element);
+    const mark = element.querySelector("header a i");
+    return {
+      font: styles.fontFamily,
+      background: styles.backgroundColor,
+      ink: styles.color,
+      action: styles.getPropertyValue("--action").trim(),
+      brand: mark ? getComputedStyle(mark).backgroundColor : "",
+      logo: element.querySelector("header a")?.textContent?.trim(),
+    };
+  });
+  expect(theme.font).toContain("Pretendard");
+  expect(theme.background).toBe("rgb(251, 252, 250)");
+  expect(theme.ink).toBe("rgb(23, 35, 29)");
+  expect(theme.action).toBe("#0b3d2e");
+  expect(theme.brand).toBe("rgb(24, 183, 121)");
+  expect(theme.logo).toBe("아침결");
+  await page.locator("#received-story-700").click();
+  await expect(page.locator("#news-700")).toBeFocused();
+  await expect(page.locator("#news-700")).toHaveCSS("font-family", /Pretendard/);
+  await expect(page.getByRole("heading", { name: "핵심 내용" })).toHaveCSS("color", "rgb(11, 61, 46)");
+});
+
 test("all titles stay in the received edition and keyboard open/return preserves position", async ({ page }) => {
   let requests = 0;
   await page.route(`**/api/briefings/${date}`, route => { requests++; return route.fulfill({ json: edition() }); });

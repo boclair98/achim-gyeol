@@ -2,14 +2,13 @@
 
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import Link from "next/link";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown, ChevronRight, RefreshCw } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown, ChevronRight, Mail, RefreshCw } from "lucide-react";
 import type { Briefing, Story } from "@/lib/briefing";
 import { fragmentStoryId, koreaToday, safeNewsUrl } from "@/lib/daily-letter";
 import { composeReceivedReading, relatedGlossaryTerm } from "@/lib/received-reading";
 import { readReceivedStorage, receivedApiBase, receivedDeviceHeaders, useReceivedEdition, writeReceivedStorage, type ReceivedEditionResult } from "@/lib/use-received-edition";
 import styles from "./ReceivedBriefing.module.css";
 
-const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const contentsId = "received-contents";
 const fontKey = "achim-gyeol-reader-font";
 const fontOptions = [
@@ -32,9 +31,8 @@ export function ReceivedBriefing() {
     <div className={styles.sheet} data-reading={!!data?.stories.some(item => item.id === fragmentStoryId(fragment))}>
       <header className={styles.masthead}>
         <Link href="/" className={styles.brand} aria-label="아침결 홈" prefetch={false}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`${basePath}/newsletter-prototypes/edition-icon.svg`} width={32} height={32} alt="" />
-          <span>아침결<span className={styles.brandDot}>.</span></span>
+          <i className={styles.brandMark} aria-hidden="true"><Mail size={15} strokeWidth={2.4} /></i>
+          <span>아침결</span>
         </Link>
         <span className={styles.mastheadLabel}>받은 뉴스</span>
       </header>
