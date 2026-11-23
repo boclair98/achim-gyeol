@@ -1,6 +1,17 @@
 @import "tailwindcss";
 
 :root {
+  --achim-surface: #fbfcfa;
+  --achim-paper: #fff;
+  --achim-ink: #17231d;
+  --achim-muted: #64716a;
+  --achim-border: #e1e8e4;
+  --achim-border-strong: #c8d5cd;
+  --achim-brand: #18b779;
+  --achim-brand-strong: #0b3d2e;
+  --achim-brand-hover: #082e23;
+  --achim-brand-soft: #e8f8f0;
+  --achim-focus: #0b3d2e;
   --cream: #f4f1e8;
   --paper: #fffdf7;
   --ink: #101722;

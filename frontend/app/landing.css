@@ -1,11 +1,11 @@
 :root {
-  --landing-green: #18b779;
-  --landing-green-dark: #0b3d2e;
-  --landing-green-soft: #e8f8f0;
-  --landing-ink: #17231d;
-  --landing-muted: #64716a;
-  --landing-line: #e1e8e4;
-  --landing-surface: #fbfcfa;
+  --landing-green: var(--achim-brand);
+  --landing-green-dark: var(--achim-brand-strong);
+  --landing-green-soft: var(--achim-brand-soft);
+  --landing-ink: var(--achim-ink);
+  --landing-muted: var(--achim-muted);
+  --landing-line: var(--achim-border);
+  --landing-surface: var(--achim-surface);
   --landing-violet: #7761df;
   --landing-yellow: #f4c95d;
 }

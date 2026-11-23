@@ -1,12 +1,12 @@
 .surface {
-  --paper: #fff;
-  --canvas: #fbfcfa;
-  --ink: #17231d;
-  --muted: #64716a;
-  --rule: #e1e8e4;
-  --brand: #18b779;
-  --brand-dark: #0b3d2e;
-  --brand-soft: #e8f8f0;
+  --paper: var(--achim-paper);
+  --canvas: var(--achim-surface);
+  --ink: var(--achim-ink);
+  --muted: var(--achim-muted);
+  --rule: var(--achim-border);
+  --brand: var(--achim-brand);
+  --brand-dark: var(--achim-brand-strong);
+  --brand-soft: var(--achim-brand-soft);
   --action: var(--brand-dark);
   --soft: var(--brand-soft);
   --reading-tint: #f2fbf6;
@@ -15,7 +15,7 @@
   padding: max(0px, env(safe-area-inset-top)) max(0px, env(safe-area-inset-right)) max(0px, env(safe-area-inset-bottom)) max(0px, env(safe-area-inset-left));
   background: var(--canvas);
   color: var(--ink);
-  font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", Arial, sans-serif;
+  font-family: var(--font-suit), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   font-size: 16px;
   line-height: 1.6;
   word-break: keep-all;
@@ -188,7 +188,7 @@
 .articleByline { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 14px; margin: 0 0 22px; font-size: 13px; color: var(--muted); }
 .articleByline:empty { display: none; }
 .sourceJump { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding-inline: 10px; border: 1px solid var(--rule); border-radius: 8px; color: var(--action); background: var(--paper); font-size: 14px; font-weight: 700; cursor: pointer; }
-.takeaway { margin: 0 0 18px; border-inline-start: 3px solid var(--action); padding: 3px 0 4px 15px; }
+.takeaway { margin: 0 0 24px; border-inline-start: 3px solid var(--brand); padding: 16px 18px; background: var(--soft); }
 .takeaway h2 { margin: 0 0 5px; color: var(--action); font-size: 14px; font-weight: 700; }
 .takeaway :is(p, ul) { margin: 0; font-size: calc(var(--read-size) + 2px); line-height: 1.62; font-weight: 700; }
 .takeaway ul { list-style: disc; padding-inline-start: 1.1em; }
@@ -310,7 +310,7 @@
 @media (min-width: 768px) {
   .surface { background: var(--canvas); padding: 30px 24px 42px; }
   .sheet { padding-inline: 40px; }
-  .sheet[data-reading="true"] { max-width: 840px; padding-inline: 60px; }
+  .sheet[data-reading="true"] { max-width: 800px; padding-inline: 60px; }
   .masthead { min-height: 76px; }
   .intro { padding-block: 40px 30px; }
   .storyList { grid-template-columns: repeat(2, minmax(0, 1fr)); }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type FormEvent } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, ArrowRight, Bell, CalendarDays, Flag, RefreshCw, Share2, ThumbsDown, ThumbsUp } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bell, CalendarDays, Flag, Mail, RefreshCw, Share2, ThumbsDown, ThumbsUp } from 'lucide-react';
 import type { Briefing, Story, StoryInterest } from '@/lib/briefing';
 import { deviceHeaders } from '@/lib/device';
 import { cachedLiveBriefing, defaultEditionView, distinctText, editionSourceCount, filterEditionStories, fragmentStoryId, koreaToday, lastLiveBriefingKey, parseLiveBriefing, safeNewsUrl, storyLead, validEditionDate } from '@/lib/daily-letter';
@@ -105,9 +105,8 @@ export function DailyBriefingLetter() {
     <header className={styles.masthead}>
       <div className={styles.toolbar}>
         <Link href="/" className={styles.brand} aria-label="아침결 홈">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={`${basePath}/newsletter-prototypes/edition-icon.svg`} width={36} height={36} alt="" />
-          <strong>아침결<span>.</span></strong><small>뉴스 브리핑</small>
+          <span className={styles.brandMark} aria-hidden="true"><Mail size={16} strokeWidth={2.4} /></span>
+          <strong>아침결</strong><small>평일 아침, 어제의 뉴스</small>
         </Link>
         <nav aria-label="뉴스 메뉴">
           <Link href="/archive"><CalendarDays size={16} aria-hidden="true" /> 지난 뉴스</Link>
@@ -231,7 +230,7 @@ function LetterStory({ story, dateLabel, position, total, reportingEnabled, onSh
       <img src={image} alt={`${story.title} 관련 기사 사진`} loading="eager" decoding="async" referrerPolicy="no-referrer" onError={() => setImageFailed(true)} />
       <figcaption>{story.imagePublisher ? `사진 ${story.imagePublisher}` : '관련 원문 기사 사진'}</figcaption>
     </figure>}
-    <section className={styles.explanation}><h2>쉽게 읽기</h2><p>{story.plainExplanation || story.summary}</p>{distinctText(story.summary, story.plainExplanation || story.summary, lead) && <p>{story.summary}</p>}</section>
+    <section className={styles.explanation}><h2>쉽게 읽기</h2><p>{story.plainExplanation || story.summary}</p>{distinctText(story.summary, story.plainExplanation || story.summary, lead) && <><h3>기사에서 확인된 내용</h3><p>{story.summary}</p></>}</section>
     {story.backgroundContext && <aside className={styles.background}><h2>알고 읽으면 쉬워요</h2><p>{story.backgroundContext}</p></aside>}
     {story.whyItMatters && <section className={styles.importance}><h2>왜 중요한가요</h2><p>{story.whyItMatters}</p></section>}
     {story.whatToWatch && <section className={styles.context}><h2>앞으로 살펴볼 점</h2><p>{story.whatToWatch}</p></section>}

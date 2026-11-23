@@ -48,7 +48,7 @@ test("received news shares the homepage type and green-neutral brand system", as
       logo: element.querySelector("header a")?.textContent?.trim(),
     };
   });
-  expect(theme.font).toContain("Pretendard");
+  expect(theme.font).toMatch(/suit/i);
   expect(theme.background).toBe("rgb(251, 252, 250)");
   expect(theme.ink).toBe("rgb(23, 35, 29)");
   expect(theme.action).toBe("#0b3d2e");
@@ -56,7 +56,7 @@ test("received news shares the homepage type and green-neutral brand system", as
   expect(theme.logo).toBe("아침결");
   await page.locator("#received-story-700").click();
   await expect(page.locator("#news-700")).toBeFocused();
-  await expect(page.locator("#news-700")).toHaveCSS("font-family", /Pretendard/);
+  await expect(page.locator("#news-700")).toHaveCSS("font-family", /suit/i);
   await expect(page.getByRole("heading", { name: "핵심 내용" })).toHaveCSS("color", "rgb(11, 61, 46)");
 });
 
