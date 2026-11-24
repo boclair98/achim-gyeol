@@ -42,7 +42,7 @@ async function mockArchivedEdition(page: Page, data = edition()) {
   return methods;
 }
 
-test("one editorial list keeps every dated story once and expands only the opening three rows", async ({ page }) => {
+test("the flat editorial list keeps every dated story once with a lead summary and explicit reading actions", async ({ page }) => {
   const data = edition(18);
   data.stories.forEach((story, index) => { story.oneLineSummary = `지역 센터는 ${index + 1}곳에서 신청을 받습니다.`; });
   await mockArchivedEdition(page, data);
@@ -50,16 +50,17 @@ test("one editorial list keeps every dated story once and expands only the openi
   const rows = page.locator("[data-received-story]");
   await expect(rows).toHaveCount(data.stories.length);
   const expected = data.stories.map(story => `#news-${story.id}`);
-  const positions = rows.locator('span[aria-hidden="true"]');
-  await expect(positions).toHaveText(data.stories.map((_, index) => String(index + 1).padStart(2, "0")));
+  await expect(rows.getByText("기사 읽기", { exact: true })).toHaveCount(data.stories.length);
   // Check all article anchors on the fresh edition, not just card ids: a second
   // digest of the same articles would still pass a row-only count.
   const links = page.locator('main a[href^="#news-"]');
   await expect(links).toHaveCount(expected.length);
   expect(await links.evaluateAll(nodes => nodes.map(node => node.getAttribute("href")))).toEqual(expected);
-  for (const [index, story] of data.stories.slice(0, 3).entries()) {
-    await expect(rows.nth(index)).toContainText(story.oneLineSummary);
-  }
+  await expect(rows.first()).toContainText(data.stories[0].oneLineSummary);
+  await expect(rows.first().getByRole("img", { name: `${data.stories[0].title} 관련 사진` })).toHaveAttribute("src", data.stories[0].imageUrl!);
+  await expect(rows.nth(1)).not.toContainText(data.stories[1].oneLineSummary);
+  await expect(rows.nth(1).getByRole("img")).toHaveCount(0);
+  await expect(rows.first()).toContainText("검증 원문");
   await expect(rows.nth(3)).not.toContainText(data.stories[3].oneLineSummary);
   await expect(rows.last()).toContainText("e스포츠");
   const link = rows.nth(1);
@@ -80,9 +81,8 @@ for (const size of [1, 2, 3]) {
     await expect(links).toHaveCount(size);
     expect(await links.evaluateAll(nodes => nodes.map(node => node.getAttribute("href"))))
       .toEqual(data.stories.map(story => `#news-${story.id}`));
-    for (const story of data.stories) {
-      await expect(page.locator(`#received-story-${story.id}`)).toContainText(story.oneLineSummary);
-    }
+    await expect(page.locator(`#received-story-${data.stories[0].id}`)).toContainText(data.stories[0].oneLineSummary);
+    for (const story of data.stories) await expect(page.locator(`#received-story-${story.id}`)).toContainText(story.title);
   });
 }
 
@@ -110,6 +110,28 @@ test("opened progress and the first unopened article survive returning and reloa
   await expect(page.locator("#news-1701")).toBeFocused();
   expect(methods.length).toBeGreaterThan(0);
   expect(methods.every(method => method === "GET")).toBe(true);
+});
+
+test("editorial reading actions align across unequal headlines and remain usable with 2x text", async ({ page }) => {
+  const data = edition(3);
+  data.stories[1].title = longTitle;
+  await mockArchivedEdition(page, data);
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(recipient);
+  const actions = page.locator('[data-received-story]').getByText('기사 읽기', { exact: true });
+  const firstAction = await actions.nth(1).boundingBox();
+  const secondAction = await actions.nth(2).boundingBox();
+  expect(Math.abs(firstAction!.y - secondAction!.y)).toBeLessThanOrEqual(1);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.locator('main').evaluate(root => {
+    const sizes = [...root.querySelectorAll<HTMLElement>('*')].map(element => [element, parseFloat(getComputedStyle(element).fontSize)] as const);
+    for (const [element, size] of sizes) element.style.fontSize = `${size * 2}px`;
+  });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)).toBe(false);
+  const rows = page.locator('[data-received-story]');
+  await expect(rows).toHaveCount(3);
+  for (const action of await actions.all()) expect((await action.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await expect(rows.nth(1)).toContainText(longTitle);
 });
 
 test("the reading toolbar advances with the keyboard and returns focus to the opener", async ({ page }) => {
@@ -170,6 +192,28 @@ test("returning from a story restores the original row at the same viewport posi
   expect(methods).toEqual(["GET"]);
 });
 
+test("the lead image is omitted when its URL is unsafe or the image fails", async ({ page }) => {
+  const unsafe = edition(3);
+  unsafe.stories[0].imageUrl = "javascript:alert(1)";
+  await mockArchivedEdition(page, unsafe);
+  await page.goto(recipient);
+  const lead = page.locator("#received-story-1700");
+  await expect(lead.getByRole("img")).toHaveCount(0);
+  await expect(lead).toContainText(unsafe.stories[0].title);
+
+  const failure = edition(3);
+  await page.route("http://127.0.0.1:4173/og-v2.png", route => route.abort());
+  await page.route("**/api/**", route => {
+    if (route.request().method() !== "GET") return route.fulfill({ status: 204 });
+    if (new URL(route.request().url()).pathname === `/api/briefings/${date}`) return route.fulfill({ json: failure });
+    return route.fulfill({ status: 404 });
+  });
+  await page.goto(recipient);
+  const failedLead = page.locator("#received-story-1700");
+  await expect(failedLead.locator("[data-news-photo]")).toHaveCount(0);
+  await expect(failedLead).toContainText(failure.stories[0].title);
+});
+
 for (const viewport of viewports) {
   test(`the list keeps long headlines and photos uncropped at ${viewport.width}px`, async ({ page }) => {
     const data = edition(18);
@@ -183,7 +227,11 @@ for (const viewport of viewports) {
     ]);
     await expect(page.locator("[data-received-story]")).toHaveCount(18);
     const first = page.locator("#received-story-1700");
-    await expect(page.locator("[data-received-story] img")).toHaveCount(0);
+    const listImage = first.getByRole("img", { name: `${longTitle} 관련 사진`, exact: true });
+    await expect(listImage).toHaveAttribute("src", photoUrl);
+    await expect(listImage).toBeVisible();
+    await expect.poll(() => listImage.evaluate(element => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0);
+    await expect(page.locator("#received-story-1701").getByRole("img")).toHaveCount(0);
     const title = first.getByText(longTitle, { exact: true });
     await expect(title).toBeVisible();
     expect(await title.evaluate(element => {

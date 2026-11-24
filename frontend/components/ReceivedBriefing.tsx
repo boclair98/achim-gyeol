@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import Link from "next/link";
-import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown, ChevronRight, Mail, RefreshCw } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Check, ChevronDown, Mail, RefreshCw } from "lucide-react";
 import type { Briefing, Story } from "@/lib/briefing";
 import { fragmentStoryId, koreaToday, safeNewsUrl } from "@/lib/daily-letter";
 import { composeReceivedReading, relatedGlossaryTerm } from "@/lib/received-reading";
@@ -164,12 +164,11 @@ function ReceivedEdition({ briefing, fragment, report }: { briefing: Briefing; f
 
   return <>
     <header className={styles.intro}>
+      <h1>어제의 핵심 뉴스</h1>
       <div className={styles.editionMeta}>
         <time className={styles.editionEyebrow} dateTime={briefingDate}>{dateLabel} 발행</time>
         <p className={styles.editionFacts}>뉴스 {stories.length}건{briefing.readMinutes > 0 && <> · 전체 약 {briefing.readMinutes}분</>}</p>
       </div>
-      <h1>어제의 핵심 뉴스</h1>
-      <p className={styles.editionInvitation}>관심 가는 이야기부터 편하게 읽어보세요.</p>
     </header>
     {read.size > 0 && <aside className={styles.readProgress} aria-label="이 기기의 읽기 기록">
       <div><span>{read.size === stories.length ? "이번 편을 모두 열어봤어요" : "읽던 이야기, 이어서"}</span>
@@ -180,8 +179,7 @@ function ReceivedEdition({ briefing, fragment, report }: { briefing: Briefing; f
         : <Check size={24} aria-label="모든 기사 열람" />}
     </aside>}
     {fragment.startsWith("#news-") && <p className={styles.notice} role="status">이 뉴스레터에서 해당 기사를 찾지 못했어요. 아래 목록을 확인해 주세요.</p>}
-    <section className={styles.contents} id={contentsId} tabIndex={-1} aria-labelledby="received-list-title">
-      <header className={styles.listHead}><h2 id="received-list-title">읽고 싶은 뉴스부터</h2></header>
+    <section className={styles.contents} id={contentsId} tabIndex={-1} aria-label="전체 뉴스">
       <ol className={styles.storyList}>
         {stories.map((item, index) => <ReceivedStoryRow key={item.id} story={item} index={index}
           opened={read.has(item.id)} onOpen={rememberOpener} />)}
@@ -197,23 +195,28 @@ function ReceivedStoryRow({ story, index, opened, onOpen }: {
   const lead = index === 0;
   const metaId = `received-meta-${story.id}`;
   const titleId = `received-title-${story.id}`;
-  const teaser = index < 3 ? storyTeaser(story) : undefined;
+  const teaser = lead ? storyTeaser(story) : undefined;
+  const sources = story.sources.filter(source => safeNewsUrl(source.url));
   const teaserId = `received-teaser-${story.id}`;
   return <li className={lead ? styles.leadItem : undefined}>
     <a href={storyAnchor(story.id)} id={rowId(story.id)} className={styles.row}
       aria-labelledby={titleId} aria-describedby={teaser ? `${metaId} ${teaserId}` : metaId}
-      onClick={event => onOpen(event, story.id)} data-received-story={story.id} data-lead={lead}>
+      onClick={event => onOpen(event, story.id)} data-received-story={story.id} data-lead={lead}
+      data-has-photo={lead && !!safeNewsUrl(story.imageUrl)}>
       <span className={styles.rowText}>
         <span className={styles.rowMeta} id={metaId}>
-          <span className={styles.rowNumber} aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
           {story.category}
           {confidence && <span className={styles.confidence}>{confidence}</span>}
           {opened && <span className={styles.readMark}><Check size={12} aria-hidden="true" />열어봄</span>}
         </span>
         <strong id={titleId}>{story.title}</strong>
         {teaser && <span className={styles.teaser} id={teaserId}>{teaser}</span>}
+        <span className={styles.rowFooter}>
+          {sources.length > 0 && <span className={styles.rowSources}>{sourceLabel(story)}</span>}
+          <span className={styles.rowAction}>기사 읽기 <ArrowRight size={17} aria-hidden="true" /></span>
+        </span>
       </span>
-      <ChevronRight className={styles.rowArrow} size={20} aria-hidden="true" />
+      {lead && <ReceivedPhoto story={story} className={styles.rowPhoto} />}
     </a>
   </li>;
 }
@@ -277,6 +280,7 @@ function ReceivedStory({ story, dateLabel, date, position, total, publicHref, ca
       {keyPoints.length === 1 ? <p>{keyPoints[0]}</p> : <ul>{keyPoints.map(point => <li key={point}>{point}</li>)}</ul>}
     </section>}
     {!!explanation.length && <StorySection label="쉽게 풀어 보면" paragraphs={explanation} />}
+    <ReceivedPhoto story={story} />
     {!!displayedCautions.length && <aside className={styles.caveat} aria-labelledby="received-caveat">
       <h2 id="received-caveat">확인할 점</h2>
       {displayedCautions.map(note => <p key={note}>{note}</p>)}
@@ -308,7 +312,6 @@ function ReceivedStory({ story, dateLabel, date, position, total, publicHref, ca
         <StorySection label="앞으로 확인할 점" paragraphs={watch} />
       </div>
     </details>}
-    <ReceivedPhoto story={story} />
     {!!rest.length && <StorySection label={explanation.length ? "이야기 이어 읽기" : "기사 내용을 살펴볼게요"} paragraphs={rest} />}
     {!!story.claims?.length && <details className={styles.evidence}>
       <summary>근거 확인</summary>
@@ -352,14 +355,14 @@ function StorySection({ label, paragraphs }: { label: string; paragraphs: string
   </section>;
 }
 
-function ReceivedPhoto({ story }: { story: Story }) {
+function ReceivedPhoto({ story, className }: { story: Story; className?: string }) {
   const [failed, setFailed] = useState(false);
   const href = safeNewsUrl(story.imageUrl);
   if (!href || failed) return null;
-  return <figure className={styles.photo}>
+  return <figure className={[styles.photo, className].filter(Boolean).join(" ")} data-news-photo>
     {/* eslint-disable-next-line @next/next/no-img-element */}
     <img src={href} alt={`${story.title} 관련 사진`} decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)} />
-    <figcaption>{story.imagePublisher ? `사진 · ${story.imagePublisher}` : "관련 원문 기사 사진"}</figcaption>
+    {story.imagePublisher && <figcaption>사진 · {story.imagePublisher}</figcaption>}
   </figure>;
 }
 
