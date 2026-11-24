@@ -34,7 +34,10 @@ export function ReceivedBriefing() {
           <i className={styles.brandMark} aria-hidden="true"><Mail size={15} strokeWidth={2.4} /></i>
           <span>아침결</span>
         </Link>
-        <span className={styles.mastheadLabel}>받은 뉴스</span>
+        <nav className={styles.mastheadLinks} aria-label="브리핑 바로가기">
+          <Link href="/archive" prefetch={false}>지난 뉴스</Link>
+          <Link href="/preferences" prefetch={false}>알림 설정</Link>
+        </nav>
       </header>
       {isReadable ? <>
         {notice && <p className={styles.notice} role="status">{notice}</p>}
@@ -269,11 +272,11 @@ function ReceivedStory({ story, dateLabel, date, position, total, publicHref, ca
       <h2>바로잡은 내용</h2>
       {story.corrections.map((correction, index) => <p key={index}>{correction.reason} <time>{correction.correctedAt}</time></p>)}
     </section>}
-    {!!explanation.length && <StorySection label="쉽게 풀어 보면" paragraphs={explanation} />}
     {!!keyPoints.length && <section className={styles.takeaway} aria-labelledby="received-takeaway">
       <h2 id="received-takeaway">핵심 내용</h2>
       {keyPoints.length === 1 ? <p>{keyPoints[0]}</p> : <ul>{keyPoints.map(point => <li key={point}>{point}</li>)}</ul>}
     </section>}
+    {!!explanation.length && <StorySection label="쉽게 풀어 보면" paragraphs={explanation} />}
     {!!displayedCautions.length && <aside className={styles.caveat} aria-labelledby="received-caveat">
       <h2 id="received-caveat">확인할 점</h2>
       {displayedCautions.map(note => <p key={note}>{note}</p>)}

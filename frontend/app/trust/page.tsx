@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { BookOpenCheck, CheckCircle2, FileClock, Flag, Newspaper, ShieldCheck } from "lucide-react";
 import { SiteFooter, SiteHeader } from "@/components/SiteChrome";
-import "../enterprise.css";
+import "../reader-system.css";
 
 export const metadata: Metadata = {
   title: "서비스 원칙 | 아침결",
@@ -16,7 +16,7 @@ const readerPromises = [
 ];
 
 export default function TrustPage() {
-  return <main className="enterprise-shell">
+  return <main className="enterprise-shell reader-system">
     <SiteHeader context="무료 알림 받기" />
     <section className="trust-hero"><span>아침결 서비스 원칙</span><h1>중요한 뉴스는 짧게,<br /><em>더 궁금하면 원문까지.</em></h1><p>아침결은 바쁜 아침에 꼭 필요한 뉴스를 읽기 편하게 전하고, 더 자세히 보고 싶은 독자에게 관련 원문을 함께 제공합니다.</p><div><b><Newspaper /> 핵심 뉴스</b><b><BookOpenCheck /> 관련 원문</b><b><FileClock /> 오류 수정</b></div></section>
 

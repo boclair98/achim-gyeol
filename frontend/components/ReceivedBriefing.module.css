@@ -40,7 +40,11 @@
   justify-content: space-between;
   gap: 16px;
   min-height: 68px;
-  border-bottom: 1px solid var(--rule);
+  margin-block: 10px 0;
+  padding: 8px 14px;
+  border: 1px solid var(--rule);
+  border-radius: 18px;
+  background: var(--paper);
 }
 
 .brand {
@@ -65,7 +69,9 @@
   background: var(--brand);
   color: #fff;
 }
-.mastheadLabel { color: var(--muted); font-size: 13px; font-weight: 600; letter-spacing: -.02em; }
+.mastheadLinks { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.mastheadLinks a { display: inline-flex; align-items: center; min-height: 44px; color: var(--muted); font-size: 14px; font-weight: 600; text-decoration: none; }
+.mastheadLinks a:hover { color: var(--action); text-decoration: underline; text-underline-offset: 4px; }
 
 .intro { padding-block: 29px 24px; }
 .editionMeta {
@@ -95,7 +101,7 @@
 .readProgress progress::-moz-progress-bar { border-radius: 8px; background: var(--brand); }
 .readProgress > a { flex: none; font-size: 14px; }
 
-.listHead { padding-block: 13px 11px; border-top: 2px solid var(--ink); }
+.listHead { padding-block: 13px 11px; border-top: 1px solid var(--rule); }
 .listHead h2 { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -.026em; }
 .contents { scroll-margin-block-start: 12px; }
 .intro ~ .notice { margin-bottom: 16px; }
@@ -121,8 +127,8 @@
 .rowText strong { font-size: clamp(18px, 3.1vw, 20px); line-height: 1.45; font-weight: 700; letter-spacing: -.027em; }
 .rowArrow { width: 16px; color: var(--action); align-self: center; }
 .teaser { display: block; color: var(--muted); font-size: 15px; line-height: 1.65; font-weight: 400; }
-.storyList > .leadItem { background: var(--reading-tint); }
-.leadItem .row { padding: 21px 12px 22px 14px; border-inline-start: 2px solid var(--action); }
+.storyList > .leadItem { margin-block: 12px; border: 1px solid var(--rule); border-radius: 14px; background: var(--reading-tint); }
+.leadItem .row { padding: 21px 14px 22px; border-radius: inherit; }
 .leadItem .rowNumber { color: var(--action); }
 .leadItem .rowText { gap: 6px; }
 .leadItem .rowText strong { font-size: clamp(25px, 3.1vw, 34px); line-height: 1.35; letter-spacing: -.04em; }
@@ -188,9 +194,9 @@
 .articleByline { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 14px; margin: 0 0 22px; font-size: 13px; color: var(--muted); }
 .articleByline:empty { display: none; }
 .sourceJump { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding-inline: 10px; border: 1px solid var(--rule); border-radius: 8px; color: var(--action); background: var(--paper); font-size: 14px; font-weight: 700; cursor: pointer; }
-.takeaway { margin: 0 0 24px; border-inline-start: 3px solid var(--brand); padding: 16px 18px; background: var(--soft); }
+.takeaway { margin: 0 0 28px; border: 1px solid var(--rule); border-radius: 12px; padding: 16px 18px; background: var(--soft); }
 .takeaway h2 { margin: 0 0 5px; color: var(--action); font-size: 14px; font-weight: 700; }
-.takeaway :is(p, ul) { margin: 0; font-size: calc(var(--read-size) + 2px); line-height: 1.62; font-weight: 700; }
+.takeaway :is(p, ul) { margin: 0; color: var(--ink); font-size: calc(var(--read-size) + 1px); line-height: 1.7; font-weight: 600; }
 .takeaway ul { list-style: disc; padding-inline-start: 1.1em; }
 .takeaway li + li { margin-top: 7px; }
 .takeaway li::marker { color: var(--action); }
@@ -311,7 +317,7 @@
   .surface { background: var(--canvas); padding: 30px 24px 42px; }
   .sheet { padding-inline: 40px; }
   .sheet[data-reading="true"] { max-width: 800px; padding-inline: 60px; }
-  .masthead { min-height: 76px; }
+  .masthead { min-height: 72px; }
   .intro { padding-block: 40px 30px; }
   .storyList { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .storyList > .leadItem { grid-column: 1 / -1; }
@@ -332,6 +338,9 @@
   .intro { padding-block: 25px 20px; }
   .intro h1 { font-size: 31px; }
   .masthead { min-height: 60px; }
+  .masthead { gap: 10px; padding-inline: 10px; }
+  .mastheadLinks { gap: 10px; }
+  .mastheadLinks a { font-size: 13px; }
   .row { grid-template-columns: minmax(0, 1fr) 14px; column-gap: 8px; }
   .rowArrow { width: 14px; }
   .readingBar { padding-block: 7px; gap: 4px; }
